@@ -3,7 +3,7 @@ C
 C  Copyright (C) 
 C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
 C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
-C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License
@@ -50,7 +50,7 @@ C...........................................................................
 
       IMPLICIT NONE
       CHARACTER*(*) STRING
-      INTEGER       I, J, K, CHANGED, EC_T_STRLEN
+      INTEGER       I, J, K, CHANGED, EC_T_STRLEN, OLDLEN
       EXTERNAL EC_T_STRLEN
 
       CHARACTER     QUOTE(2)
@@ -61,10 +61,14 @@ C Remove trailing spaces
    15 CONTINUE
    20 CONTINUE
 
-C Remove leading spaces
+C Remove leading spaces 
       CHANGED = 1      
       I = 1
-      DO 30, WHILE (CHANGED .EQ. 1)
+      K = 0
+      OLDLEN = LEN(STRING)
+C Check if a space removed, and check if we are beyond the original
+C length
+      DO 30, WHILE ((CHANGED .EQ. 1) .AND. (K.LE.OLDLEN))
         CHANGED = 0
         IF ((STRING(I:I) .EQ. ' ') .OR.
      &      (STRING(I:I) .EQ. CHAR(0))) THEN
@@ -72,6 +76,7 @@ C Remove leading spaces
               STRING(J-1:J-1) = STRING(J:J)
    35      CONTINUE
            CHANGED = 1
+           K = K + 1
         ELSE
            I = I + 1
         ENDIF

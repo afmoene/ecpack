@@ -3,7 +3,7 @@ C
 C  Copyright (C) 
 C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
 C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
-C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License
@@ -878,14 +878,15 @@ C     ***
      &	DoPrint,
      &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
      &  Have_Cal(NMax), QSchot
-      REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
+      REAL*8  P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),FrCor(NMax,NMax),
      &	DirYaw,O2Factor(NMax),
      &	NSTA,NEND,TAUV,TauD,DirPitch,DirRoll, TSonFact,
      &	SonFactr(NMax),
      &  Yaw(3,3), Roll(3,3), Pitch(3,3), WebVel,
      &  ExpVar(NMaxExp)
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
+      REAL*8  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
+      INTEGER DumIndep(NMax), DumCIndep(NMax,NMax)
 C
 C
 C Only print intermediate results if desired
@@ -917,7 +918,8 @@ C
         CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
         CALL EC_C_T10(ExpVar(QEPreRoll),Roll)
         CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
-        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 
         IF (QTilt) THEN
           CALL EC_G_ShwHead(OutF, 
@@ -935,7 +937,8 @@ C
         CALL EC_C_T06(DirYaw,Yaw)
         CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
 
-        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 
         IF (QYaw) THEN
           WRITE(OutF,*)
@@ -956,7 +959,8 @@ C
           CALL EC_C_T08(DirPitch,Pitch)
           CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
         ENDIF
-        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 
         IF (QPitch) THEN
           WRITE(OutF,*)
@@ -977,7 +981,8 @@ C
           CALL EC_C_T10(DirRoll,Roll)
           CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
         ENDIF
-        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 
         IF (QRoll) THEN
           WRITE(OutF,*)
@@ -990,7 +995,8 @@ C
 C
 C Reset the coveriances for which no data available
 C
-      CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+      CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 C
 C Correct sonic temperature and all covariances with sonic temperature
 C for humidity. This is half the Schotanus-correction. Side-wind
@@ -1011,7 +1017,8 @@ C
         CALL EC_C_Schot1(Mean(SpecHum),Mean(TSonic),NMax,N,Cov,
      &    SonFactr,TSonFact)
         CALL EC_C_Schot2(SonFactr,TSonFact,Mean(TSonic),NMax,N,Cov)
-        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 
         IF (QSchot) THEN
           WRITE(OutF,*)
@@ -1036,7 +1043,8 @@ C
           CALL EC_C_Oxygen1(Mean(WhichTemp),NMax,N,Cov,P,CalHyg(QQType),
      &      WhichTemp,O2Factor)
           CALL EC_C_Oxygen2(O2Factor,NMax,N,Cov)
-          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
 
           IF (QO2) THEN
             CALL EC_G_ShwHead(OutF,
@@ -1078,7 +1086,8 @@ C
           CALL EC_C_F02(FrCor,NMax,N,ExpVar(QELLimit),
      &                  ExpVar(QEULimit),Cov,TolCov)
      
-          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
           IF (QFreq) THEN
             CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
             WRITE(OutF,*) 'Factors accepted between ',
@@ -1101,7 +1110,8 @@ C
       IF (DoCorr(QCWebb)) THEN
          IF (WhichTemp .GT. 0) THEN
            CALL EC_C_Webb(Mean,NMax,Cov,P, WhichTemp, WebVel)
-           CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+           CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                  DumIndep, DumCindep)
            IF (QWebb) THEN
 	     WRITE(OutF,*) 'Webb-velocity (vertical) = ',WebVel,' m/s'
              CALL EC_G_ShwHead(OutF, 'After addition of Webb-term: ')

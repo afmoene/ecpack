@@ -4,7 +4,7 @@ C
 C  Copyright (C) 
 C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
 C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
-C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License
@@ -320,7 +320,7 @@ C
                CALL Calibrat(RawSampl(1,i),Channels,P,CorMean,
      &	          CalSonic,CalTherm,CalHyg,CalCO2, 
      &            BadTc,Sample(1,i),N,Flag(1,i),
-     &            Have_Uncal, FirstDay)
+     &            Have_Uncal, FirstDay, i)
            ENDDO
 C
 C Determine mean velocities, check if there are enough valid samples

@@ -16,9 +16,10 @@ C         CalSonic : Calibration array REAL*8(NQQ) of the anemometer
 C         CalTherm : Calibration array REAL*8(NQQ) of the thermometer
 C         CalHyg   : Calibration array REAL*8(NQQ) of the hygrometer
 C         CalCO2   : Calibration array REAL*8(NQQ) of the CO2-sensor
-C         HAVE_TREF: do we have a reference temperature for thermocouple
-C                    (if so apply calibration curve and add reference
-C                    temperature)
+C         BadTC    : Flag for bad thermocouple
+C         N        : number of uncalibrated variables in sample
+C         Have_Uncal: flag whether we have a certain uncalibrated variable
+C         SampNum  : Sample number (needed to make fake time column)
 C OutPut: Sample   : REAL*8(N) : Calibrated sample
 C         Error    : LOGICAL(N) : Indicator if quantities are valid
 C                    after calibration
@@ -32,7 +33,7 @@ C ########################################################################
 C
       SUBROUTINE Calibrat(RawSampl,Channels,P,CorMean,
      &  CalSonic,CalTherm,CalHyg,CalCO2, BadTc,Sample,N,Error,
-     &  Have_Uncal,FirstDay)
+     &  Have_Uncal,FirstDay,SampNum)
 
       IMPLICIT NONE
 
@@ -48,7 +49,7 @@ C
       REAL*8 EC_PH_Q,EC_M_BaseF, EC_Ph_QCO2 ! External function calls
 
       REAL*8 C(0:NMaxOrder)
-      INTEGER IFLG, DUMORDER, DUMTYP, DIAG_WORD
+      INTEGER IFLG, DUMORDER, DUMTYP, DIAG_WORD, SampNum
       REAL*8 ABSERROR, RELERROR, ESTIM, DNLIMIT, UPLIMIT
 
       REAL*8 DUMFUNC, EC_C_Schot3
@@ -66,12 +67,18 @@ C
 C
 C Calculate time from the columns in the raw data
 C
-      Days = RawSampl(QUDoy) - DBLE(FirstDay)
-      Hours = NINT(0.01D0*RawSampl(QUHourMin))
-      Minutes = RawSampl(QUHourMin) - 100.D0*Hours
-      Secnds = RawSampl(QUSec)
-      Sample(TTime) =
-     &  Secnds + 60.D0*(Minutes +60.D0*(Hours + 24.D0*Days))
+      IF (Have_Uncal(QUSec) .AND. 
+     &    Have_Uncal(QUDoy) .AND.
+     &    Have_Uncal(QUHourMin)) THEN
+        Days = RawSampl(QUDoy) - DBLE(FirstDay)
+        Hours = NINT(0.01D0*RawSampl(QUHourMin))
+        Minutes = RawSampl(QUHourMin) - 100.D0*Hours
+        Secnds = RawSampl(QUSec)
+        Sample(TTime) =
+     &    Secnds + 60.D0*(Minutes +60.D0*(Hours + 24.D0*Days))
+      ELSE
+        Sample(TTime) = SampNum*1.0D0
+      ENDIF
 
       Error(TTime) = (.FALSE.)
 C

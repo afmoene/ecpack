@@ -3,7 +3,7 @@ C
 C  Copyright (C) 
 C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
 C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
-C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License
@@ -249,6 +249,10 @@ C
       IF (HAVE_UNCAL(QUW)) HAVE_CAL(W) = .TRUE.
       IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
         IF (Have_Uncal(QUDiagnost)) THEN
+            DiagFlag(QDDelta) = 0
+            DiagFlag(QDLock) = 0
+            DiagFlag(QDHigh) = 0
+            DiagFlag(QDLow) = 0
             DO I=1,M
                DIAG_WORD = INT(RawSampl(QUDiagnost, I)/4096)
                DiagFlag(QDDelta) = 
@@ -311,7 +315,7 @@ C
             CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
      &               CalSonic,CalTherm,CalHyg,CalCO2,
      &               BadTc,Sample(1,i),N,Flag(1,i),
-     &               Have_Uncal, FirstDay)
+     &               Have_Uncal, FirstDay, i)
             IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
          ENDDO
          BadTc = (NTcOut.GE.(M/2))
@@ -326,7 +330,7 @@ C
           CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
      &      CalSonic,CalTherm,CalHyg,CalCO2,
      &      BadTc,Sample(1,i),N,Flag(1,i),
-     &      Have_Uncal, FirstDay)
+     &      Have_Uncal, FirstDay, i)
         ENDDO
       ENDIF
 C
@@ -339,7 +343,8 @@ C Find the shift/drift in humidity of the krypton hygrometer
 C
 	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
         IF (.NOT. Have_Cal(Humidity)) THEN
 	   Mean(Humidity) = Psychro
 	   MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
@@ -361,7 +366,7 @@ C
 	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
      &	    CalSonic,CalTherm,CalHyg,CalCO2,
      &      BadTc,Sample(1,i),N,Flag(1,i),
-     &      Have_Uncal, FirstDay)
+     &      Have_Uncal, FirstDay, i)
 	ENDDO
       ENDIF
 
@@ -383,7 +388,8 @@ C
       CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
      &	               Mean,TolMean,Cov,TolCov,MIndep,
      &                 CIndep,Mok,Cok)
-      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
       IF (.NOT. Have_Cal(Humidity)) THEN
         Mean(Humidity) = Psychro
         MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
@@ -417,7 +423,8 @@ C
 	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
      &	                 Mean,TolMean,Cov,TolCov,
      &                   MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
         IF (.NOT. Have_cal(Humidity)) THEN
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
@@ -468,7 +475,8 @@ C
       CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
      &	               Mean,TolMean,Cov,TolCov,
      &                 MIndep,CIndep,Mok,Cok)
-      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
       IF (.NOT. Have_cal(Humidity)) THEN
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
@@ -501,7 +509,8 @@ C angles.
      &	  CalSonic,CalTherm,CalHyg,
      &    CalCO2, FrCor,
      &	  WebVel, P,Have_cal)
-        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
       ENDIF
 C
 C If any transformation of coordinates was required (one of the options
@@ -564,7 +573,8 @@ C
 	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
      &	                 Mean,TolMean,Cov,TolCov,
      &                   MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
         IF (.NOT. Have_cal(Humidity)) THEN
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
@@ -607,7 +617,8 @@ C
      &	  O2Factor,
      &	  CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
      &	  WebVel, P, Have_cal)
-      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
       
 C
 C
@@ -625,7 +636,8 @@ C
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &                QPhys, dQPhys, WebVel, DirYaw)
 
-      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
 
       RETURN
       END
@@ -634,12 +646,14 @@ C
 
 
 
-      SUBROUTINE EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      SUBROUTINE EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov,
+     &                      Mindep, CIndep)
 C     ****f* ec_gene.f/EC_G_Reset
 C NAME
 C     EC_G_Reset
 C SYNOPSIS
-C     CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+C     CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, MIndep,
+C     CIndep)
 C FUNCTION
 C     Routine to reset means and covariances based on availability
 C     of the uncalibrated data
@@ -655,6 +669,10 @@ C     Cov         : [REAL*8(NMax,NMax)]
 C                   covariances of quantities
 C     TolMean     : [REAL*8(NMax,NMax)]
 C                   tolerance in covariances of quantities
+C     MIndep      : [REAL*8(NMax)]
+C                   number of independent samples
+C     CIndep      : [REAL*8(NMax,NMax)]
+C                   number of independent samples in covariances 
 C OUTPUT
 C     Mean        : [REAL*8(NMax)]
 C                   mean of quantities
@@ -664,6 +682,10 @@ C     Cov         : [REAL*8(NMax,NMax)]
 C                   covariances of quantities
 C     TolMean     : [REAL*8(NMax,NMax)]
 C                   tolerance in covariances of quantities
+C     MIndep      : [REAL*8(NMax)]
+C                   number of independent samples
+C     CIndep      : [REAL*8(NMax,NMax)]
+C                   number of independent samples in covariances 
 C AUTHOR
 C     Arnold Moene
 C HISTORY
@@ -678,18 +700,20 @@ C     ***
       LOGICAL Have_cal(NNMax)
       REAL*8  Mean(NNmax), TolMean(NNMax), Cov(NNMax, NNMax),
      +        TolCov(NNMax, NNMax)
-      INTEGER I,J
+      INTEGER I,J, MIndep(NNMax), CIndep(NNMax, NNMax)
 
       DO I=1,NNMax
          IF (.NOT. Have_CAL(I)) THEN
              MEAN(I) = DUMMY
              TolMean(I) = DUMMY
+             MIndep(I) = DUMMY
          ENDIF
          DO J=1,NNMax
             IF ((.NOT. HAVE_CAL(I)).OR.
      +          (.NOT. HAVE_CAL(J))) THEN
                 COV(I,J) = DUMMY
                 TolCov(I,J) = DUMMY
+                CIndep(I,J) = INT(DUMMY)
             ENDIF
          ENDDO
       ENDDO
@@ -899,6 +923,7 @@ C     ***
 
       INCLUDE 'parcnst.inc'
       INTEGER i,j,N,NMax,OutF,MIndep(NMax),CIndep(NMax,NMax),M
+      REAL*8 TmpTime(NMax)
       REAL*8 Freq
 
       WRITE(OutF,*)
@@ -910,8 +935,12 @@ C     ***
       WRITE(OutF,*)
 
       DO i=1,N
-	WRITE(OutF,10) QName(i),MIndep(i),
-     &    (DBLE(M)/(Freq*DBLE(MIndep(i))))
+        IF (MIndep(I).EQ. INT(DUMMY)) THEN
+	  WRITE(OutF,10) QName(i),DUMMY,DUMMY
+        ELSE
+	  WRITE(OutF,10) QName(i),MIndep(i),
+     &      (DBLE(M)/(Freq*DBLE(MIndep(i))))
+        ENDIF
       ENDDO
  10   FORMAT(a6,' = ',I8,5X,F12.3)
 
@@ -936,8 +965,14 @@ C     ***
  40   FORMAT(a6,20(a9:,1X))
 
       DO i=1,N
-	WRITE(OutF,50) QName(i),
-     &   (DBLE(M)/(Freq*DBLE(CIndep(i,j))),j=1,N)
+        DO J=1,N
+          IF (CIndep(I,J) .EQ. INT(DUMMY)) THEN
+             TmpTime(J) = DUMMY
+          ELSE
+             TmpTime(J) = DBLE(M)/(Freq*DBLE(CIndep(i,j)))
+          ENDIF
+        ENDDO
+	WRITE(OutF,50) QName(i),(TmpTime(J),J=1,N)
  50	FORMAT(a6,20(F9.3:,1X))
       ENDDO
 

@@ -2,7 +2,7 @@ C $Id$
 C  calcomm.inc, part of ecpack
 C  
 C  Copyright (C) 
-C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License

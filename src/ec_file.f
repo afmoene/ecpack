@@ -4,7 +4,7 @@ C
 C  Copyright (C) 
 C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
 C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
-C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License
@@ -145,7 +145,7 @@ C     ***
       IOCODE = 0
       DO 4000, WHILE (IOCODE .EQ. 0)
 C     Read one line from configuration file
-         READ(Confunit, '(A)', IOSTAT=IOCODE, END=9000) LINE
+         READ(Confunit,'(A)', IOSTAT=IOCODE, END=9000) LINE
          IF (IOCODE .NE. 0) THEN
             WRITE(*,*) 'ERROR in reading of configuration file'
             STOP
@@ -1449,7 +1449,7 @@ C The real data!
            WRITE(OutUnit,'(A,$)') OUTNAME(:EC_T_STRLEN(OUTNAME))
 C General format for other columns
            IF (Outputs(OSCSV)) THEN
-              FRM='(",",I4,$)'
+              FRM='(",",I6,$)'
            ELSE
               FRM='(" ",I20,$)'
            ENDIF
@@ -1468,7 +1468,7 @@ C Number of samples
            ENDDO
            IF (Outputs(OSDiag)) THEN
               IF (Outputs(OSCSV)) THEN
-                 FRM='(",",I10,$)'
+                 FRM='(",",I6,$)'
               ELSE
                  FRM='(" ",I20,$)'
               ENDIF
