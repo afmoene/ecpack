@@ -92,6 +92,7 @@ C
 
 C Report version number (VERSION is defined in version.inc)
       WRITE(*,*) 'EC_NCDF Version: ', VERSION
+C Give some RCS info (do not edit this!!, RCS does it for us) 
       WRITE(*,*) '$Name$'
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
