@@ -152,7 +152,7 @@ C                       data are available (AM)
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
-      REAL*8 MEANW, TOLMEANW
+      REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
       LOGICAL HAVE_CAL(NMax)
@@ -243,6 +243,14 @@ C Find the shift/drift in humidity of the krypton hygrometer
 C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+        CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+	IF (DoPrint) THEN
+	   WRITE(OUTF,*) 'Min/max of samples'
+	   DO I=1,N
+	      WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ', 
+     &                   Maxs(I)
+	   ENDDO
+	ENDIF
 
 	CorMean(Humidity) = Psychro - Mean(Humidity)
 	IF (DoPrint.AND.PCal) THEN
@@ -268,6 +276,7 @@ C
 	  ENDDO
 	ENDDO
       ENDIF
+
 C
 C
 C Estimate mean values, covariances and tolerances of both
@@ -275,6 +284,15 @@ C
 C
       CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+
+      CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+      IF (DoPrint) THEN
+	   WRITE(OUTF,*) 'Min/max of samples'
+           DO I=1,N
+              WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ', 
+     &                   Maxs(I)
+           ENDDO
+      ENDIF
 
 C
 C Print number of independent contributions
@@ -308,11 +326,18 @@ C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
 
+      CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+
 	IF (DoPrint.AND.PDetrend) THEN
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After detrending : '
 	  WRITE(OutF,*)
 
+	  WRITE(OUTF,*) 'Min/max of samples'
+          DO I=1,N
+             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ', 
+     &                Maxs(I)
+          ENDDO
 	  IF (PIndep) THEN
 	    CALL ECShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
 	  ENDIF
@@ -883,7 +908,7 @@ C...........................................................................
      +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
      +        CURCH
       REAL*8 SEC1, SEC2, SEC3, DOY1, DOY2, DOY3, HM1, HM2, HM3,
-     +     SAMPF, TIME1, TIME2, TIME3, 
+     +     SAMPF, TIME1, TIME2, TIME3, SEC4, HM4, DOY4,
      +     DOYD, HOURD, SECD, TIMED
 
       REAL*8 CSI2HOUR
@@ -898,30 +923,19 @@ C...........................................................................
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
-      IF ((DOY1 .EQ. DOY3) .AND. (HM1 .EQ. HM3)) THEN
-          SAMPF = SEC3-SEC1
-      ELSE IF (DOY1 .EQ. DOY3) THEN
-          TIME1 = CSI2HOUR(HM1)
-          TIME3 = CSI2HOUR(HM3)
-          SAMPF = (TIME3*3600+SEC3) - (TIME1*3600 + SEC1)
-      ELSE
-          TIME1 = CSI2HOUR(HM1)
-          TIME3 = CSI2HOUR(HM3)
-          SAMPF = (DOY3-DOY1)*3600*24 +
-     +         (TIME3*3600+SEC3) - (TIME1*3600 + SEC1)
-      ENDIF
+C Get mean sample rate
       DOYD = DOY3 - DOY1
       HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM1)
       SECD = SEC3 - SEC1
       TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
       SAMPF = MAXIND/ABS(TIMED)
-
+C Get time difference between start and requested point
       DOYD = FDOY - DOY1
       HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
       SECD = 0 - SEC1
       TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
       ATTEMPTS = 0
-      IND2 = TIMED*SAMPF
+      IND2 = TIMED*SAMPF+1
       CURCH = IND2
 
       DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
@@ -934,65 +948,50 @@ C Determine time difference between current sample and required time
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2, SEC2)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2+1, SEC4)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2+1, DOY4)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2+1, HM4)
 
+C Get local sample rate
+         DOYD = DOY4 - DOY2
+         HOURD = CSI2HOUR(HM4) - CSI2HOUR(HM2)
+         SECD = SEC4 - SEC2
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+	 SAMPF = 1D0/TIMED
+
+C Get distance between current point and requested point
          DOYD = FDOY - DOY2
          HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
          SECD = 0 - SEC2
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
          CURCH = INT(TIMED*SAMPF)
-
 	 IF (CURCH .EQ. 0) THEN
 	    IND = IND2
 	    RETURN
 	 ELSE IF (TIMED .GT. 0) THEN 
-             DOYD = DOY3 - DOY2
-             HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM2)
-             SECD = SEC3 - SEC2
-             TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-	     IF (ABS(TIMED) .GT. 1e-6) 
-     +           SAMPF = (IND3-IND2)/ABS(TIMED)
 	     IND1 = IND2
 	     HM1 = HM2
 	     SEC1 = SEC2
 	     DOY1 = DOY2
+             IND2 = IND2 + INT(TIMED*SAMPF)
 	 ELSE IF  (TIMED .LT. 0) THEN
-             DOYD = DOY2 - DOY1
-             HOURD = CSI2HOUR(HM2) - CSI2HOUR(HM1)
-             SECD = SEC2 - SEC1
-             TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-	     IF (ABS(TIMED) .GT. 1e-6) 
-     +           SAMPF = (IND2-IND1)/ABS(TIMED)
 	     IND3 = IND2
 	     HM3 = HM2
 	     SEC3 = SEC2
 	     DOY3 = DOY2
+             IND2 = IND2 + INT(TIMED*SAMPF)
 	ENDIF
 C
 C Get time difference between start of interval and requested point
-        DOYD = FDOY - DOY1
-        HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
-        SECD = 0 - SEC1
-        TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-        IND2 = IND1 + INT(TIMED*SAMPF)
         IF (IND2 .GT. MAXIND) THEN
 	   IND = -1
 	   RETURN
 	ENDIF
-
-        CURCH = INT(TIMED*SAMPF)
-
         ATTEMPTS = ATTEMPTS + 1
-C
-C A fix to get the right sample (needed in some cases)
-c        IF ((SECD .LT. 0) .AND. 
-c    +       ((INT(FHOURMIN) - INT(HM1)) .EQ. 1)) THEN
-c           CURCH = CURCH + 1
-c ENDIF
       ENDDO
       IF (ATTEMPTS .EQ. 20) THEN
          IND = -1
       ENDIF
-
       IND = IND2
       END
       
@@ -1137,7 +1136,6 @@ C
           RETURN
       ENDIF
       NSAMPLE = STOPIND - STARTIND 
-      write(*,*) 'num samples = ', NSAMPLE
       IF ((STOPIND - STARTIND) .GT. MMMAX) THEN
          WRITE(*,5500) MMMAX, NSAMPLE
 	 STOP
@@ -1660,6 +1658,34 @@ C
 
 
 
+      SUBROUTINE ECMinMax(x,NMax,N,MMax, M,Flag,Mins, Maxs)
+
+      INCLUDE 'parcnst.inc'
+
+      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax)
+      LOGICAL Flag(NMax,MMax)
+      INTEGER I,J, N, M, NSAMP
+
+      DO I=1,N
+         Mins(I) = 1e10
+	 Maxs(I) = -1e10
+      ENDDO
+
+      DO I=1,N
+         NSAMP = 0
+         DO J=1,M
+	    IF (.NOT. FLAG(I,J)) THEN
+	      NSAMP = NSAMP + 1
+	      Mins(I) = MIN(Mins(I), x(I,J))
+	      Maxs(I) = MAX(Maxs(I), x(I,J))
+	    ENDIF
+	 ENDDO
+	 IF (NSAMP .EQ. 0) THEN
+            Mins(I) = DUMMY
+            Maxs(I) = DUMMY
+	 ENDIF
+      ENDDO
+      END
 
 
       SUBROUTINE ECAverag(x,NMax,N,MMax,M,Flag,
