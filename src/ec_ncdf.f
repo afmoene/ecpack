@@ -93,7 +93,7 @@ C
 C Report version number (VERSION is defined in version.inc)
       WRITE(*,*) 'EC_NCDF Version: ', VERSION
       WRITE(*,*) '$Name$'
-      WRITE(*,*) '$Name$'
+      WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
       
       CALL GetConf(ECConfFile,
