@@ -18,10 +18,10 @@ EXT=.exe
 FFLAGS=$(INCDIR) -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none
 LDFLAGS=$(LIBDIR) -lnetcdf 
 
-all: ec_ncdf2$(EXT) planfit$(EXT)
+all: ec_ncdf$(EXT) planfit$(EXT)
 
-ec_ncdf2$(EXT): ec_ncdf.o slatec.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o
-	$(FC) -o ec_ncdf2$(EXT) slatec.o ec_ncdf.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o  $(LDFLAGS)
+ec_ncdf$(EXT): ec_ncdf.o slatec.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o
+	$(FC) -o ec_ncdf$(EXT) slatec.o ec_ncdf.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o  $(LDFLAGS)
 
 planfit$(EXT): planfit.o slatec.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o
 	$(FC) -o planfit$(EXT) slatec.o planfit.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o  $(LDFLAGS)
