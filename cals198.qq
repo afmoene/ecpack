@@ -1,0 +1,27 @@
+1	  QQType   ! Either of the ApXXXXXX numbers
+198       QQIdent  ! True series-number of the apparatus
+1   	  QQGain   ! Gain in this experiment
+0	  QQOffset ! Offset in this experiment
+0	  QQX	   ! Absolute x-position of the focal point
+0	  QQY	   ! Absolute y-position of the focal point
+2.91	  QQZ	   ! [m] Absolute z-position of the focal point
+0	  QQC0	   ! Zeroth order coefficient of calibration
+0	  QQC1	   ! First order coefficient of calibration
+0	  QQC2	   ! Second order coefficient of calibration
+0	  QQC3	   ! Third order coefficient of calibration
+0	  QQC4	   ! Fourth order coefficient of calibration
+0	  QQC5	   ! Fifth order coefficient of calibration
+0	  QQC6	   ! Sixth order coefficient of calibration
+257  	  QQPitch  ! [degree] Pitch angle of apparatus relative to north
+0	  QQYaw    ! Yaw angle
+0	  QQRoll   ! Roll angle
+0	  QQOrder  ! Order of the calibration model
+0	  QQFunc   ! Type of fitfunction
+0.1 	  QQPath   ! [m] Path length over which sensor integrates
+0	  QQTime   ! Time constant
+0         QQDelay  ! [ms] Delay of this apparatus
+0         QQExt1   ! Factor for conversion of sonic temperature signal
+1         QQExt2   ! Multiplication factor for sonic temperature due to path length
+0.1	  QQExt3   ! [m] distance w-u
+0.1  	  QQExt4   ! [m] path length sonic T
+0	  QQExt5   ! Additional calibration coefficient
