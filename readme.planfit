@@ -1,0 +1,189 @@
+$Id$
+C  ec_corr.f, part of ecpack
+C  
+C  Copyright (C) 
+C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
+C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
+C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C 
+C  This program is free software; you can redistribute it and/or
+C  modify it under the terms of the GNU General Public License
+C  as published by the Free Software Foundation; either version 2
+C  of the License, or (at your option) any later version.
+C 
+C  This program is distributed in the hope that it will be useful,
+C  but WITHOUT ANY WARRANTY; without even the implied warranty of
+C  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+C  GNU General Public License for more details.
+C 
+C  You should have received a copy of the GNU General Public License
+C  along with this program; if not, write to the Free Software
+C  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+C 
+
+
+
+Program : planfit
+Purpose : To determine planarfit rotation as well as residual angles
+          for individual runs
+Author  : Arjan van Dijk (presently at IMAU: A.vanDijk@phys.uu.nl)
+          Arnold Moene (afmoene@hp1.met.wau.nl)
+Date    : June 21, 2001
+
+Current version: 0.2  (under construction)
+
+Theory
+-------
+For the theory on the planar fit method see:
+- the paper by Arjan on surface fluxes
+- the original paper by Wilczak et al. (BLM 99 2001 , pp 127-150)
+In very short summary: the planar fit method is a way to rotate the
+axes of a sonic anemometer.  The main idea is that the sonic
+should be aligned with the mean wind. To this end the mean velocities
+of a number of averaging intervals (for instance a complete day) are gathered
+an a plane is calculated in which the mean wind streamlines are located.
+Then the angle between that plane and the sonic can be calculated.
+These angles could be used to rotate the system before calculating
+fluxes (rather than yaw, pitch and roll correction, which are based
+on the data of only one averaging interval and may therefore by more 
+contaminated by measurement errors).
+
+
+Link with ec_ncdf
+-----------------
+The program uses the same type of input files as ec_ncdf:
+- configuration file (ecconf or something like that)
+- interval file (ectimes or alike)
+- calibration files
+
+Some changes need to be made:
+- In the configuration file, an extra item needs to be given:
+     PlfName = 'foo.out'
+  where the foo.out can be any name, but will be the name of the file
+  to which residual angles are written per averaging interval
+- In the time interval file, an extra column needs to be added in which
+  a file name is given to which intermediate mean velocities can be written.
+  This name should be the same for all intervals that should be used together
+  to determine the planar fit
+
+What does the program do
+------------------------
+First the program makes a pass through the data and computes for each
+averaging interval (as defined in the interval file) the mean velocities.
+These mean velocities are written to the intermediate file which is also
+defined for each interval in the interval file.
+Then the program makes a second pass through the data. Now, for each 
+averaging interval the planar fit is calculated from the mean velocities
+that where stored in the intermediate file (of which the name was given
+in the interval file). Subsequently, the planar fit method is also
+applied to that data of the given interval only and the difference
+between the two rotations is given. This difference might be an
+indication of real physics: during the averaging interval indeed the flow
+has not been parallel to the longterm flow plane (due to large scale
+turbulence or some other phenomenon). If these deviations
+are real physics, they should occur simultaneously and with the
+same size, for all sonics that are operated at the same spot.
+
+
+Adjusted excerpt from readme of ec_ncdf
+----------------------------------------
+
+Usage
+-----
+The program is controlled by a large number of configuration files.
+
+The program is invoked as:
+   planfit < configfile
+where configfile is the name of the main configuration file of which 
+the structure is described below. Thus the configuration is read from 
+standard input.
+The hierarchy of configuration files is as follows (an arrow means that
+the file from which the arrow points contains the name of the file
+pointed to):
+
+main configuration file
+    |-> | interval file              -> | data file
+        | planarfit output results      | intermediate results file (tussen.txt)
+        | calibration files             | intermediate files for mean velocities
+
+Main configuration file
+-----------------------
+The main configuration file consits of two types of lines:
+- lines with an assigment 
+- comment lines (starting with //)
+
+Assignments are of the form 
+   VARNAME = VALUE
+where VARNAME is one of a prescribed list of tokens and VALUE is the value
+to be assigned (VALUE may be placed between quotes, but this is not necessary
+as long as no spcaes are part of VALUE). VARNAME is case-insensitive
+(i.e. VARNAME is equivalent to VarName), but VALUE may not be (on UNIX
+path names are cases sensitive and names of variables in a NetCDF file
+are also cases-sensitive).
+
+Valid tokens are:
+DatDir        directory for data files
+OutDir        directory for output files (flux files, intermediate result file)
+ParmDir       directory for parameter file (processing parameters, calibration
+              files, interval files)
+ParmName      name of processing parameter file
+PlfName       name of file for residual angles 
+InterName     name of interval file 
+SonName       name of sonic calibration file 
+CoupName      name of thermo couple calibration file
+HygName       name of hygrometer calibration file
+U_var         name of u-velocity variable in NetCDF file
+V_var         name of v-velocity variable in NetCDF file
+W_var         name of w-velocity variable in NetCDF file
+HourMin_var   name of hour/minute variable in NetCDF file (presently this
+              should be a la the Campbell hour/minutes: e.g. 1845 means
+	      18:45
+Doy_var       name of day of year variable in NetCDF file
+sec_var       name of seconds variable in NetCDF
+
+Interval file
+-------------
+The interval file describes for which times intervals fluxes have to be 
+computed from which data files etc.
+The format is:
+- One blank line (can be used for a heading, comments ...)
+- one line per interval, where the interval is described with the
+following columns:
+
+1. Starting day of year number
+2. Starting hour
+3. Starting minutes
+4. End day of year number 
+5. End hour
+6. End minutes
+7. Water vapour density (in kg/m3) from a slow sensor (used to correct for
+   drift of the fast hygrometer)
+8. Atmopheric pressure (in Pa)
+9. Name of data file
+10. Name of file for intermediate results
+11. Name of file for intermediate storage of mean velocities
+
+Note that the program determines the time interval such that the datapoint
+should have a time that corresponds a doy,hour,minute combination within
+the interval specified, including the start time, but excluding the end time
+This implies that e.g.
+the interval 
+  255 13 00 255 13 30 
+corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:00
+(this different from the behaviour before version has changed as of 
+
+Calibration files
+-----------------
+See readme for ec_ncdf.
+
+Data file
+---------
+See readme for ec_ncdf.
+
+Intermediate results file
+-------------------------
+Some (seemingly random) results from the planar fit method are
+written to the intermediate results file
+
+
+
