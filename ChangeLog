@@ -87,3 +87,6 @@ Revision 1.20: June 21, 2001
 Revision 1.21: June 25, 2001
           - fixed error in time interval search routine (now really discards
 	    samples with incorrect DOY and/or HOURMIN.
+Reivision 1.22: August 2, 2001
+          - Yaw and Pitch changed in numbers of variables of calibration
+	    constants (QQYaw and QQPitch) in parcnst.inc.

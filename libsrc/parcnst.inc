@@ -97,8 +97,8 @@ C
       PARAMETER(QQC4	 = 12) ! Fourth order coefficient of calibration
       PARAMETER(QQC5	 = 13) ! Fifth order coefficient of calibration
       PARAMETER(QQC6	 = 14) ! Sixth order coefficient of calibration
-      PARAMETER(QQPitch  = 15) ! Pitch angle of apparatus relative to north
-      PARAMETER(QQYaw	 = 16) ! Yaw angle
+      PARAMETER(QQYaw    = 15) ! Yaw angle of apparatus relative to north
+      PARAMETER(QQPitch	 = 16) ! Pitch angle
       PARAMETER(QQRoll	 = 17) ! Roll angle
       PARAMETER(QQOrder  = 18) ! Order of the calibration model
       PARAMETER(QQFunc	 = 19) ! Type of fitfunction
