@@ -490,7 +490,7 @@ C
      &                QPhys, dQPhys, Std, dStd, Struct,
      &                dStruct, R, dR, DiagFlag,
      &                OutMean, OutCov, OutPh, 
-     &                OutStd, OutStr, Outputs)
+     &                OutStd, OutNum, OutStr, Outputs)
 
       IF (DoPrint) CLOSE(OutFile)
 

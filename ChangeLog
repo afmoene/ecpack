@@ -326,6 +326,8 @@ Revision : 2.5.7: January 5, 2003 (Arnold.Moene@wur.nl)
       - added initializations of variables in EC_C_F01 and EC_C_Oxygen1
       - changed order of calculation in EC_Ph_Flux to make sure variables are
         initialized
+      - renamed physical variables VectWind and DirFrom to U_vect and U_dir
+        (but in configuration file old names still work)
 
 
 

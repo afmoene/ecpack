@@ -304,7 +304,7 @@ C...........................................................................
       include 'parcnst.inc'
       
       CHARACTER*(*) STRING
-      CHARACTER*100 DUMSTRING
+      CHARACTER*100 DUMSTRING, ALTDUMSTR
       LOGICAL       FLAGS(NMaxPhys), OneFound
       INTEGER       I
       INTEGER EC_T_STRLEN
@@ -316,9 +316,13 @@ C...........................................................................
       OneFound = .FALSE.
       DO I=1,NMaxPhys
 	 DUMSTRING = QPName(I)
+	 ALTDUMSTR = QPAltN(I)
 	 CALL EC_T_STRIPSTR(DUMSTRING)
+	 CALL EC_T_STRIPSTR(ALTDUMSTR)
          CALL EC_T_UPCASE(DUMSTRING)
-         IF (EC_T_EQSTRING(DUMSTRING, STRING)) THEN
+         CALL EC_T_UPCASE(ALTDUMSTR)
+         IF ((EC_T_EQSTRING(DUMSTRING, STRING)) .OR.
+     &       (EC_T_EQSTRING(ALTDUMSTR, STRING))) THEN
 	     Flags(I) = .TRUE.
 	     OneFound = .TRUE.
          ENDIF

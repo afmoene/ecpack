@@ -169,6 +169,24 @@ C
      &                   'FCO2cov ',
      &                   'FCO2Webb',
      &                   'SumFCO2 '/
+
+      CHARACTER*9 QPAltN(NMaxPhys) 
+      DATA QPAltN
+     &                  /'        ',
+     &                   '        ',
+     &                   '        ',
+     &                   'VectWind',
+     &                   'DirFrom ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        ',
+     &                   '        '/
      
       CHARACTER*10 UPName(NMaxPhys) 
       DATA UPName

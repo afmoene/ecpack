@@ -223,8 +223,11 @@ all   : select all defined variables (e.g. Out_Cov='w,all' gives all covariances
 Variable names to be used for Out_Phys (defined in
 parcnst.inc, not case-sensitive):
 
-VectWind : vector wind [m/s]     
-DirFrom  : wind direction [degr.]   
+RhoSon   : air density with sonic temperature[kg/m^3]  
+RhoTc    : air density with thermocouple [kg/m^3]  
+Wnorot   : vertical wind speed before any axis rotation [m/s]   
+U_Vect   : (was VectWind, still works)  vector wind [m/s]     
+U_dir    : (was DirFrom, still works)  wind direction [degr.]   
 HSonic   : sensible heat flux from sonic temperature [W/m^2]   
 HTc      : sensible heat flux from thermocouple[W/m^2]   
 LvEcov   : covariance LvE [W/m^2]   
@@ -235,9 +238,6 @@ Tau      : wall shear stress [N/m^2]
 FCO2cov  : covariance CO2 flux [kg/m^2/s]
 FCO2Webb : Webb term CO2 flux [kg/m^2/s]
 SumFCO2  : sum of covariance and Webb CO2 flux [kg/m^2/s]
-RhoSon   : air density with sonic temperature[kg/m^3]  
-RhoTc    : air density with thermocouple [kg/m^3]  
-Wnorot   : vertical wind speed before any axis rotation [m/s]   
 all      : gives all defined physical quantities
          
 
