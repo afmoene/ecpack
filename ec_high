@@ -1,0 +1,26 @@
+OutDir='s:\Johan\EC_Program\flux_high'
+DatDir='s:\Johan\NC_files\'
+Parmdir='s:\Johan\EC_Program\'
+// file names
+ParmName='spechigh.dat'
+FluxName='flux_hi.txt'
+InterName='ectimes.dat'
+//
+// calibrations
+SonName='calsknmih2.qq'
+CoupName='caltcoph.qq'
+HygName='calh1353.qq'
+//
+// netcdf variable names
+U_var='u_hi'
+V_var='v_hi'
+W_var='w_hi'
+Tsonic_var = 'Tsonic_hi'
+Humidity_var='Krypton_hi'
+Tcouple_var = 'Tcouple_hi'
+Tref_var = 'Tref'
+Hourmin_var='hour_min'
+Doy_var='doy'
+sec_var='sec'
+//
+// diag_var='diagnostic'

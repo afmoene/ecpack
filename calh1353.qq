@@ -1,0 +1,27 @@
+3	  QQType   ! Either of the ApXXXXXX numbers
+1353	  QQIdent  ! True series-number of the apparatus
+1	  QQGain   ! Gain in this experiment
+0	  QQOffset ! Offset in this experiment
+0.04	  QQX	   ! [m] Absolute x-position of the focal point
+0	  QQY	   ! Absolute y-position of the focal point
+4.7       QQZ      ! [m] Absolute z-position of the focal point
+37.964  QQC0	   ! Zeroth order coefficient of calibration
+-4.8381 QQC1	   ! First order coefficient of calibration
+0       QQC2	   ! Second order coefficient of calibration
+0	  QQC3	   ! Third order coefficient of calibration
+0	  QQC4	   ! Fourth order coefficient of calibration
+0	  QQC5	   ! Fifth order coefficient of calibration
+0	  QQC6	   ! Sixth order coefficient of calibration
+0	  QQPitch  ! [degree] Pitch angle of apparatus relative to north
+0	  QQYaw    ! Yaw angle
+0	  QQRoll   ! Roll angle
+2	  QQOrder  ! Order of the calibration model
+2	  QQFunc   ! Type of fitfunction: logpoly
+0.014	  QQPath   ! [m] Path length over which sensor integrates
+0	  QQTime   ! [s] Time constant
+0	  QQDelay  ! [ms] Delay of this channel
+0	  QQExt1   !
+0	  QQExt2   !
+0	  QQExt3   !
+0	  QQExt4   !
+0	  QQExt5   !

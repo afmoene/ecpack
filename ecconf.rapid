@@ -1,0 +1,28 @@
+//
+// directories
+OutDir='d:\data\rapid'
+DatDir='d:\data\rapid'
+Parmdir='d:\data\rapid'
+// file names
+ParmName='speclow.dat'
+FluxName='fluxes'
+InterName='ectimes.dat'
+//
+// calibrations
+SonName='cals296l.qq'
+CoupName='caltcopl.qq'
+HygName='calh1334.qq'
+//
+// netcdf variable names
+U_var=u_lo
+V_var='v_lo'
+W_var='w_lo'
+Tsonic_var = 'Tsonic_lo'
+Humidity_var='Krypton_lo'
+Tcouple_var = 'Tcouple_lo'
+// Tref_var = 'T_ref'
+Hourmin_var='hour_min'
+Doy_var='doy'
+sec_var='sec'
+//
+// diag_var='diagnostic'

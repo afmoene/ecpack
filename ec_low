@@ -1,0 +1,28 @@
+//
+// directories
+OutDir='s:\Johan\EC_Program\flux_low'
+DatDir='s:\Johan\NC_files\'
+Parmdir='s:\Johan\EC_Program\'
+// file names
+ParmName='speclow.dat'
+FluxName='flux_lo.txt'
+InterName='ectimes.dat'
+//
+// calibrations
+SonName='calswaul2.qq'
+CoupName='caltcopl.qq'
+HygName='call1334.qq'
+//
+// netcdf variable names
+U_var='u_lo'
+V_var='v_lo'
+W_var='w_lo'
+Tsonic_var = 'Tsonic_lo'
+Humidity_var='Krypton_lo'
+Tcouple_var = 'Tcouple_lo'
+Tref_var = 'Tref'
+Hourmin_var='hour_min'
+Doy_var='doy'
+sec_var='sec'
+//
+// diag_var='diagnostic'

@@ -1,0 +1,24 @@
+//
+// directories
+OutDir='s:\arnold\vanosc~1\CSAT_LiCor'
+DatDir='s:\arnold\vanosc~1\CSAT_LiCor'
+Parmdir='s:\arnold\vanosc~1\CSAT_LiCor'
+// file names
+ParmName='spec_H2O.dat'
+FluxName='CSAT_LiCor_H2O.flx'
+InterName='ectimes_LiCor.dat'
+//
+// calibrations
+SonName='cals258.qq'
+HygName='Li_H2O.qq'
+//
+// netcdf variable names
+U_var='u'
+V_var='v'
+W_var='w'
+Tsonic_var = 'Tsonic'
+Humidity_var='H2O'
+Hourmin_var='hour_min'
+Doy_var='doy'
+//
+diag_var='diagnostic'

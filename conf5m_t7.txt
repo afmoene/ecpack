@@ -1,0 +1,27 @@
+//
+// directories
+OutDir='s:\arnold\vanosc~1\EC_Prueger'
+DatDir='s:\arnold\vanosc~1\EC_Prueger'
+Parmdir='s:\arnold\vanosc~1\EC_Prueger'
+// file names
+ParmName='spec5m.txt'
+FluxName='flux5m_t7.txt'
+InterName='ectimes5m_t7.txt'
+//
+// calibrations
+SonName='cals_t8.qq'
+CoupName='caltcop.qq'
+HygName='calh_t8.qq'
+//
+// netcdf variable names
+U_var='u'
+V_var='v'
+W_var='w'
+// Tsonic_var = 'Tsonic'
+Humidity_var='Krypton'
+Tcouple_var = 'Tcouple'
+// Tref_var = 'T_ref'
+Hourmin_var='hour_min'
+Doy_var='doy'
+sec_var='sec'
+diag_var='diagnostic'

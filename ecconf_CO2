@@ -1,0 +1,27 @@
+//
+// directories
+OutDir='d:\data\HEBEX\ecpack\CSAT_LiCor'
+DatDir='d:\data\HEBEX\ncfiles\CSAT_LiCor'
+Parmdir='d:\data\HEBEX\ecpack\CSAT_LiCor'
+// file names
+ParmName='spec_CO2.dat'
+FluxName='foo.flx'
+InterName='ectimes_LiCor.dat'
+PlfName='planang.dat'
+PlfIntName='plfint.dat'
+//
+// calibrations
+SonName='cals258.qq'
+HygName='Li_CO2.qq'
+//
+// netcdf variable names
+U_var='u'
+V_var='v'
+W_var='w'
+Tsonic_var = 'Tsonic'
+//gebruik  voor CO2 het Humidity kanaal in EC programma (web uitzetten!!!)
+Humidity_var='CO2'
+Hourmin_var='hour_min'
+Doy_var='doy'
+//
+// diag_var='diagnostic'
