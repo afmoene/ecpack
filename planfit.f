@@ -767,7 +767,16 @@ C
      &                  ERROR(U), ERROR(V), ERROR(W))
             Sample(W) = WDum
          ENDIF
-   
+C
+C If this is one of Kaijo Denki's, turn it an 90 degrees
+C
+         IF ((CalSonic(QQType) .EQ. ApKaijoTR90). .OR.
+     &       (CalSonic(QQType) .EQ. ApKaijoTR61)) THEN
+           Hook = PI*90.D0/180.D0
+           Sample(U) =  COS(Hook)*UDum + SIN(Hook)*VDum
+           Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
+         ENDIF
+       
 C This is the construction when we have a diagnostic variable
          IF (Have_Uncal(Diagnost)) THEN
             IF ((Error(U).OR.Error(V).OR.Error(W)).OR.

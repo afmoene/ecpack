@@ -62,7 +62,7 @@ C FUNCTION
 C     Infinitisimal number 
 C SOURCE
       REAL*8 Epsilon			    ! Infinitesimal number
-      PARAMETER(Epsilon = 1.D-20)	    ! [1]
+      PARAMETER(Epsilon = 1.D-30)	    ! [1]
 C     ***
 
 C     ****d* physcnst.inc/Pi
@@ -259,7 +259,7 @@ C FUNCTION
 C     Lower limit for acceptance of temperature sample
 C SOURCE
       REAL*8 MinT
-      PARAMETER(MinT	= -20.D0) ! [Celsius]
+      PARAMETER(MinT	= 253.D0) ! [Kelvin]
 C     ***
 
 c     ****d* physcnst.inc/MaxT
@@ -269,7 +269,7 @@ C FUNCTION
 C     Upper limit for acceptance of temperature sample
 C SOURCE
       REAL*8 MaxT
-      PARAMETER(MaxT	=  60.D0) ! [Celsius]
+      PARAMETER(MaxT	=  333.D0) ! [Kelvin]
 C     ***
 
 c     ****d* physcnst.inc/MinRhov
@@ -290,4 +290,24 @@ C     Upper limit for acceptance of water vapour sample
 C SOURCE
       REAL*8 MaxRhoV
       PARAMETER(MaxRhoV =   1.D0) ! [kg m^{-3}]
+C     *** 
+
+c     ****d* physcnst.inc/MinRhoCO2
+C NAME
+C     MinRhoCO2
+C FUNCTION
+C     Lower limit for acceptance of CO2 sample
+C SOURCE
+      REAL*8 MinRhoCO2
+      PARAMETER(MinRhoCO2 =   0.D0) ! [kg m^{-3}]
+C     ***
+
+c     ****d* physcnst.inc/MaxRhoCO2
+C NAME
+C     MaxRhoCO2
+C FUNCTION
+C     Upper limit for acceptance of CO2 sample
+C SOURCE
+      REAL*8 MaxRhoCO2
+      PARAMETER(MaxRhoCO2 =   1.D0) ! [kg m^{-3}]
 C     *** 

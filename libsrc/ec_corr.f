@@ -156,14 +156,15 @@ C     ***
 
 
       SUBROUTINE EC_C_F01(Mean,Cov,NMax,NSize,WhichTemp,
-     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,WXT)
+     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,
+     &  CalCO2,WXT)
 C     ****f* ec_corr.f/EC_C_F01
 C NAME
 C     EC_C_F01
 C SYNOPSIS
 C     CALL EC_C_F01(Mean, Cov, NMax, NSize, WhichTemp,
 C                   NSta, NEnd, NInt, NS, TauD, TauV, CalSonic,
-C                   CalTherm, CalHyg, WXT)
+C                   CalTherm, CalHyg, CalCO2,WXT)
 C FUNCTION
 C     Calculate frequency response corrections for sensor response, path
 C     length averaging, sensor separation, signal processing and dampening
@@ -208,10 +209,17 @@ C              thermometer.
 C     CalHyg : [REAL*8(NQQ)]  
 C              Calibration specification array of
 C              hygrometer.
+C     CalCO2 : [REAL*8(NQQ)]  
+C              Calibration specification array of
+C              CO2 sensor.
 C
 C OUTPUT
 C     WXT    : [REAL*8(NMax,NMax)]  
 C              Correction factors for covariances.
+C BUGS
+C     In the present configuration, only correction factors are computed
+C     for the variances and for the covariances involving the vertical
+C     velocity. Other covariances get a factor of 1.
 C AUTHOR
 C     Arjan van Dijk
 C
@@ -228,6 +236,7 @@ C	(unpublished)
 C HISTORY
 C       28-05-2001: added info on which temperature should be used
 C                   in corrections (Sonic or thermocouple)
+C       19-09-2002: added CalCO2 in interface
 C     $Name$ 
 C     $Id$
 C USES
@@ -240,12 +249,14 @@ C     ***
       INCLUDE 'parcnst.inc'
 
       INTEGER I1,I2,I3,I4,I,J,NINT,NMax,NSize, WhichTemp
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
-     &	GAIND,GAINV,GAINT1,GAINT2,GAINUV,GAINW,GAINQ1,
+      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CALCO2(NQQ),
+     &	GAIND,GAINV,GAINT1,GAINT2,GAINUV,GAINW,GAINQ1, GAINCO21,
      &	TRANA,TRANQ1,TRANUV,TRANW,TRANT1,TRANT2,TRANWT1,TRANWT2,TRANWQ1,
      &	TRANWUV,ATT,AWW,AUU,AWT,AUW,BTT,BWW,BUU,BWT,BUW,TAUD,TAUV,TAUT,
+     &  TRANCO21, TRANWCO21,
      &	XI,ZETA,CW,CU,WT,UW,TT,UU,WW,F,NS,C,NSTA,NEND,N,LF,X,ZL,
-     &	INTTS(15),G(15),WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),UStar,
+     &	INTTS(NNMax,NNMAX),G(NNMAX,NNMAX),
+     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),UStar,
      &	Lower,Upper,TolCov(NMax,NMax)
 C
 C-- Declarations of constants ----------------------------------------
@@ -256,8 +267,10 @@ C
       C    = 1.D0/(LOG(10.D0)*LF/3.D0)	    ! Constant of integration, eq.1
       LF   = 10.D0**LF
       N    = 10.D0**NSTA
-      DO I=1,15
-	INTTS(I)=0.D0
+      DO I=1,NNMAX
+         DO J=1,NNMAX
+            INTTS(I,J)=0.D0
+         ENDDO
       ENDDO
 
       Ustar = ((Cov(U,W))**2.D0)**0.25D0
@@ -401,25 +414,67 @@ C
 	  X=N/Mean(U)*CalHyg(QQX)
 	  IF (X.GT.0.01D0) TRANWQ1=EXP(-9.9D0*X**1.5D0)
 C
+C-- CO2 sensor !!
+C-- CO2 sensor frequency response gain, eq. 2 ------------
+C
+	  GAINCO21=1.D0	       !CO2 sensor gain neglectible
+C
+C-- lymann-alpha spatial averaging transfer function, eq.7 ------------
+C
+	  TRANCO21=1.D0
+	  X=2.D0*PI*N/Mean(U)*CalCO2(QQPath)
+	  IF (X.GT.0.02D0) THEN
+	     TRANCO21=(3.D0+EXP(-X)-4.D0*(1.D0-EXP(-X))/X)/X
+          ENDIF
+C
+C-- W-Q lateral separation transfer function, eq. 11 -------------
+C
+	  TRANWCO21=1.D0
+	  X=N/Mean(U)*CalCO2(QQX)
+	  IF (X.GT.0.01D0) TRANWCO21=EXP(-9.9D0*X**1.5D0)
+C
 C-- Composite transfer functions, eq. 28 -------------------------
 C
-	  DO I=1,15
-	    G(I) = 0.D0
+	  DO I=1,NNMAX
+	     DO J=1,NNMAX
+	        G(I,J) = 0.D0
+             ENDDO
 	  ENDDO
 
-	  G(1)	= TRANUV / GAINUV		    !UU
-	  G(2)	= TRANUV / GAINUV		    !VV
-	  G(3)	= TRANW  / GAINW		    !WW
-	  G(4)	= TRANT1 / GAINT1		    !TTth
-	  G(5)	= TRANT2 / GAINT2		    !TTso
-	  G(6)	= TRANQ1 / GAINQ1		    !QQkr
-	  G(9)	= TRANWUV * SQRT (G(3) * G(1))	    !WU
-	  G(10) = TRANWUV * SQRT (G(3) * G(2))	    !WV
-	  G(11) = TRANWT1 * SQRT (G(3) * G(4))	    !WTth
-	  G(12) = TRANWT2 * SQRT (G(3) * G(5))	    !WTso
-	  G(13) = TRANWQ1 * SQRT (G(3) * G(6))	    !WQkr
-	  DO I=1,15
-	    G(I) = G(I)*TRANA/GAINV*GAIND
+          G(U,U)= TRANUV / GAINUV    !UU
+          G(V,V)= TRANUV / GAINUV    !VV
+          G(W,W)= TRANW  / GAINW    !WW
+          G(TCouple, Tcouple) = TRANT1 / GAINT1    !TTth
+          G(TSonic,TSonic)= TRANT2 / GAINT2    !TTso
+          G(SpecHum,SpecHum)= TRANQ1 / GAINQ1    !QQ
+          G(Humidity,Humidity)= TRANQ1 / GAINQ1    !rhov rhov
+          G(CO2,CO2)= TRANCO21 / GAINCO21    !CO2
+          G(SpecCO2,SpecCO2)= TRANCO21 / GAINCO21    !CO2
+          G(U,W) = TRANWUV * SQRT (G(U,U) * G(W,W))    !WU
+          G(W,U) = G(U,W)
+          G(V,W) = TRANWUV * SQRT (G(V,V) * G(W,W))    !WV
+          G(W,V) = G(V,W)
+          G(W,TCouple) = TRANWT1 * 
+     &                   SQRT (G(W,W) * G(TCouple,TCouple))	    !WTth
+          G(TCouple,W) = G(W,TCouple)
+          G(W,TSonic) = TRANWT2 * SQRT (G(W,W) * G(TSonic,TSonic))    !WTso
+          G(TSonic,W) = G(W,TSonic)
+          G(W,Humidity) = TRANWQ1 * 
+     &                   SQRT (G(W,W) * G(Humidity,Humidity))	    !WQkr
+          G(Humidity,W) = G(W,Humidity)
+          G(W,SpecHum) = TRANWQ1 * 
+     &                   SQRT (G(W,W) * G(Humidity,Humidity))	    !WQkr
+          G(SpecHum,W) = G(W,SpecHum)
+          G(W,CO2) = TRANWCO21 * 
+     &                   SQRT (G(W,W) * G(CO2,CO2))	    !WCO2
+          G(CO2,W) = G(W,CO2)
+          G(W,SpecCO2) = TRANWCO21 * 
+     &                   SQRT (G(W,W) * G(CO2,CO2))	    ! WqCO2
+          G(SpecCO2,W) = G(W,SpecCO2)
+	  DO I=1,NNMax
+	     DO J=1,NNMax
+	        G(I,J) = G(I,J)*TRANA/GAINV*GAIND
+             ENDDO
 	  ENDDO
 
 	  F=N/Mean(U)*CalSonic(QQZ)
@@ -452,17 +507,29 @@ C
 C
 C-- Integral of co-spectral transfer function * atm. co-spectrum -
 C
-	  INTTS(1)  = INTTS(1)	+ I4*G(1) *UU	   !UU
-	  INTTS(2)  = INTTS(2)	+ I4*G(2) *UU	   !VV
-	  INTTS(3)  = INTTS(3)	+ I4*G(3) *WW	   !WW
-	  INTTS(4)  = INTTS(4)	+ I4*G(4) *TT	   !TTth
-	  INTTS(5)  = INTTS(5)	+ I4*G(5) *TT	   !TTso
-	  INTTS(6)  = INTTS(6)	+ I4*G(6) *TT	   !QQkr
-	  INTTS(9)  = INTTS(9)	+ I4*G(9) *UW	   !WU
-	  INTTS(10) = INTTS(10) + I4*G(10)*UW	   !WV
-	  INTTS(11) = INTTS(11) + I4*G(11)*WT	   !WTth
-	  INTTS(12) = INTTS(12) + I4*G(12)*WT	   !WTso
-	  INTTS(13) = INTTS(13) + I4*G(13)*WT	   !WQkr
+          INTTS(U,U)  = INTTS(U,U) + I4*G(U,U) *UU  !UU
+          INTTS(V,V)  = INTTS(V,V) + I4*G(V,V) *UU  !VV
+          INTTS(W,W)  = INTTS(W,W) + I4*G(W,W) *WW  !WW
+          INTTS(TCouple,TCouple)  = 
+     &           INTTS(TCouple,TCouple) + I4*G(TCouple,TCouple)*TT !TTth
+          INTTS(TSonic,TSonic)  = 
+     &           INTTS(TSonic,TSonic) + I4*G(TSonic,TSonic) *TT ! TTso
+          INTTS(Humidity,Humidity)  =
+     &           INTTS(Humidity,Humidity) + I4*G(Humidity,Humidity) *TT  !QQkr
+          INTTS(CO2,CO2)  =
+     &           INTTS(CO2,CO2) + I4*G(CO2,CO2) *TT  !CO2 CO2
+          INTTS(U,W)  = INTTS(U,W) + I4*G(U,W) *UW   !WU
+          INTTS(W,U) = INTTS(U,W)
+          INTTS(V,W)  = INTTS(V,W) + I4*G(V,W)*UW   !WV
+          INTTS(W,V) = INTTS(V,W)
+          INTTS(W,TCouple) = INTTS(W,TCouple) + I4*G(W,TCouple)*WT   !WTth
+          INTTS(TCouple,W) = INTTS(W,TCouple)
+          INTTS(W,TSonic) = INTTS(W,TSonic) + I4*G(W,TSonic)*WT   !WTso
+          INTTS(TSonic,W) = INTTS(W,TSonic)
+          INTTS(W,Humidity) = INTTS(W,Humidity) + I4*G(W,Humidity)*WT  !WQkr
+          INTTS(Humidity,W) = INTTS(W,Humidity)
+          INTTS(W,CO2) = INTTS(W,CO2) + I4*G(W,CO2)*WT  !WQCO2
+          INTTS(CO2,W) = INTTS(W,CO2)
 
 C
 C-- Increase frequency by interval width -------------------------
@@ -484,32 +551,39 @@ C
       ENDDO
 
 999   CONTINUE
-      WXT(U,U) = C/INTTS(1)		   !UU
-      WXT(V,V) = C/INTTS(2)		   !VV
+      WXT(U,U) = C/INTTS(U,U)		   !UU
+      WXT(V,V) = C/INTTS(V,V)		   !VV
       WXT(U,V) = WXT(U,U)		   !UV
       WXT(V,U) = WXT(U,V)		   !VU
-      WXT(W,W) = C/INTTS(3)		   !WW
-      WXT(W,U) = C/INTTS(9)		   !WU
+      WXT(W,W) = C/INTTS(W,W)		   !WW
+      WXT(W,U) = C/INTTS(U,W)		   !WU
       WXT(U,W) = WXT(W,U)
-      WXT(W,V) = C/INTTS(10)		   !WV
+      WXT(W,V) = C/INTTS(V,W)		   !WV
       WXT(V,W) = WXT(W,V)
 
-      WXT(W,TSonic) = C/INTTS(12)	 !WTso
+      WXT(W,TSonic) = C/INTTS(W,TSonic)	 !WTso
       WXT(TSonic,W) = WXT(W,TSonic)
-      WXT(TSonic,TSonic) = C/INTTS(5)	 !TTso
+      WXT(TSonic,TSonic) = C/INTTS(TSonic,TSonic)  !TTso
 
-      WXT(W,TCouple) = C/INTTS(11)	  !WTth
+      WXT(W,TCouple) = C/INTTS(W,TCouple)	  !WTth
       WXT(TCouple,W) = WXT(W,TCouple)
-      WXT(TCouple,TCouple) = C/INTTS(4)    !TTth
+      WXT(TCouple,TCouple) = C/INTTS(TCouple,TCouple)    !TTth
 
-      WXT(W,Humidity) = C/INTTS(13)	  !WQly
+      WXT(W,Humidity) = C/INTTS(W,Humidity)	  !WQly
       WXT(Humidity,W) = WXT(W,Humidity)
-      WXT(Humidity,Humidity) = C/INTTS(6)  !QQly
+      WXT(Humidity,Humidity) = C/INTTS(Humidity,Humidity)  !QQly
 
       WXT(W,SpecHum)	   = WXT(W,Humidity)
       WXT(SpecHum,W)	   = WXT(Humidity,W)
       WXT(SpecHum,SpecHum) = WXT(Humidity,Humidity)
 
+      WXT(W,CO2) = C/INTTS(W,CO2)	  ! W rhoCO2
+      WXT(CO2,W) = WXT(W,CO2)
+      WXT(CO2,CO2) = C/INTTS(CO2,CO2)  ! rhoCO2^2
+
+      WXT(W,SpecCO2)	   = WXT(W,CO2)
+      WXT(SpecCO2,W)	   = WXT(CO2,W)
+      WXT(SpecCO2,SpecCO2) = WXT(CO2,CO2)
       RETURN
       END
 
@@ -617,7 +691,6 @@ C
      &	DoPrint,
      &	Mean,NMax,N,TolMean,
      &	Cov,TolCov,
-     &	QName,UName,
      &  BadTc,
      &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
      &	DoYaw,PYaw,DirYaw,
@@ -625,7 +698,8 @@ C
      &	DoRoll,PRoll,RollLim,DirRoll,
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
+     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
+     &  CalCo2, FrCor,
      &	DoWebb,PWebb,P, Have_Uncal)
 C     ****f* ec_corr.f/EC_C_Main
 C NAME
@@ -633,14 +707,15 @@ C     EC_C_MAIN
 C SYNOPSIS
 C     CALL EC_C_Main(OutF,
 C     	DoPrint, Mean,NMax,N,TolMean, Cov,TolCov,
-C     	QName,UName, BadTc,
+C     	BadTc,
 C     	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
 C     	DoYaw,PYaw,DirYaw,
 C     	DoPitch,PPitch,PitchLim,DirPitch,
 C     	DoRoll,PRoll,RollLim,DirRoll,: 
 C     	DoSonic,PSonic,SonFactr,
 C     	DoO2,PO2,O2Factor,
-C     	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
+C     	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
+C       CalCo2,FrCor,
 C     	DoWebb,PWebb,P, Have_Uncal)
 C FUNCTION
 C     Integrated correction routine applying ALL (user-selected)
@@ -667,10 +742,6 @@ C     Cov     : [REAL*8(NMax,NMax)] (in/out)
 C               Covariances of all calibrated signals
 C     TolCov  : [REAL*8(NMax,NMax)] (in/out)
 C               Tolerances in covariances of all calibrated signals
-C     QName   : [CHARACTER*6(NMax)]
-C               Names of calibrated signals
-C     UName   : [CHARACTER*9(NMax)]
-C               Unit of calibrated signal (in text)
 C     BadTc   : [LOGICAL]
 C               Is thermocouple data unreliable ?
 C     DoTilt  : [LOGICAL]
@@ -737,6 +808,8 @@ C     CalTherm: [REAL*8(NQQ)]
 C               Calibration info for thermocouple
 C     CalHyg  : [REAL*8(NQQ)]
 C               Calibration info for hygrometer
+C     CalCO2  : [REAL*8(NQQ)]
+C               Calibration info for CO2 sensor
 C     FrCor   : [REAL*8(NMax,NMax)] (out)
 C               Correction factors for covariances for frequency
 C               response
@@ -815,9 +888,7 @@ C     ***
      &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
      &	SonFactr(NMax),PreYaw,PrePitch,PreRoll,TSonFact,
      &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
+      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
 C
 C
 C Only print intermediate results if desired
@@ -856,7 +927,7 @@ C
 	  WRITE(OutF,*) 'Averages of data after fixed ',
      &	  'tilt-correction: '
 	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
@@ -877,7 +948,7 @@ C
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After yaw-correction (Mean(V) -> 0) : '
 	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
@@ -899,7 +970,7 @@ C
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After pitch-correction (Mean(W) -> 0) : '
 	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
@@ -921,23 +992,13 @@ C
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After roll-correction (Cov(V,W) -> 0) : '
 	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
 C Reset the coveriances for which no data available
 C
-      DO I=1,NMax
-          DO J=1,NMax
-	     IF ((.NOT. HAVE_UNCAL(I)) .OR.
-     +           (.NOT. HAVE_UNCAL(J))) THEN
-                COV(I,J) = DUMMY
-	     ENDIF
-	  ENDDO
-      ENDDO
-
-C
-C
+      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 C
 C Correct sonic temperature and all covariances with sonic temperature
 C for humidity. This is half the Schotanus-correction. Side-wind
@@ -971,7 +1032,7 @@ C
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After H2O-correction for sonic : '
 	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
@@ -997,7 +1058,7 @@ C
 	    WRITE(OutF,*)
 	    WRITE(OutF,*) 'After oxygen-correction for hygrometer : '
 	    WRITE(OutF,*)
-	    CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	    CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	  ENDIF
         ELSE
 	    WRITE(*,*) 'ERROR: can not perform O2 correction without ',
@@ -1022,18 +1083,19 @@ C
       IF (DoFreq) THEN
         IF (WhichTemp .GT. 0) THEN
 	  CALL EC_C_F01(Mean,Cov,NMax,N,WhichTemp,
-     &         NSta,NEnd,NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor)
+     &         NSta,NEnd,NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,
+     &         CALCO2, FrCor)
 	  CALL EC_C_F02(FrCor,NMax,N,LLimit,ULimit,Cov,TolCov)
 	  CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
 	  IF (QFreq) THEN
-	    CALL EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
+	    CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
 	    WRITE(OutF,*)
 	    WRITE(OutF,*) 'After frequency-correction : '
 	    WRITE(OutF,*) 'Factors accepted between ',LLimit,
      &	                  ' and ',ULimit
 	    WRITE(OutF,*)
-	    CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	    CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	  ENDIF
 
         ELSE
@@ -1057,7 +1119,7 @@ C
 	     WRITE(OutF,*)
 	     WRITE(OutF,*) 'After addition of Webb-term : '
 	     WRITE(OutF,*)
-	     CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,
+	     CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,
      &              NMax,N)
 	   ENDIF
          ELSE
@@ -1106,9 +1168,10 @@ C     Factor    : [REAL*8(NMax)]
 C                 Correction factor for the covariance with each of
 C                 calibrated signals
 C NOTES
-C     Currently this routine knows about two types of hygrometer:
+C     Currently this routine knows about three types of hygrometer:
 C        ApCampKrypton : the KH20 krypton hygrometer from Campbell Sci.
 C        ApMierijLyma  : the Lymann-alpha hygrometer from Mierij Meteo
+C        ApLiCor7500   : the LiCor IR  hygrometer (not sensitive to O2)
 C
 C SEE ALSO
 C     EC_C_Oxygen2
@@ -1141,6 +1204,9 @@ C     ***
       ELSE IF (HygType .EQ. ApMierijLyma) THEN
           GenKo = KoLa
           GenKw = KwLa
+      ELSE IF (HygType .EQ. ApLiCor7500) THEN
+          GenKo = 0.0D0
+	  GenKw = 1.0D0
       ENDIF
       OXC = FracO2*MO2*P*GenKo/(RGas*MeanT**2.D0*GenKw)
 
@@ -1430,7 +1496,7 @@ C OUTPUT
 C     Cov      : [REAL*8(NMax,NMax)] (in/out)
 C                covariance matrix of calibrated signals
 C SEE ALSO
-C     EC_C_Schot2
+C     EC_C_Schot1
 C HISTORY
 C     $Name$ 
 C     $Id$

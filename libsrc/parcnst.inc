@@ -47,10 +47,20 @@ C If Ecconffile is set to 5, input is read from standard input
 C else a file named 'ecconf' is opened
       PARAMETER(ECConfFile = 5)
 C
+C Constants used for maximum array dimensions
+C
+      INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder
+
+      PARAMETER(MMMax = 100000) ! Maximum number of samples allowed
+      PARAMETER(NNNMax	  = 15) ! Maximum number of uncalibrated quantities in 1 sample
+      PARAMETER(NNMax	  =  10) ! Maximum number of calibrated quantities in 1 sample
+      PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]
+      PARAMETER(NMaxOrder =  6) ! Maximum order of calibration polynomial
+C
 C These constants are used to indicate quantities
 C
       INTEGER U,V,W,TSonic,Tcouple,Humidity,SpecHum,TTime,
-     &        Doy, HourMin, Sec, Diagnost, Tref
+     &        Doy, HourMin, Sec, Diagnost, Tref, CO2, SpecCO2
 
       PARAMETER(U	 = 1)
       PARAMETER(V	 = 2)
@@ -59,22 +69,50 @@ C
       PARAMETER(Tcouple  = 5)
       PARAMETER(Humidity = 6)
       PARAMETER(SpecHum  = 7)
-      PARAMETER(TTime	 = 8)
-      PARAMETER(Doy   	 = 9)
-      PARAMETER(HourMin	 = 10)
-      PARAMETER(Sec   	 = 11)
-      PARAMETER(Diagnost = 12)
-      PARAMETER(Tref     = 13)
-C
-C Constants used for maximum array dimensions
-C
-      INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder
+      PARAMETER(CO2      = 8)
+      PARAMETER(SpecCO2  = 9)
+      PARAMETER(TTime	 = 10)
+      PARAMETER(Doy   	 = 11)
+      PARAMETER(HourMin	 = 12)
+      PARAMETER(Sec   	 = 13)
+      PARAMETER(Diagnost = 14)
+      PARAMETER(Tref     = 15)
 
-      PARAMETER(MMMax = 100000) ! Maximum number of samples allowed
-      PARAMETER(NNNMax	  = 13) ! Maximum number of uncalibrated quantities in 1 sample
-      PARAMETER(NNMax	  =  8) ! Maximum number of calibrated quantities in 1 sample
-      PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]
-      PARAMETER(NMaxOrder =  6) ! Maximum order of calibration polynomial
+
+      CHARACTER*6 QName(NNNMax) 
+     &                  /'     u',
+     &                   '     v',
+     &                   '     w',
+     &                   'T(Son)',
+     &                   'T(Cpl)',
+     &                   '  rhoV',
+     &                   '     q',
+     &                   'RhoCO2',
+     &                   '  qCO2',
+     &                   '  time',
+     &                   '   doy',
+     &                   'hr min',
+     &                   '   sec',
+     &                   ' diagn',
+     &                   '  Tref'/
+
+      CHARACTER*9 UName(NNNMax) 
+     &                  /'    [m/s]',
+     &                   '    [m/s]',
+     &                   '    [m/s]',
+     &                   '      [K]',
+     &                   '      [K]',
+     &                   '[kg ^m-3]',
+     &                   '  [kg/kg]',
+     &                   '[kg m^-3]',
+     &                   '  [kg/kg]',
+     &                   '      [-]',
+     &                   '      [-]',
+     &                   '      [-]',
+     &                   '      [-]',
+     &                   '      [-]',
+     &                   '      [K]'/
+      
 C
 C
 C Constants used for function types
@@ -88,7 +126,8 @@ C Constants to characterize types of measurement apparatus, all starting
 C with ''Ap''
 C
       INTEGER ApGillSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro,
-     &        ApSon3Dcal, ApMierijLyma
+     &        ApSon3Dcal, ApMierijLyma, ApLiCor7500, ApKaijoTR90,
+     &        ApKaijoTR61
 
       PARAMETER(ApGillSonic   = 1)
       PARAMETER(ApTCouple     = 2)
@@ -97,11 +136,14 @@ C
       PARAMETER(ApPsychro     = 5)
       PARAMETER(ApSon3Dcal    = 6)
       PARAMETER(ApMierijLyma  = 7)
+      PARAMETER(ApLiCor7500   = 8)
+      PARAMETER(ApKaijoTR90   = 9)
+      PARAMETER(ApKaijoTR61   = 10)
 
 C
 C Number of calibration data for each apparatus type
 C
-      INTEGER  ApNQQ(7) /27,27,27,27,27,33,27/
+      INTEGER  ApNQQ(8) /27,27,27,27,27,33,27,27/
 C
 C Constants to indicate calibration data, all starting with QQ
 C

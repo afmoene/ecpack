@@ -55,14 +55,14 @@ C
 
       SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau)
+     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb)
 C     ****f* ec_phys.f/EC_Ph_Flux
 C NAME
 C     EC_Ph_Flux
 C SYNOPSIS
 C     CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
 C                     HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-C                     UStar,dUStar,Tau,dTau)
+C                     UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb)
 C FUNCTION
 C     Construct estimates for surface fluxes from mean values and covariances
 C INPUTS
@@ -105,8 +105,16 @@ C     Tau    : [REAL*8]
 C              surface shear stress (N/m^2)
 C     dTau   : [REAL*8]
 C              tolerance in surface shear stress (N/m^2)
+C     FCO2   : [REAL*8]
+C              w CO2-covariance CO2 flux (kg/m^2 s)
+C     dFCO2  : [REAL*8]
+C              tolerance in w CO2-covariance CO2 flux (kg/m^2 s)
+C     FCO2Webb: [REAL*8]
+C              Webb term for CO2  flux (kg/m^2 s)
+C     dLvEWebb: [REAL*8]
+C              tolerance in Webb term for CO2 flux (kg/m^2 s)
 C AUTHOR
-C     Arjan van Dijk
+C     Arjan van Dijk, Arnold Moene
 C HISTORY
 C     $Name$ 
 C     $Id$
@@ -123,9 +131,11 @@ C     ***
 
       LOGICAL BadTc
       INTEGER NMax
-      REAL*8 EC_Ph_RhoWet,Mean(NMax),Cov(NMax,NMax),HSonic,dHSonic,HTc,dHTc,
+      REAL*8 EC_Ph_RhoWet,Mean(NMax),Cov(NMax,NMax),HSonic,dHSonic,HTc,
+     &  dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
-     &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar
+     &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar,
+     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb
 C
 C Sensible heat flux [W m^{-2}]
 C
@@ -184,6 +194,18 @@ C
       ENDIF
       dTau = ABS(TolCov(W,U)/Cov(W,U))*Tau
 
+C
+C CO2 flux [kg m^{-2} s^{-1}]
+C
+      FCO2 = Cov(W,CO2)
+      dFCO2 = TolCov(W,CO2)
+      FCO2Webb = Mean(W)*Mean(CO2)
+C Frac1 is set to zero, assuming no error in W (else error in 
+C Webb term would be enormous
+      Frac1 = 0.D0
+      Frac2 = ABS(TolMean(CO2)/Mean(CO2))
+
+      dFCO2Webb = FCO2Webb*(Frac1**2.D0+Frac2**2.D0)**0.5D0
       RETURN
       END
 
@@ -196,7 +218,7 @@ C     ****f* ec_phys.f/EC_Ph_Q
 C NAME
 C     EC_Ph_Q
 C SYNOPSIS
-C     Spec_hum = EC_Ph_RhoDry(RhoV,T,P)
+C     Spec_hum = EC_Ph_Q(RhoV,T,P)
 C FUNCTION
 C     Calculate the specific humidity of wet air 
 C INPUTS
@@ -222,6 +244,44 @@ C     ***
 
       RhoWet = EC_Ph_RhoWet(RhoV,T,P)
       EC_Ph_Q = RhoV/RhoWet 		 ! [kg/kg]
+
+      RETURN
+      END
+
+
+      REAL*8 FUNCTION EC_Ph_QCO2(RHOCO2,RHOV,T,P)
+C     ****f* ec_phys.f/EC_Ph_QCO2
+C NAME
+C     EC_Ph_QCO2
+C SYNOPSIS
+C     Spec_CO2 = EC_Ph_QCO2(RHOCO2,RHOV,T,P)
+C FUNCTION
+C     Calculate the specific CO2 concentration of wet air 
+C INPUTS
+C      RhoCO2 : [REAL*8]
+C             Density of CO2 (kg/m^3)
+C      Rhov : [REAL*8]
+C             Density of air (kg/m^3)
+C      T    : [REAL*8]
+C             Temperature (K)
+C      P    : [REAL*8]
+C             Pressure (Pa)
+C RETURN VALUE
+C      return value : [REAL*8]
+C             Specific CO2 (kg/kg)
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_Ph_RhoWet
+C     ***
+      IMPLICIT NONE
+      REAL*8 RhoCO2, RhoV,T,P,EC_Ph_RhoWet,RhoWet
+
+      RhoWet = EC_Ph_RhoWet(RhoV,T,P)
+      EC_Ph_QCO2 = RhoCO2/RhoWet ! [kg/kg]
 
       RETURN
       END
@@ -383,7 +443,14 @@ C     Arjan van Dijk
 C HISTORY
 C     $Name$ 
 C     $Id$
+C     Revision:  20-9-2002: added implicit none and inclusion of
+C                           parcnst.inc (needed for constants U,V, and W)
+C USES
+C     parcnst.inc
 C     ***
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+
       INTEGER NMax,N,i,M,MMax,XIndex,YIndex,NOk,NSeparate,
      &  CIndep(NMax,NMax)
       LOGICAL Flag(NMax,MMax),ok
@@ -415,7 +482,7 @@ C delay distance. The rounded off value for R is returned to the calling
 C rourine.
 C
       dR = UMean/Freq
-      NSeparate = NINT(R/dR)
+      NSeparate = MAX(1,NINT(R/dR))
       R = R*NSeparate/(R/dR)
 C
 C Calculate structure parameter

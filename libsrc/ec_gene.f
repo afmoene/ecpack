@@ -43,10 +43,9 @@ C ########################################################################
 
       SUBROUTINE EC_G_Main(OutF,DoPrint,
      &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
-     &	Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
+     &	Psychro,Freq,CalSonic,CalTherm,CalHyg, CalCO2, P,
      &	Calibr,
      &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &	QName,UName,
      &	DoDetren,PDetrend,
      &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
      &	DoYaw,PYaw,DirYaw,
@@ -60,17 +59,17 @@ C ########################################################################
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,
-     &  MEANW, TOLMEANW, HAVE_UNCAL)
+     & FCO2, dFCO2, FCO2Webb, dFCO2Webb,
+     &  MEANW, TOLMEANW, HAVE_UNCAL, FirstDay)
 C     ****f* ec_gene.f/EC_G_Main
 C NAME
 C     EC_G_Main
 C SYNOPSIS
 C     CALL EC_G_Main(OutF,DoPrint,
 C        RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
-C        Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
+C        Psychro,Freq,CalSonic,CalTherm,CalHyg, CalCO2, P,
 C        Calibr,
 C        Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-C        QName,UName,
 C        DoDetren,PDetrend,
 C        DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
 C        DoYaw,PYaw,DirYaw,
@@ -84,7 +83,8 @@ C        Mean,TolMean,Cov,TolCov,
 C        HSonic,dHSonic,HTc,dHTc,
 C        LvE,dLvE,LvEWebb,dLvEWebb,
 C        UStar,dUStar,Tau,dTau,
-C        MEANW, TOLMEANW, HAVE_UNCAL)
+C        FCO2, dFCO2, FCO2Webb, dFCO2Webb,
+C        MEANW, TOLMEANW, HAVE_UNCAL, FirstDay)
 C FUNCTION
 C     Integrated routine which:
 C     - Calibrates raw samples
@@ -129,6 +129,8 @@ C     CalTherm  : [REAL*8(NNQ)]
 C                 array with calibration data of thermocouple
 C     CalHyg    : [REAL*8(NNQ)]
 C                 array with calibration data of hygrometer
+C     CalCO2    : [REAL*8(NNQ)]
+C                 array with calibration data of CO2 sensor
 C     P         : [REAL*8]
 C                 atmospheric pressure (Pa)
 C     Calibr    : [SUBROUTINE]
@@ -187,6 +189,9 @@ C                 Print intermediate results for Webb correction ?
 C     HAVE_UNCAL: [LOGICAL(NMax)]
 C                 switch whether data for uncalibrated data
 C                 are available for each channel
+C     FirstDay  : [INTEGER]
+C                 day number of first sample in array (needed for
+C                 detrending data that pass midnight
 C OUTPUTS
 C     Sample    : [REAL*8(NMax, MMax)]
 C                 array with calibrated samples
@@ -209,12 +214,6 @@ C                 has been done (for each quanity)
 C     BadTc     : [LOGICAL]
 C                 if more than half of the thermocouple samples are 
 C                 wrong, flag thermocouple as bad
-C     QName     : [CHARACTER*6(NMax)]
-C                 names of quantities (is this logical, to
-C                 fill this array here?)
-C     UName     : [CHARACTER*9(NMax)]
-C                 units of quantities (is this logical, to
-C                 fill this array here?)
 C     DirYaw    : [REAL*8]
 C                 yaw angle (degrees)
 C     DirPitch  : [REAL*8]
@@ -262,6 +261,14 @@ C     Tau       : [REAL*8]
 C                 surface shear stress (N/m^2)
 C     dTau      : [REAL*8]
 C                 tolerance in surface shear stress (N/m^2)
+C     FCO2      : [REAL*8]
+C                 CO2 flux from covariance (kg/m^2 s)
+C     dFCO2     : [REAL*8]
+C                 tolerance in CO2 flux from covariance (kg/m^2 s)
+C     FCO2Webb  : [REAL*8]
+C                 Webb contribution to CO2 flux (kg/m^2 s)
+C     dFCO2Webb : [REAL*8]
+C                 tolerance in Webb contribution to CO2 flux (kg/m^2 s)
 C     MEANW     : [REAL*8]
 C                 mean vertical velocity before tilt correction (m/s)
 C     TOLMEANW  : [REAL*8]
@@ -274,6 +281,8 @@ C     Revision: 03-04-2001: get mean W and its tolerance before tilt
 C                           correction; export via interface (AM)
 C     Revision: 28-05-2001: added passing of info on whether uncalibrated
 C                           data are available (AM)
+C     Revision: 18-09-2002: removed calcomm.inc and added FirstDay
+C                           to interface (to pass it to calibration routine
 C     $Name$
 C     $Id$
 C USES
@@ -291,15 +300,13 @@ C     EC_M_Detren
 C     EC_Ph_Q
 C     EC_Ph_Flux
 C     parcnst.inc
-C     calcomm.inc
 C     ***
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
-      INCLUDE 'calcomm.inc'
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
      &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
-     & WhichTemp
+     & WhichTemp, FirstDay
       LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
      &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,Flag(NMAx,MMax),DoDetren,
@@ -313,12 +320,11 @@ C     ***
      &	SonFactr(NMax),CorMean(NNMax),PreYaw,PrePitch,PreRoll,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
+     &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3),
+     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb
+      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
       REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
       LOGICAL HAVE_CAL(NMax)
       LOGICAL HAVE_UNCAL(NMax)
 C
@@ -327,20 +333,24 @@ C
       DO I=1,NMax
          HAVE_CAL(i) = .FALSE.
       ENDDO
-      IF (HAVE_SONCAL) THEN
-         HAVE_CAL(U) = .TRUE.
-         HAVE_CAL(V) = .TRUE.
-         HAVE_CAL(W) = .TRUE.
+      DO I=U,W
+         IF (HAVE_UNCAL(I)) HAVE_CAL(I) = .TRUE.
+      ENDDO
+      IF (HAVE_UNCAL(TSonic)) THEN
          HAVE_CAL(TSonic) = .TRUE.
 	 WhichTemp = TSonic
       ENDIF
-      IF (HAVE_HYGCAL) THEN
+      IF (HAVE_UNCAL(Humidity)) THEN
          HAVE_CAL(Humidity) = .TRUE.
          HAVE_CAL(SpecHum) = .TRUE.
       ENDIF
-      IF (HAVE_TCCAL) THEN
+      IF (HAVE_UNCAL(TCouple)) THEN
          HAVE_CAL(TCouple) = .TRUE.
 	 WhichTemp = TCouple
+      ENDIF
+      IF (HAVE_UNCAL(CO2)) THEN
+         HAVE_CAL(CO2) = .TRUE.
+         HAVE_CAL(SpecCO2) = .TRUE.
       ENDIF
 
 C
@@ -353,26 +363,6 @@ C
          DoSonic = .FALSE.
       ENDIF
 C
-C Names of quantities and units
-C
-      QName(U	    ) = '     U'
-      QName(V	    ) = '     V'
-      QName(W	    ) = '     W'
-      QName(TSonic  ) = 'T(son)'
-      QName(TCouple ) = 'T(cpl)'
-      QName(Humidity) = '  RhoV'
-      QName(SpecHum ) = '     q'
-      QName(TTime   ) = '  Time'
-
-      UName(U	    ) = '[m/s]'
-      UName(V	    ) = '[m/s]'
-      UName(W	    ) = '[m/s]'
-      UName(TSonic  ) = '[K]'
-      UName(TCouple ) = '[K]'
-      UName(Humidity) = '[kg m^-3]'
-      UName(SpecHum ) = '[kg/kg]'
-      UName(TTime   ) = '[s]'
-C
 C
 C Calibrate the raw samples for the first time ignoring drift in apparatus.
 C
@@ -380,24 +370,33 @@ C
       DO i=1,N
        	CorMean(i) = 0.D0
       ENDDO
-
-      NTcOut = 0
-      BadTc = (.FALSE.)
+C
+C First try it with thermocouple
+C
       Have_Uncal(TTime) = .TRUE.
-      IF (Have_Uncal(Humidity)) Have_Uncal(SpecHum) = .TRUE.
-
-      DO i=1,M
-         CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
-     &    Have_Uncal)
-        IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
-      ENDDO
-      BadTc = (NTcOut.GE.(M/2))
+      IF (HAVE_UNCAL(TCouple)) THEN
+         NTcOut = 0
+         BadTc = (.FALSE.)
+         DO i=1,M
+            CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+     &               CalSonic,CalTherm,CalHyg,CalCO2,
+     &               BadTc,Sample(1,i),N,Flag(1,i),
+     &               Have_Uncal, FirstDay)
+            IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
+         ENDDO
+         BadTc = (NTcOut.GE.(M/2))
+      ELSE
+         BadTc = .TRUE.
+      ENDIF
+C
+C If thermocouple too bad, or absent
+C
       IF (BadTc) THEN
         DO i=1,M
           CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
-     &      Have_Uncal)
+     &      CalSonic,CalTherm,CalHyg,CalCO2,
+     &      BadTc,Sample(1,i),N,Flag(1,i),
+     &      Have_Uncal, FirstDay)
         ENDDO
       ENDIF
 C
@@ -436,8 +435,9 @@ C
 
 	DO i=1,M
 	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	    CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
-     &      Have_Uncal)
+     &	    CalSonic,CalTherm,CalHyg,CalCO2,
+     &      BadTc,Sample(1,i),N,Flag(1,i),
+     &      Have_Uncal, FirstDay)
 	ENDDO
       ENDIF
 
@@ -476,7 +476,7 @@ C
 C Print number of independent contributions
 C
       IF (DoPrint.AND.PIndep) THEN
-	CALL EC_G_ShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+	CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
       ENDIF
 C
 C Print averages of raw, calibrated data
@@ -485,7 +485,7 @@ C
 	WRITE(OutF,*)
 	WRITE(OutF,*) 'For raw calibrated data : '
 	WRITE(OutF,*)
-	CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
       ENDIF
 C
 C
@@ -521,10 +521,10 @@ C
      &                Maxs(I)
           ENDDO
 	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
 	  ENDIF
 
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
@@ -535,11 +535,11 @@ C
 C
 C Correct mean values and covariances for all thinkable effects
 C
+
       CALL EC_C_Main(OutF,
      &	DoPrint,
      &	Mean,NMax,N,TolMean,
      &	Cov,TolCov,
-     &	QName,UName,
      &  BadTc,
      &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
      &	DoYaw,PYaw,DirYaw,
@@ -547,7 +547,8 @@ C
      &	DoRoll,PRoll,RollLim,DirRoll,
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
+     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
+     &  CalCO2, FrCor,
      &	DoWebb,PWebb,P,Have_Uncal)
       CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 C
@@ -621,10 +622,10 @@ C
 	  WRITE(OutF,*)
 
 	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
 	  ENDIF
 
-	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
 
         DumTilt  = (.FALSE.)
@@ -638,7 +639,6 @@ C
      &	  DoPrint,
      &	  Mean,NMax,N,TolMean,
      &	  Cov,TolCov,
-     &	  QName,UName,
      &    BadTc,
      &	  DumTilt,PTilt,PreYaw,PrePitch,PreRoll,
      &	  DumYaw,PYaw,DirYaw,
@@ -647,7 +647,7 @@ C
      &	  DoSonic,PSonic,SonFactr,
      &	  DoO2,PO2,O2Factor,
      &	  DoFreq,PFreq,LLimit,ULimit,Freq,
-     &    CalSonic,CalTherm,CalHyg,FrCor,
+     &    CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
      &	  DoWebb,PWebb,P, Have_Uncal)
         CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
       ENDIF
@@ -659,7 +659,7 @@ C
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau)
+     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb)
 
       CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
@@ -687,6 +687,12 @@ C
 	  dLvE = DUMMY
 	  LveWebb = DUMMY
 	  dLvEWebb = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(CO2)) THEN
+	  FCO2 = DUMMY
+	  dFCO2 = DUMMY
+	  FCO2Webb = DUMMY
+	  dFCO2Webb = DUMMY
       ENDIF
 
       RETURN
@@ -802,13 +808,13 @@ C
 
 
 
-      SUBROUTINE EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,
+      SUBROUTINE EC_G_Show(OutF,Mean,TolMean,Cov,
      &	TolCov,NMax,N)
 C    ****f* ec_gene.f/EC_G_Show
 C NAME
 C     EC_G_Show
 C SYNOPSIS
-C     CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,
+C     CALL EC_G_Show(OutF,Mean,TolMean,Cov,
 C     	             TolCov,NMax,N)
 C FUNCTION
 C     Prints mean values and (co-)variances plus respective 
@@ -816,10 +822,6 @@ C     tolerances
 C INPUTS
 C     OUTF    : [INTEGER]
 C               unit number of file
-C     QName   : [CHARACTER*6(NMax)]
-C               names of quantities
-C     UName   : [CHARACTER*9(NMax)]
-C               names of units
 C     Mean    : [REAL*8(NMax)]
 C               means of quantities
 C     TolMean : [REAL*8(NMax)]
@@ -848,8 +850,6 @@ C     ***
       INTEGER i,j,N,NMax,OutF
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),Dum(NNMax)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
 
       WRITE(OutF,*)
       WRITE(OutF,*) 'Mean quantities : '
@@ -858,7 +858,7 @@ C     ***
       DO i=1,N
 	WRITE(OutF,10) QName(i),Mean(i),TolMean(i),UName(i)
       ENDDO
- 10   FORMAT(a6,' = ',F20.10,' +/- ',F20.10,1X,a9)
+ 10   FORMAT(a6,' = ',F20.10,' +/- ',F20.10,1X,a10,1X)
 
       WRITE(OutF,*)
       WRITE(OutF,*) 'Covariances : '
@@ -907,19 +907,17 @@ C     ***
 
 
 
-      SUBROUTINE EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
+      SUBROUTINE EC_G_ShwFrq(OutF,FrCor,NMax,N)
 C     ****f* ec_gene.f/EC_G_ShwFrq
 C NAME
 C     EC_G_ShwFrq
 C SYNOPSIS
-C     CALL EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
+C     CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
 C FUNCTION
 C     Prints correction factors associated with frequency response
 C INPUTS
 C     OUTF    : [INTEGER]
 C               unit number of file
-C     QName   : [CHARACTER*6(NMax)]
-C               names of quantities
 C     FrCor   : [REAL*8(NMax,NMax)]
 C               freqency response correction factors for
 C               each combination of quantities
@@ -939,7 +937,6 @@ C     ***
       INCLUDE 'parcnst.inc'
       INTEGER i,j,N,NMax,OutF
       REAL*8 FrCor(NMax,NMax)
-      CHARACTER*6 QName(NMax)
 
       WRITE(OutF,*)
       WRITE(OutF,*) 'Frequency respons correction factors'
@@ -961,21 +958,19 @@ C     ***
 
 
 
-      SUBROUTINE EC_G_ShwInd(OutF,QName,MIndep,
+      SUBROUTINE EC_G_ShwInd(OutF,MIndep,
      &	CIndep,NMax,N,M,Freq)
 C     ****f* ec_gene.f/EC_G_ShwInd
 C NAME
 C     EC_G_ShwInd
 C SYNOPSIS
-C     CALL EC_G_ShwInd(OutF,QName,MIndep,
+C     CALL EC_G_ShwInd(OutF,MIndep,
 C                      CIndep,NMax,N,M,Freq)
 C FUNCTION
 C     Prints number of independent observations
 C INPUTS
 C     OUTF    : [INTEGER]
 C               unit number of file
-C     QName   : [CHARACTER*6(NMax)]
-C               names of quantities
 C     MIndep  : [INTEGER(NMax)]
 C               number of independent samples for
 C               means
@@ -999,9 +994,10 @@ C USES
 C     parcnst.inc
 C     ***
       IMPLICIT NONE
+
+      INCLUDE 'parcnst.inc'
       INTEGER i,j,N,NMax,OutF,MIndep(NMax),CIndep(NMax,NMax),M
       REAL*8 Freq
-      CHARACTER*6 QName(NMax)
 
       WRITE(OutF,*)
       WRITE(OutF,*) ' Number of independent samples: '

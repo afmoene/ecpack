@@ -25,7 +25,8 @@ C
      &           DatDir, OutDir,  ParmDir,
      &           FluxName, ParmName, InterName,
      &           PlfName,
-     &           SonName, CoupName, HygName, NCVarName,
+     &           SonName, CoupName, HygName, CO2Name,
+     &           NCVarName,
      &           NCNameLen)
 
       INCLUDE 'physcnst.inc'
@@ -34,7 +35,8 @@ C
       
       INTEGER         ConfUnit, NCNameLen
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
-     &                InterName, SonName, CoupName, HygName, PlfName
+     &                InterName, SonName, CoupName, HygName, 
+     &                CO2Name, PlfName
       CHARACTER*(*)   NCVarName(NCNameLen)
 
       INTEGER         IOCODE, KINDEX
@@ -56,6 +58,7 @@ C
       CALL EC_T_CLEARSTR(SonName)
       CALL EC_T_CLEARSTR(CoupName)
       CALL EC_T_CLEARSTR(HygName)
+      CALL EC_T_CLEARSTR(CO2Name)
       CALL EC_T_CLEARSTR(PlfName)
       
       IOCODE = 0
@@ -101,6 +104,8 @@ C     See which token this is
                CoupName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'HYGNAME') .GT. 0) THEN
                HygName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+            ELSE IF (INDEX(TOKLINE, 'CO2NAME') .GT. 0) THEN
+               CO2Name = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'PLFNAME') .GT. 0) THEN
                PlfName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
 C NetCdF variable names
@@ -116,6 +121,8 @@ C NetCdF variable names
                NCVarName(TCouple) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'HUMIDITY_VAR') .GT. 0) THEN
                NCVarName(HUMIDITY) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+            ELSE IF (INDEX(TOKLINE, 'CO2_VAR') .GT. 0) THEN
+               NCVarName(CO2) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'DOY_VAR') .GT. 0) THEN
                NCVarName(Doy) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'HOURMIN_VAR') .GT. 0) THEN
@@ -186,6 +193,14 @@ C NetCdF variable names
          CALL EC_T_STRCAT(DUMSTRING,HygName)
       ENDIF
       HygName = DUMSTRING
+
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(CO2Name) .GT. 0) THEN
+         DUMSTRING = ParmDir
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,CO2Name)
+      ENDIF
+      CO2Name = DUMSTRING
 
 
  5000 FORMAT(A)
@@ -475,7 +490,7 @@ C
       END
 
       SUBROUTINE EC_F_ReadNCDF(InName,StartTime,StopTime,
-     &  Delay,Gain,Offset,x,NMax,N,MMax,M, NCVarName,
+     &  Delay,Gain,Offset,x,NMax,MMax,M, NCVarName,
      &  Have_Uncal)
 C
 C Read raw data from NETCDF-file
@@ -483,7 +498,6 @@ C
 C input : InName : CHARACTER*40 : Name of the datafile (ASCII)
 C	  NMax : INTEGER : Maximum number of quantities in this array
 C	  MMax : INTEGER : Maximum number of samples in this array
-C	  N : INTEGER : Number of quantities in file
 C
 C output : x(NMax,MMax) : REAL*8 Raw data array.
 C			  First index counts quantities; second counter
@@ -494,7 +508,10 @@ C Revision 28-05-2001: added info on whether uncalibrated data are
 C                      available for a given variable (mainly important
 C                      for sonic and/or Couple temperature since that
 C                      is used for various corrections)
+C Revision 19-9-2002:  removed N (number of quantities in file) from
+C                      interface
 C
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
       INCLUDE 'netcdf.inc'
@@ -513,7 +530,7 @@ C
      &        NATTS,      ! # of attributes
      &        DIMLEN      ! length of a dimension   
       INTEGER I, J, K
-      INTEGER NMax,N,MMax,M,Delay(NMax),HMStart,HMStop,Counter
+      INTEGER NMax,MMax,M,Delay(NMax),HMStart,HMStop,Counter
       REAL Dum
       LOGICAL ok,Ready,Started,NotStopped
       REAL*8 x(NMax,MMax),Gain(NMax),Offset(NMax),StartTime(3),
@@ -542,7 +559,6 @@ C
       STATUS = NF_INQ(NCID, NDIMS, NVARS, NGATTS, UNLIMITED)
       IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
 
-      N = NVars
       M = 0
 C
 C Inquire about variables
