@@ -4,9 +4,9 @@ Program : ec_ncdf
 Purpose : to process eddy-correlation data stored in NetCDF files
 Author  : Arjan van Dijk (presently at IMAU: A.vanDijk@phys.uu.nl)
           Arnold Moene (afmoene@hp1.met.wau.nl)
-Date    : November 1, 2001
+Date    : february 13, 2002
 
-Current version: 2.00  (see Changelog for revisions)
+Current version: 2.01  (see Changelog for revisions)
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
