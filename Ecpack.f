@@ -16,7 +16,7 @@ C     EC Special Interest Group of Wag-UR-METAIR Wageningen and KNMI
 C
 C
 C
-C Version of release    : 1.05
+C Version of release    : 1.06
 C (note that version numbers of subroutines are not maintained)
 C Date	   : September 26 2000
 C Author		: Arjan van Dijk
@@ -3666,25 +3666,27 @@ C...........................................................................
       VCorr = VDum
       WCorr = WDum
 
-      DO WHILE (((ABS(AziNew-AziOld) .GT. 1./60) .OR.
-     &           (ABS(ElevNew-ElevOld) .GT. 1./60)) .AND.
+      IF (ABS(AziNew) .LE. 0.698) THEN
+         DO WHILE (((ABS(AziNew-AziOld) .GT. 1./60) .OR.
+     &              (ABS(ElevNew-ElevOld) .GT. 1./60)) .AND.
      &           (NITER .LT. ITMAX))
-         UCorr =  UDum/(UC1*(1 - 0.5*
-     &           ((AziNew + (ElevNew/0.5236D0)*UC2)*
-     &            (1 - UC3*Abs(ElevNew/0.5236D0))
-     &           )**2        )
-     &                  )
-         VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
-         WCorr =  WDum/(WC1*(1 - 0.5*(AziNew*WC2)**2))
-
-         AziOld = AziNew
-         ElevOld = ElevNew
-
-         AziNew = ATAN(Vcorr/UCorr)
-         ElevNew = ATAN(Wcorr/SQRT(UCorr**2 + VCorr**2))
-
-         NITER = NITER + 1
-      ENDDO
+            UCorr =  UDum/(UC1*(1 - 0.5*
+     &              ((AziNew + (ElevNew/0.5236D0)*UC2)*
+     &              (1 - UC3*Abs(ElevNew/0.5236D0))
+     &              )**2        )
+     &                     )
+            VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
+            WCorr =  WDum/(WC1*(1 - 0.5*(AziNew*WC2)**2))
+   
+            AziOld = AziNew
+            ElevOld = ElevNew
+   
+            AziNew = ATAN(Vcorr/UCorr)
+            ElevNew = ATAN(Wcorr/SQRT(UCorr**2 + VCorr**2))
+   
+            NITER = NITER + 1
+         ENDDO
+      ENDIF
       
       IF ((NITER .EQ. ITMAX) .OR. (ABS(AziNew) .GT. 0.698)) THEN
          UError = .TRUE.

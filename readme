@@ -10,7 +10,9 @@ Revision: September 18, 2000: changed in physconst.inc the sensitivity
 	  Arjan van Dijk's value (0.0038 m^3 g^-1 cm^-1)
 Revision: September 26, 2000: added support for wind tunnel calibrated
           sonic anemometer (see description at end of this readme)
-Current version: 1.06
+Revision: October 18, 2000: in calibration of wind tunnel calibrated
+          sonic: check for valid wind direction before interation
+Current version: 1.07
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html

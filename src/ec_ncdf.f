@@ -12,7 +12,10 @@ C                                of sonic (for EBEX data)
 C             October 11 2000:   check for validity of reference temperature
 C                                for thermocouple and for validity of
 C                                iteration used in thermocouple calibration
-C Current version: 1.06
+C             October 18, 2000:  in calibration of wind tunnel calibrated
+C                                sonic: check for valid wind direction 
+C                                before interation (change in ec_pack)
+C Current version: 1.07
 C...........................................................................
       PROGRAM EC_NCDF
 
