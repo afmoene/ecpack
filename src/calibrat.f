@@ -163,7 +163,7 @@ C correction online (see CSAT  manual, page 1, section 2, 3rd sentence).
      &         ((3./4.)*(Sample(U)**2 + Sample(V)**2) +
      &          (1./2.)* Sample(W)**2
      &         )/GammaR
-           ELSE
+           ELSE IF (CalSonic(QQType) .NE. ApCSATsonic) THEN
              Sample(TSonic) = Sample(TSonic)
      &         + (Sample(U)**2 + Sample(V)**2)/GammaR
            ENDIF
