@@ -359,3 +359,4 @@ Revision : 2.5.11: May 10, 2004 (Arnold.Moene@wur.nl)
         closing this file did not give problems under windows, but did under
         Linux: for the next interval the routine didn't start at the beginning
         of the planar fit angles file
+      - forgot to update version.inc for 2.5.10: now set to 2.5.11
