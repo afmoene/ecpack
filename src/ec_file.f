@@ -40,23 +40,23 @@ C
       INTEGER         IOCODE, KINDEX
       CHARACTER*255   LINE, TOKLINE, VALLINE, DUMSTRING
       CHARACTER       ONECHAR
-      INTEGER         EC_G_STRLEN
-      EXTERNAL        EC_G_STRLEN
+      INTEGER         EC_T_STRLEN
+      EXTERNAL        EC_T_STRLEN
 
 
       DO 1000, I=1,NCNameLen
-         CALL EC_G_CLEARSTR(NCVarName(I))
+         CALL EC_T_CLEARSTR(NCVarName(I))
  1000 CONTINUE
-      CALL EC_G_CLEARSTR(DatDir)
-      CALL EC_G_CLEARSTR(OutDir)
-      CALL EC_G_CLEARSTR(ParmDir)
-      CALL EC_G_CLEARSTR(FluxName)
-      CALL EC_G_CLEARSTR(ParmName)
-      CALL EC_G_CLEARSTR(InterName)
-      CALL EC_G_CLEARSTR(SonName)
-      CALL EC_G_CLEARSTR(CoupName)
-      CALL EC_G_CLEARSTR(HygName)
-      CALL EC_G_CLEARSTR(PlfName)
+      CALL EC_T_CLEARSTR(DatDir)
+      CALL EC_T_CLEARSTR(OutDir)
+      CALL EC_T_CLEARSTR(ParmDir)
+      CALL EC_T_CLEARSTR(FluxName)
+      CALL EC_T_CLEARSTR(ParmName)
+      CALL EC_T_CLEARSTR(InterName)
+      CALL EC_T_CLEARSTR(SonName)
+      CALL EC_T_CLEARSTR(CoupName)
+      CALL EC_T_CLEARSTR(HygName)
+      CALL EC_T_CLEARSTR(PlfName)
       
       IOCODE = 0
       DO 4000, WHILE (IOCODE .EQ. 0)
@@ -66,7 +66,7 @@ C     Read one line from configuration file
             WRITE(*,*) 'ERROR in reading of configuration file'
             STOP
          ENDIF
-         CALL EC_G_STRIPSTR(LINE)
+         CALL EC_T_STRIPSTR(LINE)
 C     Check for comment (should start with //
          KINDEX = INDEX(LINE, '//')
          IF (KINDEX .EQ. 0) THEN
@@ -79,9 +79,9 @@ C     Find the equality sign
 c     Split into token and value
             WRITE(TOKLINE,*) LINE(:KINDEX-1)
             WRITE(VALLINE,*) LINE(KINDEX+1:)
-            CALL EC_G_STRIPSTR(TOKLINE)
-            CALL EC_G_STRIPSTR(VALLINE)
-            CALL EC_G_UPCASE(TOKLINE)
+            CALL EC_T_STRIPSTR(TOKLINE)
+            CALL EC_T_STRIPSTR(VALLINE)
+            CALL EC_T_UPCASE(TOKLINE)
 C     See which token this is
             IF (INDEX(TOKLINE, 'DATDIR') .GT. 0) THEN
                DatDir = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
@@ -131,59 +131,59 @@ C NetCdF variable names
  4000 CONTINUE
  9000 CONTINUE
 
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(PlfName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(PlfName) .GT. 0) THEN
          DUMSTRING = OutDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,PlfName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,PlfName)
       ENDIF
       PlfName = DUMSTRING
 
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(FluxName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(FluxName) .GT. 0) THEN
          DUMSTRING = OutDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,FluxName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,FluxName)
       ENDIF
       FluxName = DUMSTRING
 
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(ParmName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(ParmName) .GT. 0) THEN
          DUMSTRING = ParmDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,ParmName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,ParmName)
       ENDIF
       ParmName = DUMSTRING
 
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(InterName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(InterName) .GT. 0) THEN
          DUMSTRING = ParmDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,InterName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,InterName)
       ENDIF
       InterName = DUMSTRING
       
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(SonName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(SonName) .GT. 0) THEN
          DUMSTRING = ParmDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,SonName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,SonName)
       ENDIF
       SonName = DUMSTRING
       
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(CoupName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
          DUMSTRING = ParmDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,CoupName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,CoupName)
       ENDIF
       CoupName = DUMSTRING
       
-      CALL EC_G_CLEARSTR(DUMSTRING)
-      IF (EC_G_STRLEN(HygName) .GT. 0) THEN
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(HygName) .GT. 0) THEN
          DUMSTRING = ParmDir
-         CALL EC_G_STRCAT(DUMSTRING,'/')
-         CALL EC_G_STRCAT(DUMSTRING,HygName)
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,HygName)
       ENDIF
       HygName = DUMSTRING
 
@@ -391,12 +391,12 @@ C
       CHARACTER*(*) InName
       REAL*8 CalSpec(NQQ)
       INTEGER i, IOCODE
-      INTEGER EC_G_STRLEN
-      EXTERNAL EC_G_STRLEN
+      INTEGER EC_T_STRLEN
+      EXTERNAL EC_T_STRLEN
 
       OPEN(TempFile,FILE=InName,STATUS='OLD', IOSTAT=IOCODE)
       IF (IOCODE .NE. 0) THEN
-         WRITE(*,5100) InName(:EC_G_STRLEN(InName))
+         WRITE(*,5100) InName(:EC_T_STRLEN(InName))
          STOP
       ENDIF
  5100 FORMAT ('ERROR: can not open calibration file ', (A))
@@ -415,7 +415,7 @@ C Now read the correct number of specs
  9000 CONTINUE
       IF ((I-1) .NE. ApNQQ(CalSpec(1))) THEN
          WRITE(*,*) 'ERROR: did not find correct number of specs in ',
-     &               InName(:EC_G_STRLEN(InName))
+     &               InName(:EC_T_STRLEN(InName))
       ENDIF
 
       CLOSE(TempFile)
@@ -526,8 +526,8 @@ C
      +              STARTIND, STOPIND, NSAMPLE
       LOGICAL       HAS_SCALE(NMax), HAS_OFFSET(NMax)
       REAL*8        NC_SCALE(NMax), NC_OFFSET(NMax)
-      INTEGER       EC_G_STRLEN
-      EXTERNAL      EC_G_STRLEN
+      INTEGER       EC_T_STRLEN
+      EXTERNAL      EC_T_STRLEN
 
       HMStart = 100*ANINT(StartTime(2))+ANINT(StartTime(3))
       HMStop  = 100*ANINT(StopTime( 2))+ANINT(StopTime( 3))
@@ -587,9 +587,9 @@ C Check whether all variables found
 C
       OK = (.TRUE.)
       DO I=1,NMax
-        IF ((EC_G_STRLEN(NCVarName(I)) .GT. 0) .AND.
+        IF ((EC_T_STRLEN(NCVarName(I)) .GT. 0) .AND.
      &      (NCVarID(I) .EQ. 0)) THEN
-            WRITE(*,5110) NCVarName(I)(:EC_G_STRLEN(NCVarName(I)))
+            WRITE(*,5110) NCVarName(I)(:EC_T_STRLEN(NCVarName(I)))
             OK = (.FALSE.)
         ENDIF
       ENDDO
@@ -607,7 +607,7 @@ C
             STATUS = NF_INQ_DIMLEN(NCID, DIMIDS(1), DIMLEN)
             IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
 	    IF (DIMLEN .LT. 1) THEN
-               WRITE(*,5120) NCVarName(I)(:EC_G_STRLEN(NCVarName(I)))
+               WRITE(*,5120) NCVarName(I)(:EC_T_STRLEN(NCVarName(I)))
                STATUS = NF_CLOSE(NCID)
                IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
                RETURN

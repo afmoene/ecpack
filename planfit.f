@@ -50,11 +50,11 @@ C
       LOGICAL       HAVE_UNCAL(NNNMax),Flag(NNMAx,MMMax),
      &        DoWBias, SingleRun
       LOGICAL ENDINTERVAL, BadTc, DoPrint, HAVE_SAMP, DoPf, DoClassic
-      INTEGER EC_G_STRLEN
+      INTEGER EC_T_STRLEN
 C
 C The name of the calibration routine specified at the end of this file
 C
-      EXTERNAL Calibrat, EC_G_STRLEN
+      EXTERNAL Calibrat, EC_T_STRLEN
 
 
 C...........................................................................
@@ -87,17 +87,17 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
 C
 C Check which calibration files we have
 C
-      IF (EC_G_STRLEN(SonName) .GT. 0) THEN
+      IF (EC_T_STRLEN(SonName) .GT. 0) THEN
          HAVE_SONCAL = .TRUE.
       ELSE
          HAVE_SONCAL = .FALSE.
       ENDIF
-      IF (EC_G_STRLEN(HygName) .GT. 0) THEN
+      IF (EC_T_STRLEN(HygName) .GT. 0) THEN
          HAVE_HYGCAL = .TRUE.
       ELSE
          HAVE_HYGCAL = .FALSE.
       ENDIF
-      IF (EC_G_STRLEN(CoupName) .GT. 0) THEN
+      IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
          HAVE_TCCAL = .TRUE.
       ELSE
          HAVE_TCCAL = .FALSE.
@@ -161,8 +161,8 @@ C and clear those files
      &        (StopTime(i),i=1,3), Psychro, p, Fname, OutName,
      &        PlfIntName
          DUMSTRING =  OutDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, PlfIntName)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, PlfIntName)
          PlfIntName = DUMSTRING
          OPEN(PlfIntFile,FILE=PlfIntName,STATUS='REPLACE')
          CLOSE(PlfIntFile)
@@ -201,24 +201,24 @@ C Read one line of comments (blindly, it is supposed to be a comment line)
      &        (StopTime(i),i=1,3), Psychro, p, Fname, OutName,
      &        PlfIntName
          DUMSTRING =  DatDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, Fname)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, Fname)
          Fname = DUMSTRING
 
          DUMSTRING =  OutDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, OutName)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, OutName)
          OutName = DUMSTRING
          OPEN(OutFile, FILE=OutName, Status='UNKNOWN')
 
          DUMSTRING =  OutDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, PlfIntName)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, PlfIntName)
          PlfIntName = DUMSTRING
 C
 C Show which file is currently being analysed
 C
-         WRITE(*,951) FName(:EC_G_STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
+         WRITE(*,951) FName(:EC_T_STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
  951     FORMAT(a,1X,3(I5,1X))
 C
 C Read raw data from file
@@ -285,18 +285,18 @@ C
      &        PlfIntName
          write(*,*) (starttime(i),i=1,3)
          DUMSTRING =  DatDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, Fname)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, Fname)
          Fname = DUMSTRING
 
          DUMSTRING =  OutDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, OutName)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, OutName)
          OutName = DUMSTRING
 
          DUMSTRING =  OutDir
-         CALL EC_G_STRCAT(DUMSTRING, "/")
-         CALL EC_G_STRCAT(DUMSTRING, PlfIntName)
+         CALL EC_T_STRCAT(DUMSTRING, "/")
+         CALL EC_T_STRCAT(DUMSTRING, PlfIntName)
          PlfIntName = DUMSTRING
 C
          IF (DOPF) THEN

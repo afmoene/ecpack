@@ -97,11 +97,11 @@ C...........................................................................
       CHARACTER*255 NCvarname(NNNMax)
       LOGICAL       HAVE_UNCAL(NNNMax)
 
-      INTEGER EC_G_STRLEN
+      INTEGER EC_T_STRLEN
 C
 C The name of the calibration routine specified at the end of this file
 C
-      EXTERNAL Calibrat, EC_G_STRLEN
+      EXTERNAL Calibrat, EC_T_STRLEN
 
 C...........................................................................
 C Start of executable statements
@@ -129,7 +129,7 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
      &             NCVarname, NNNMax)
 C
 C Check whether we have a reference temperature for a thermocouple
-      IF (EC_G_STRLEN(NCVarName(Tref)) .GT. 0) THEN
+      IF (EC_T_STRLEN(NCVarName(Tref)) .GT. 0) THEN
          HAVE_TREF = .TRUE.
       ELSE
          HAVE_TREF = .FALSE.
@@ -137,17 +137,17 @@ C Check whether we have a reference temperature for a thermocouple
 C
 C Check which calibration files we have
 C
-      IF (EC_G_STRLEN(SonName) .GT. 0) THEN
+      IF (EC_T_STRLEN(SonName) .GT. 0) THEN
          HAVE_SONCAL = .TRUE.
       ELSE
          HAVE_SONCAL = .FALSE.
       ENDIF
-      IF (EC_G_STRLEN(HygName) .GT. 0) THEN
+      IF (EC_T_STRLEN(HygName) .GT. 0) THEN
          HAVE_HYGCAL = .TRUE.
       ELSE
          HAVE_HYGCAL = .FALSE.
       ENDIF
-      IF (EC_G_STRLEN(CoupName) .GT. 0) THEN
+      IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
          HAVE_TCCAL = .TRUE.
       ELSE
          HAVE_TCCAL = .FALSE.
@@ -276,26 +276,26 @@ C
       OutName = DumName2
 C
       DUMSTRING=DatDir
-      CALL EC_G_STRCAT(DUMSTRING, '/')
-      CALL EC_G_STRCAT(DUMSTRING, Fname)
+      CALL EC_T_STRCAT(DUMSTRING, '/')
+      CALL EC_T_STRCAT(DUMSTRING, Fname)
       Fname=DUMSTRING
 
       DUMSTRING=OutDir
-      CALL EC_G_STRCAT(DUMSTRING, '/')
-      CALL EC_G_STRCAT(DUMSTRING, OutName)
+      CALL EC_T_STRCAT(DUMSTRING, '/')
+      CALL EC_T_STRCAT(DUMSTRING, OutName)
       OutName=DUMSTRING
 
 C
 C Show which file is currently being analysed
 C
-      WRITE(*,951) FName(:EC_G_STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
+      WRITE(*,951) FName(:EC_T_STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
  951  FORMAT(a,1X,3(I5,1X))
 C
 C If wanted, make a file for printing intermediate results
 C
       IF (DoPrint) THEN
         OPEN(OutFile,FILE=OutName,FORM='FORMATTED')
-        WRITE(OutFile,54) FName(:EC_G_STRLEN(Fname))
+        WRITE(OutFile,54) FName(:EC_T_STRLEN(Fname))
  54     FORMAT('File = ',A)
         WRITE(OutFile,*) 'From (day,hour,minute)',
      &    (StartTime(i),' ',i=1,3),' to ',(StopTime(i),i=1,3)

@@ -39,20 +39,40 @@ INCDIR=-Ic:/gcc-2.95.2/include
 LIBDIR=-Lc:/gcc-2.95.2/lib
 EXT=.exe
 
-FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none
+FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g
 LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
 
-all: ec_ncdf$(EXT) planfit$(EXT) libecpack.a
+# For Robodoc
+ROBODOC=robodoc
+ROBOOPTS=C SORT
+PROJECT=ecpack
+LS=ls
+SED=sed
+RM=rm -f
+DOCFILES=ec_corr.f ec_phys.f ec_math.f ec_gene.f physcnst.inc parcnst.inc
+HTMLDOCS=$(DOCFILES:=.html)
+HTMLXREFS=$(DOCFILES:=.html.xref)
+HTMLXREFSFILE=$(PROJECT)_html.xrefs
+LATEXDOCS=$(DOCFILES:=.tex)
+LATEXXREFS=$(DOCFILES:=.tex.xref)
+LATEXXREFSFILE=$(PROJECT)_tex.xrefs
+PDFLATEX=pdflatex
+
+# By default, just the library
+all: libecpack.a
 
 libecpack.a: slatec.o ec_corr.o ec_math.o ec_phys.o ec_gene.o
 	$(AR) r $@ $?
 
-ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_nc.o libecpack.a
-	$(FC) -o ec_ncdf$(EXT) ec_ncdf.o ec_file.o ec_nc.o  $(LDFLAGS)
+# The ec_ncdf program
+ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_text.o ec_nc.o libecpack.a
+	$(FC) -o ec_ncdf$(EXT) ec_ncdf.o ec_file.o ec_text.o ec_nc.o  $(LDFLAGS)
 
-planfit$(EXT): planfit.o ec_file.o ec_nc.o
-	$(FC) -o planfit$(EXT) planfit.o ec_file.o ec_nc.o  $(LDFLAGS)
+# The planar fit program
+planfit$(EXT): planfit.o ec_file.o ec_text.o ec_nc.o
+	$(FC) -o planfit$(EXT) planfit.o ec_file.o ec_text.o ec_nc.o  $(LDFLAGS)
 
+# This individual files
 ec_ncdf.o: ec_ncdf.f physcnst.inc parcnst.inc calcomm.inc version.inc
 	$(FC) $(FFLAGS) -c ec_ncdf.f
 
@@ -64,6 +84,9 @@ ec_corr.o: ec_corr.f physcnst.inc parcnst.inc
 
 ec_file.o: ec_file.f physcnst.inc parcnst.inc 
 	$(FC) $(FFLAGS) -c ec_file.f
+
+ec_text.o: ec_text.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_text.f
 
 ec_math.o: ec_math.f physcnst.inc parcnst.inc 
 	$(FC) $(FFLAGS) -c ec_math.f
@@ -77,4 +100,60 @@ ec_gene.o: ec_gene.f physcnst.inc parcnst.inc
 ec_nc.o: ec_nc.f physcnst.inc parcnst.inc 
 	$(FC) $(FFLAGS) -c ec_nc.f
 
-	
+# The docs
+
+xhtml: $(HTMLXREFSFILE) 
+xtex: $(LATEXXREFSFILE) 
+html: $(HTMLDOCS) $(PROJECT)_mi.html 
+tex: $(LATEXDOCS) $(PROJECT)_mi.tex 
+
+# master index file, currently works only for html and latex documentation.
+# Note that you can define the title of the document.
+$(PROJECT)_mi.html: $(HTMLXREFSFILE)
+	$(ROBODOC) $< $@ INDEX HTML 
+
+$(PROJECT)_mi.tex: $(LATEXXREFSFILE)
+	$(ROBODOC) $< $@ INDEX LATEX 
+
+# Create xrefs file
+$(HTMLXREFSFILE): $(HTMLXREFS)
+	$(LS) $(HTMLXREFS) > $@
+
+$(LATEXXREFSFILE): $(LATEXXREFS)
+	$(LS) $(LATEXXREFS) > $@
+
+# Rule to create an .xref file from a source file for the various formats.
+%.html.xref : %
+	$(ROBODOC) $< $(@:.xref=) $(ROBOOPTS) INTERNAL GENXREF $@
+%.tex.xref : %
+	$(ROBODOC) $< $(@:.xref=) $(ROBOOPTS) INTERNAL GENXREF $@
+
+# Rule to create html documentation from a source file.
+%.html : %
+	$(ROBODOC) $< $@ HTML $(ROBOOPTS) XREF $(HTMLXREFSFILE)
+# Rule to create latex documentation from a source file.
+# We do not include source items, and generate laxtex documents
+# than can be included in a master document.
+# Underscores is a problem
+%.tex : %
+#	$(SED) "s/\$$/\\\$$/g" $< > $<.tmp
+	$(ROBODOC) $< $@.tmp LATEX $(ROBOOPTS) NOSOURCE SINGLEDOC XREF $(LATEXXREFSFILE)
+# Number of final backslashes is not clear to me: under DOS there should be 3
+	$(SED) 's/\\\section{ec/\\\section{ec\\\/g' $@.tmp > $@
+	$(RM) $@.tmp
+
+docpdf: xtex tex 
+	$(PDFLATEX) $(PROJECT)_mi.tex
+	$(PDFLATEX) $(PROJECT)_mi.tex
+	$(RM) $(PROJECT)_mi.log *.aux *.toc *.idx
+
+doctex: xtex tex 
+	$(RM) $(PROJECT)_mi.log *.aux *.toc *.idx
+
+dochtml: xhtml html 
+
+docclean:
+	$(RM) $(HTMLXREFS)
+	$(RM) $(HTMLXREFSFILE)
+	$(RM) $(LATEXXREFS)
+	$(RM) $(LATEXXREFSFILE)

@@ -145,4 +145,13 @@ Revision 2.2.1: April 23, 2002
 Revision 2.2.2: July 3, 2002
           - added chack on value of diagnostic (if available): sample is
 	    flagged invalid if diagnostic < 0 or > 100 (check has been disabled             since  version of June 2000)
+Revision 2.3: August 30, 2002
+          - added Robodoc documentation to ec_corr.f, ec_math.f, ec_phys.f,
+	    physcnst.inc, parcnst.inc
+          - added commands to Makefile for generation of HTML and Tex docs
+	  - added IMPLICIT NONE's to routines in ec_corr.f, ec_math.f and
+	    ec_phys.f
+          - removed a number of unnecessary include statements
+          - moved text manipulation routines from ec_gene.f to ec_text.f
+	    and renamed them from EC_G_* to EC_T_*
 

@@ -66,17 +66,15 @@ C SEE ALSO
 C     Oost, W. (1991).  Flow distortion by an ellipsoid and its 
 C     application to the analysis of atmospheric measurements. 
 C     J.Atm.Oc.Tech., 8 No 3:331-340. 
-
-C     "Flow distortion by an ellipsoid and its application
-C     to atmpspheric measurements" by W.A. Oost, May 1989,
-C     KNMI internal report, accepted by J.Atm.Oc.Tech.,'90.
 C     References in the code are to this article.
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
 C     EC_C_D02
 C     EC_M_InvM
 C     ***
+      IMPLICIT NONE
       REAL*8 x(3),b(3),a(3,3),aInv(3,3)
       CALL EC_C_D02(x,b,a)
       CALL EC_M_InvM(a,aInv)
@@ -115,21 +113,19 @@ C SEE ALSO
 C     Oost, W. (1991).  Flow distortion by an ellipsoid and its 
 C     application to the analysis of atmospheric measurements. 
 C     J.Atm.Oc.Tech., 8 No 3:331-340. 
-
-C     "Flow distortion by an ellipsoid and its application
-C     to atmpspheric measurements" by W.A. Oost, May 1989,
-C     KNMI internal report, accepted by J.Atm.Oc.Tech.,'90.
 C     References in the code are to this article.
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
-C     EC_M_Sort_Decr
+C     EC_M_SortDecr
 C     EC_M_SortUse
 C     EC_M_EllCoords
 C     EC_M_specint
 C     EC_M_MulVec
 C     EC_M_UnSort
 C     ***
+      IMPLICIT NONE
       INTEGER Lambda, Mu, Nu
       PARAMETER(Lambda=1,Mu=2,Nu=3)
       REAL*8 x(3),b(3),a(3,3)
@@ -232,12 +228,14 @@ C	(unpublished)
 C HISTORY
 C       28-05-2001: added info on which temperature should be used
 C                   in corrections (Sonic or thermocouple)
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
-C     physcnst.inc
-C     parcnst.inc
-C     
+C     GG
+C     Karman
+C     Pi
 C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -566,14 +564,11 @@ C
 C HISTORY 
 C     28-05-2001: added info on which temperature should be used
 C                 in corrections (Sonic or thermocouple)
-C     $Name$ $Id$
-C USES
-C     physcnst.inc
-C     parcnst.inc
+C     $Name$ 
+C     $Id$
 C     ***
-      INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
+      IMPLICIT NONE
       INTEGER I,J,NMax,NSize
       REAL*8 WXT(NMax,NMax),Cov(NMax,NMax),Lower,Upper,TolCov(NMax,NMax)
 
@@ -783,9 +778,9 @@ C     28-05-2001: added info on whether uncalibrated data are
 C                 available for a given variable (mainly important
 C                 for sonic and/or Couple temperature since that
 C                 is used for various corrections)  
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
-C     physcnst.inc
 C     parcnst.inc
 C     EC_C_T05
 C     EC_C_T06
@@ -805,7 +800,7 @@ C     EC_G_Show
 C     EC_G_ShwFrq
 C     EC_G_Reset
 C     ***
-      INCLUDE 'physcnst.inc'
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER N,NInt,NMAx,OutF, WhichTemp, I, J
@@ -1090,7 +1085,7 @@ C     some of the radiation at the wavelengths at which the
 C     hygrometer works.
 C     This routine computes the correction factors. The 
 C     factors are applied in EC_C_Oxygen2
-C INPUT
+C INPUTS
 C     MeanT     : [REAL*8]
 C                 Mean temperature (Kelvin)
 C     NMax      : [INTEGER]
@@ -1115,17 +1110,24 @@ C     Currently this routine knows about two types of hygrometer:
 C        ApCampKrypton : the KH20 krypton hygrometer from Campbell Sci.
 C        ApMierijLyma  : the Lymann-alpha hygrometer from Mierij Meteo
 C
-C HISTORY
-C     28-05-2001: added info on which temperature should be used
-C                 in corrections (Sonic or thermocouple)
 C SEE ALSO
 C     EC_C_Oxygen2
 C HISTORY
-C     $Name$ $Id$
+C     28-05-2001: added info on which temperature should be used
+C                 in corrections (Sonic or thermocouple)
+C     $Name$ 
+C     $Id$
 C USES
 C     parcnst.inc
-C     physcnst.inc
+C     Kok
+C     KwK
+C     Kola
+C     Kwla
+C     FracO2
+C     MO2
+C     RGas
 C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -1167,7 +1169,7 @@ C     some of the radiation at the wavelengths at which the
 C     hygrometer works.
 C     This routine applies the correction factors that were 
 C     computed in EC_C_Oxygen1
-C INPUT
+C INPUTS
 C     Factor    : [REAL*8(NMax)]
 C                 Correction factor for the covariance with each of
 C                 calibrated signals
@@ -1183,10 +1185,12 @@ C                 Covariances
 C SEE ALSO
 C     EC_C_Oxygen1
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
 C     parcnst.inc
 C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i, WhichTemp
@@ -1216,7 +1220,7 @@ C FUNCTION
 C     To calibrate a sonic signal according to wind tunnel
 C     calibration (for the moment this works for apparatus 6,
 C     i.e. a wind tunnel calibrated sonic)
-C INPUT
+C INPUTS
 C     Cal   : [REAL*8(NQQ)]
 C             Array of length NQQ with calibration info
 C     UDum  : [REAL*8 ] (in/out)
@@ -1265,11 +1269,13 @@ C     direction from the most optimal direction (i.e. the 'open'
 C     side of a sonic). Samples with an absolute azimuth angle of
 C     more than 40 degrees are rejected.
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
 C     parcnst.inc
-C   ***
+C     ***
 
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       REAL*8   Cal(NQQ), UDum, VDum, WDum
@@ -1348,7 +1354,7 @@ C     for humidity of sonic temperature, and of all covariances with
 C     sonic temperature.
 C     Sidewind-correction has already been applied in the
 C     routine where the sonic signal is calibrated.
-C INPUT
+C INPUTS
 C     MeanQ    : [REAL*8]
 C                mean specific humidity  (kg/kg)
 C     MeanTSon : [REAL*8]
@@ -1368,12 +1374,12 @@ C                correction factor for sonic temperature
 C SEE ALSO
 C     EC_C_Schot1
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
-C     physcnst.inc
 C     parcnst.inc
 C     ***
-      INCLUDE 'physcnst.inc'
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i
@@ -1406,7 +1412,7 @@ C     for humidity of sonic temperature, and of all covariances with
 C     sonic temperature.
 C     Sidewind-correction has already been applied in the
 C     routine where the sonic signal is calibrated.
-C INPUT
+C INPUTS
 C     Factor   : [REAL*8(NMax)]
 C                correction factor for the covariances with specific
 C                humidity
@@ -1426,11 +1432,12 @@ C                covariance matrix of calibrated signals
 C SEE ALSO
 C     EC_C_Schot2
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
 C     physcnst.inc
 C     ***
-      INCLUDE 'physcnst.inc'
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i
@@ -1479,14 +1486,12 @@ C               corrected sonic temperature (Kelvin)
 C AUTHOR
 C     Arnold Moene
 C HISTORY
-C     $Name$ $Id$
+C     $Name$ 
+C     $Id$
 C USES
-C     physcnst.inc
-C     parcnst.inc
 C     EC_Ph_Q
 C     ***
-      INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
+      IMPLICIT NONE
 
       INTEGER NMax,N,i
       REAL*8   Temp, Rhov, Press, SPHUM, SPHUMNEW, NEWTEMP
@@ -1519,25 +1524,49 @@ C
 
       SUBROUTINE EC_C_T01(DoWBias,SingleRun,uMean,NRuns,Apf,
      &  Alpha,Beta,Gamma,WBias)
+C     ****f* ec_corr.f/EC_C_T01
+C NAME
+C     EC_C_T01
+C SYNOPSIS
+C     CALL EC_C_T01(DoWBias,SingleRun,uMean,NRuns,Apf, 
+C                   Alpha,Beta,Gamma,WBias)
+C FUNCTION
+C     Subroutine performs some preparations for the actual
+C     Planar Fit Method. The actual work is done in routine EC_C_T02.
+C
+C INPUTS
+C     DoWBias:   [LOGICAL]
+C                compute bias in mean vertical wind (FALSE 
+C                implies that the mean vertical wind over all
+C                runs is assumed to be zero
+C     SingleRun: [LOGICAL]
+C                Determine rotation for a single run 
+C     uMean    : [REAL*8(3,Nmax)]
+C                matrix of run mean velocity vectors
+C     NRuns    : [INTEGER]
+C                the number of runs
+C OUTPUT
+C     Apf      : [REAL*8(3,3)]
+C                the planar fit 3*3 untilt-matrix
+C     Alpha    : [REAL*8]
+C                tiltangle alpha in degrees
+C     Beta     : [REAL*8]
+C                tiltangle beta in degrees
+C     Gamma    : [REAL*8]
+C                Fixed yaw-angle in degrees associated with mean over all runs
+C     WBias    : [REAL*8]
+C                The bias in the vertical velocity
+C
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_C_T02
+C     ***
 
-C
-C Subroutine performs tilt correction of Sonic data, using Planar Fit
-C Method, as described in James M. Wilczak et al (2001), 'Sonic
-C Anemometer tilt correction algorithms', Boundary Meteorology 99: 127:150
-C References to formulae are to this article
-C The planar fit matrix is extended with an additional yaw-correction
-C to turn the first coordinate into the direction of the mean wind
-C over all runs. This extra rotation makes results from different
-C eddy-covariance systems comparable.
-C
-C Input: uMean : NRuns x 3 matrix of run mean velocity vectors, where
-C        NRuns : the number of runs
-C Output: Apf  : The planar fit 3*3 untilt-matrix
-C        Alpha : tiltangle alpha in degrees
-C        Beta  : tiltangle beta in degrees
-C        Gamma : Fixed yaw-angle in degrees associated with mean over all runs
-C        WBias : The bias in the vertical velocity
-C
+      IMPLICIT NONE
       LOGICAL SingleRun,DoWBias
       INTEGER i,j,k,NRuns,UmeanMax
       REAL*8 uMean(3,NRuns),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
@@ -1572,20 +1601,70 @@ C Call to slave-routine for details
 C
       CALL EC_C_T02(DoWBias,SingleRun,uSum,UUSum,Apf,
      &  Alpha,Beta,Gamma,WBias)
-
-
       END
-
-
-
-
-
 
       SUBROUTINE EC_C_T02(DoWBias,SingleRun,uSum,UUSum,Apf,
      &  Alpha,Beta,Gamma,WBias)
+C     ****f* ec_corr.f/EC_C_T02
+C NAME
+C     EC_C_T02
+C SYNOPSIS
+C     CALL EC_C_T02(DoWBias,SingleRun,uMean,NRuns,Apf, 
+C                   Alpha,Beta,Gamma,WBias)
+C FUNCTION
+C     Subroutine computes angles and untilt-matrix needed for
+C     tilt correction of Sonic data, using Planar Fit
+C     Method, as described in James M. Wilczak et al (2001), 'Sonic
+C     Anemometer tilt correction algorithms', Boundary Meteorology 99: 127:150
+C     References to formulae are to this article.
+C     The planar fit matrix is extended with an additional yaw-correction
+C     to turn the first coordinate into the direction of the mean wind
+C     over all runs. This extra rotation makes results from different
+C     eddy-covariance systems comparable.
+C     Furthermore, there is the option to determine a planar fit for
+C     a single run (using all individual samples within a run,
+C     rather than the mean velocities from a collection of runs as
+C     in the classic planar fit method).
+C
+C INPUTS
+C     DoWBias:   [LOGICAL]
+C                compute bias in mean vertical wind (FALSE 
+C                implies that the mean vertical wind over all
+C                runs is assumed to be zero
+C     SingleRun: [LOGICAL]
+C                Determine rotation for a single run 
+C     uMean    : [REAL*8(3,Nmax)]
+C                matrix of run mean velocity vectors
+C     NRuns    : [INTEGER]
+C                the number of runs
+C OUTPUT
+C     Apf      : [REAL*8(3,3)]
+C                the planar fit 3*3 untilt-matrix
+C     Alpha    : [REAL*8]
+C                tiltangle alpha in degrees
+C     Beta     : [REAL*8]
+C                tiltangle beta in degrees
+C     Gamma    : [REAL*8]
+C                Fixed yaw-angle in degrees associated with mean over all runs
+C     WBias    : [REAL*8]
+C                The bias in the vertical velocity
+C
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_M_InvM
+C     EC_M_InvM2
+C     EC_M_MapVec
+C     EC_M_Map2Vec
+C     EC_M_MMul
+C     ***
 C
 C Supportive routine for planar fit method for tilt-correction
 C
+      IMPLICIT NONE
       LOGICAL SingleRun,DoWBias
       REAL*8 b(0:2),S(3,3),SInv(3,3),x(3),Apf(3,3),SS2(2,2),SS2Inv(2,2),
      &  Sqrt1,Sqrt2,Alpha,Beta,SinAlpha,SinBeta,CosAlpha,CosBeta,Pi,
@@ -1756,12 +1835,6 @@ C
       CALL EC_M_MMul(Yaw,Apf,Apf)
 
       END
-
-
-
-
-
-
 C
 C ########################################################################
 C
@@ -1777,13 +1850,43 @@ C
 
 
 
-
-
       SUBROUTINE EC_C_T03(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NN)
-C
-C Help routine for routines for correction of coordinate system
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_corr.f/EC_C_T03
+C NAME
+C     EC_C_T03
+C SYNOPSIS
+C     CALL EC_C_T03(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NN)
+C INPUTS
+C     Mean    : [REAL*8(NMax)]
+C               means of all variables
+C     NMax    : [INTEGER]
+C               maximum number of variables (i.e. size of 
+C               various matrices)
+C     N       : [INTEGER]
+C               number of variables in used
+C     Cov     : [REAL*8(NMmax, NMax)]
+C               covariances of all variables
+C     NN      : [INTEGER]
+C               maximum size of second axis of DumVecs
+C OUTPUT
+C     Speed   : [REAL*8(3)]
+C               copy of means of all variables 
+C     Stress  : [REAL*8(3,3)]
+C               copy of covariances of all variables
+C     DumVecs : [REAL*8(3,4:NN)]
+C               copy of covariances of all variables with velocity components
+C FUNCTION
+C     Help routine for routines for correction of coordinate system
+C     Temporaly stores means and covariances elsewhere 
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C     ***
+C USES 
+C     parcnst.inc
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER i,j,NMax,N,NN
@@ -1806,16 +1909,44 @@ C
       END
 
 
-
-
-
       SUBROUTINE EC_C_T04(Speed,Stress,DumVecs,NN,Mean,NMax,N,Cov)
-C
-C Help routine for routines for correction of coordinate system
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_corr.f/EC_C_T04
+C NAME
+C     EC_C_T04
+C SYNOPSIS
+C     CALL EC_C_T04(Speed,Stress,DumVecs,NN, Mean,NMax,N,Cov)
+C INPUTS
+C     Speed   : [REAL*8(3)]
+C               copy of means of all variables 
+C     Stress  : [REAL*8(3,3)]
+C               copy of covariances of all variables
+C     DumVecs : [REAL*8(3,4:NN)]
+C               copy of covariances of all variables with velocity components
+C     NMax    : [INTEGER]
+C               maximum number of variables (i.e. size of 
+C               various matrices)
+C     N       : [INTEGER]
+C               number of variables in used
+C     NN      : [INTEGER]
+C               maximum size of second axis of DumVecs
+C OUTPUT
+C     Mean    : [REAL*8(NMax)]
+C               means of all variables
+C     Cov     : [REAL*8(NMmax, NMax)]
+C               covariances of all variables
+C FUNCTION
+C     Help routine for routines for correction of coordinate system
+C     Copies back temporarily stored copies of means and covariances 
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
-
       INTEGER i,j,NMax,N,NN
       REAL*8 Stress(3,3),Speed(3),DumVecs(3,4:NN),Mean(NMax),
      &	Cov(NMax,NMax)
@@ -1841,14 +1972,47 @@ C
 
 
       SUBROUTINE EC_C_T05(Mean,NMax,N,Cov,Map)
-C
-C Routine to change coordinate system according to tensor "Map".
-C This routine is called by all tilt-correction procedures.
-C Both the mean velocity and the Reynoldsstresses and the
-C covariances of all velocity components with other quantities
-C are rotated.
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_corr.f/EC_C_T05
+C NAME
+C     EC_C_T05
+C SYNOPSIS
+C     CALL EC_C_T05(Mean,NMax,N,Cov,Map)
+C INPUTS
+C     Mean    : [REAL*8(NMax)]
+C               means of all variables
+C     NMax    : [INTEGER]
+C               maximum number of variables (i.e. size of 
+C               various matrices)
+C     N       : [INTEGER]
+C               number of variables in used
+C     Cov     : [REAL*8(NMmax, NMax)]
+C               covariances of all variables
+C     Map     : [REAL*8(3,3)]
+C               rotation tensor          
+C OUTPUT
+C     Mean    : [REAL*8(NMax)]
+C               means of all variables
+C     Cov     : [REAL*8(NMmax, NMax)]
+C               covariances of all variables
+C FUNCTION
+C     Routine to change coordinate system according to tensor "Map".
+C     This routine is called by all tilt-correction procedures.
+C     Both the mean velocity and the Reynoldsstresses and the
+C     covariances of all velocity components with other quantities
+C     are rotated.
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_C_T03
+C     EC_C_T04
+C     EC_M_MapVec
+C     EC_M_MapMtx
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,j
@@ -1871,12 +2035,30 @@ C
 
 
       SUBROUTINE EC_C_T06(Direction,Yaw)
-C
-C Construct rotation matrix for coordinate system about a KNOWN yaw-angle
-C around the vertical
-C
+C     ****f* ec_corr.f/EC_C_T06
+C NAME
+C     EC_C_T06
+C SYNOPSIS
+C     CALL EC_C_T06(Direction,Yaw)
+C INPUTS
+C     Direction : [REAL*8]
+C                 yaw angle 
+C OUTPUT
+C     Yaw       : [REAL*8(3,3)]
+C                 rotation tensor
+C FUNCTION
+C     Construct rotation matrix for coordinate system 
+C     about a KNOWN yaw-angle around the vertical
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Pi
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 SinPhi,CosPhi,Yaw(3,3),Direction
 
@@ -1901,12 +2083,31 @@ C
 
 
       SUBROUTINE EC_C_T07(MeanU,MeanV,Direction)
-C
-C Give yaw-angle to transform coordinate system such that v_mean = 0
-C (no mean lateral horizontal velocity component)
-C
+C     ****f* ec_corr.f/EC_C_T07
+C NAME
+C     EC_C_T07
+C SYNOPSIS
+C     CALL EC_C_T07(MeanU,MeanV,Direction)
+C INPUTS
+C     MeanU     : [REAL*8]
+C                 mean u-velocity
+C     MeanV     : [REAL*8]
+C                 mean v-velocity
+C OUTPUT
+C     Direction : [REAL*8]
+C                 yaw angle (degree)
+C FUNCTION
+C     Give yaw-angle to transform coordinate system such that
+C     v_mean = 0 (no mean lateral horizontal velocity component)
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Pi
+C     ***
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 UHor,SinPhi,CosPhi,MeanU,MeanV,Direction
 
@@ -1924,11 +2125,30 @@ C
 
 
       SUBROUTINE EC_C_T08(Direction,Pitch)
-C
-C Give matrix for rotation about a KNOWN pitch-angle around vector (0,1,0).
-C
+C     ****f* ec_corr.f/EC_C_T08
+C NAME
+C     EC_C_T08
+C SYNOPSIS
+C     CALL EC_C_T08(Direction,Yaw)
+C INPUTS
+C     Direction : [REAL*8]
+C                 pitch angle 
+C OUTPUT
+C     Pitch     : [REAL*8(3,3)]
+C                 rotation tensor
+C FUNCTION
+C     Give matrix for rotation about a KNOWN pitch-angle 
+C     around vector (0,1,0).
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Pi
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 SinTheta,CosTheta,Pitch(3,3),Direction
 
@@ -1952,12 +2172,32 @@ C
 
 
       SUBROUTINE EC_C_T09(MeanU,MeanW,Direction)
-C
-C Give pitch angle to transform coordinate system such that w_mean = 0
-C (no mean vertical velocity component)
-C
+C     ****f* ec_corr.f/EC_C_T09
+C NAME
+C     EC_C_T09
+C SYNOPSIS
+C     CALL EC_C_T09(MeanU,MeanW,Direction)
+C INPUTS
+C     MeanU     : [REAL*8]
+C                 mean u-velocity
+C     MeanV     : [REAL*8]
+C                 mean W-velocity
+C OUTPUT
+C     Direction : [REAL*8]
+C                 pitch angle (degree)
+C FUNCTION
+C     Give pitch angle to transform coordinate system such 
+c     that w_mean = 0 (no mean vertical velocity component)
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Pi
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 SinTheta,MeanU,MeanW,Direction,UTot
 
@@ -1973,12 +2213,30 @@ C
 
 
       SUBROUTINE EC_C_T10(Direction,Roll)
-C
-C Give matrix to rotate coordinate system about a KNOWN roll-angle
-C around vector (1,0,0).
-C
+C     ****f* ec_corr.f/EC_C_T10
+C NAME
+C     EC_C_T10
+C SYNOPSIS
+C     CALL EC_C_T10(Direction,Roll)
+C INPUTS
+C     Direction : [REAL*8]
+C                 yaw angle 
+C OUTPUT
+C     Roll      : [REAL*8(3,3)]
+C                 rotation tensor
+C FUNCTION
+C     Give matrix to rotate coordinate system about a KNOWN 
+C     roll-angle around vector (1,0,0).
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Pi
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 SinRoll,CosRoll,Roll(3,3),Direction
 
@@ -2003,13 +2261,35 @@ C
 
 
       SUBROUTINE EC_C_T11(CovVV,CovVW,CovWW,Direction)
-C
-C Give roll angle to transform coordinate system such that Cov(V,W) = 0
-C (vertical velocity fluctuations are independent from horizontal
-C fluctuations)
-C
+C     ****f* ec_corr.f/EC_C_T11
+C NAME
+C     EC_C_T11
+C SYNOPSIS
+C     CALL EC_C_T11(MeanU,MeanW,Direction)
+C INPUTS
+C     CovVV     : [REAL*8]
+C                 vv-covariance
+C     CovVW     : [REAL*8]
+C                 vw-covariance
+C     CovWW     : [REAL*8]
+C                 ww-covariance
+C OUTPUT
+C     Direction : [REAL*8]
+C                 roll angle (degree)
+C FUNCTION
+C     Give roll angle to transform coordinate system such 
+C     that Cov(V,W) = 0  (vertical velocity fluctuations are
+C     independent from horizontal fluctuations)
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Pi
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 CovVV,CovVW,CovWW,Direction,RollAngl,Arg1,Arg2
 
@@ -2029,11 +2309,42 @@ C
 
 
       SUBROUTINE EC_C_Webb(Mean,NMax,Cov,P,WhichTemp)
-C
-C Mean vertical velocity according to Webb, Pearman and Leuning
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
+C     ****f* ec_corr.f/EC_C_Webb
+C NAME
+C     EC_C_Webb
+C SYNOPSIS
+C     CALL EC_C_Webb(Mean,NMax,Cov,P,WhichTemp)
+C INPUTS
+C     Mean     : [REAL*8(NMax)]
+C                mean of all variables
+C     NMax     : [INTEGER]
+C                maximum number of variables 
+C     Cov      : [REAL*8(NMax,NMax)]
+C                covariance of all variables
+C     P        : [REAL*8]
+C                atmospheric pressure
+C     WhichTemp: [INTEGER]
+C                Use thermocouple temperature or sonic temperature ?
+C                (Tcouple or TSonic, codes in parcnst.inc)
+C OUTPUT
+C     Mean     : [REAL*8(NMax)]
+C                mean of all variables, with Mean(W) set to Webb
+C                velocity
+C FUNCTION
+C     Mean vertical velocity according to Webb, Pearman and Leuning
+C AUTHOR
+C     Arjan van Dijk 
+C HISTORY
+C     28-05-2001: added info on which temperature should be used
+C                 in corrections (Sonic or thermocouple)
+C     $Name$ 
+C     $Id$
+C USES
+C     Mu
+C     parcnst.inc
+C     EC_Ph_RhoDry
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 

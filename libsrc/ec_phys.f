@@ -56,9 +56,68 @@ C
       SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau)
-C
-C Construct estimates for surface fluxes from mean values and covariances
-C
+C     ****f* ec_phys.f/EC_Ph_Flux
+C NAME
+C     EC_Ph_Flux
+C SYNOPSIS
+C     CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
+C                     HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
+C                     UStar,dUStar,Tau,dTau)
+C FUNCTION
+C     Construct estimates for surface fluxes from mean values and covariances
+C INPUTS
+C     Mean   : [REAL*8(NMax)]
+C              Means of all variables
+C     NMax   : [INTEGER]
+C              Maximum number of variables
+C     Cov    : [REAL*8(NMax,NMax)]
+C              Covariances of all variables
+C     TolMean: [REAL*8(NMax)]
+C              Tolerances in means of all variables
+C     TolCov : [REAL*8(NMax,NMax)]
+C              Tolerances in covariances of all variables
+C     p      : [REAL*8]
+C              atmosperic pressure (Pa)
+C     BadTc  : [LOGICAL]
+C              indicator whether thermocouple temperature is corrupt
+C OUTPUT
+C     HSonic : [REAL*8]
+C              sensible heat flux with sonic temperature (W/m^2)
+C     dHSonic: [REAL*8]
+C              tolerance in sensible heat flux with sonic temperature (W/m^2)
+C     HTc    : [REAL*8]
+C              sensible heat flux with thermocouple temperature (W/m^2)
+C     dHTc   : [REAL*8]
+C              tolerance in sensible heat flux with thermocouple temperature (W/m^2)
+C     LvE    : [REAL*8]
+C              wq-covariance latent heat flux (W/m^2)
+C     dLvE   : [REAL*8]
+C              tolerance in wq-covariance latent heat flux (W/m^2)
+C     LvEWebb: [REAL*8]
+C              Webb term for latent heat  flux (W/m^2)
+C     dLvEWebb: [REAL*8]
+C              tolerance in Webb term for latent heat  flux (W/m^2)
+C     UStar  : [REAL*8]
+C              friction velocity (m/s)
+C     dUStar : [REAL*8]
+C              tolerance in friction velocity (m/s)
+C     Tau    : [REAL*8]
+C              surface shear stress (N/m^2)
+C     dTau   : [REAL*8]
+C              tolerance in surface shear stress (N/m^2)
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_Ph_RhoWet
+C     parcnst.inc
+C     Cp
+C     Lv
+C     ***
+      IMPLICIT NONE
+      REAL*8 x(3),b(3),a(3,3),aInv(3,3)
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -133,18 +192,32 @@ C
 
 
       REAL*8 FUNCTION EC_Ph_Q(RhoV,T,P)
-C
-C Calculate the specific humidity of wet air
-C
-C input : RhoV : Density of water vapour [kg m^{-3}]
-C	  T    : Temperature		 [K]
-C	  P    : Pressure		 [Pa]
-C
-C output : EC_Ph_Q : specific humidity	 [kg kg^{-1}]
-C
-      INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
-
+C     ****f* ec_phys.f/EC_Ph_Q
+C NAME
+C     EC_Ph_Q
+C SYNOPSIS
+C     Spec_hum = EC_Ph_RhoDry(RhoV,T,P)
+C FUNCTION
+C     Calculate the specific humidity of wet air 
+C INPUTS
+C      Rhov : [REAL*8]
+C             Density of air (kg/m^3)
+C      T    : [REAL*8]
+C             Temperature (K)
+C      P    : [REAL*8]
+C             Pressure (Pa)
+C RETURN VALUE
+C      return value : [REAL*8]
+C             Specific humidity (kg/kg)
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_Ph_RhoWet
+C     ***
+      IMPLICIT NONE
       REAL*8 RhoV,T,P,EC_Ph_RhoWet,RhoWet
 
       RhoWet = EC_Ph_RhoWet(RhoV,T,P)
@@ -168,20 +241,36 @@ C
 
 
       REAL*8 FUNCTION EC_Ph_RhoDry(RhoV,T,P)
-C
-C Calculate the density of dry air component in wet air
-C
-C input : RhoV : Density of water vapour [kg m^{-3}]
-C	  T    : Temperature		 [K]
-C	  P    : Pressure		 [Pa]
-C
-C output : RhoDry : Density of dry air component [kg m^{-3}]
-C
-C Via Dalton's law : Pressure is sum of partial pressures :
-C	      P = RhoV*Rv*T + RhoD*Rd*T
-C
+C     ****f* ec_phys.f/EC_Ph_RhoDry
+C NAME
+C     EC_Ph_RhoDry
+C SYNOPSIS
+C     Rho_dry = EC_Ph_RhoDry(RhoV,T,P)
+C FUNCTION
+C     Calculate the density of dry air component in wet air
+C     Via Dalton's law : Pressure is sum of partial pressures :
+C     P = RhoV*Rv*T + RhoD*Rd*T
+C INPUTS
+C      Rhov : [REAL*8]
+C             Density of air (kg/m^3)
+C      T    : [REAL*8]
+C             Temperature (K)
+C      P    : [REAL*8]
+C             Pressure (Pa)
+C RETURN VALUE
+C      return value : [REAL*8]
+C             Density of dry part of air (kg/m^3)
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     Rd
+C     Rv
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
 
       REAL*8 RhoV,T,P
 
@@ -195,17 +284,31 @@ C
 
 
       REAL*8 FUNCTION EC_Ph_RhoWet(RhoV,T,P)
-C
-C Calculate the density of wet air
-C
-C input : RhoV : Density of water vapour [kg m^{-3}]
-C	  T    : Temperature		 [K]
-C	  P    : Pressure		 [Pa]
-C
-C output : RhoWet : Density of wet air [kg m^{-3}]
-C
-      INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
+C     ****f* ec_phys.f/EC_Ph_RhoWet
+C NAME
+C     EC_Ph_RhoWet
+C SYNOPSIS
+C     Rho_dry = EC_Ph_RhoWet(RhoV,T,P)
+C FUNCTION
+C     Calculate the density of wet air
+C INPUTS
+C      Rhov : [REAL*8]
+C             Density of air (kg/m^3)
+C      T    : [REAL*8]
+C             Temperature (K)
+C      P    : [REAL*8]
+C             Pressure (Pa)
+C RETURN VALUE
+C      return value : [REAL*8]
+C             Density of wet air (kg/m^3)
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_Ph_RhoDry
+C     ***
 
       REAL*8 RhoV,T,P,EC_Ph_RhoDry
 
@@ -213,9 +316,6 @@ C
 
       RETURN
       END
-
-
-
 C
 C
 C Routines to calculate structure parameters
@@ -225,35 +325,65 @@ C
 
       SUBROUTINE EC_Ph_Struct(Sample,NMax,N,MMax,M,Flag,XIndex,YIndex,
      &  R,dR,Freq,CIndep,Cxy,dCxy)
-C
-C Calculate structure parameters <(x(r)-x(r+R))*(y(r)-y(r+R))>/R^2/3
-C
-C input : Sample [REAL*8(NMax,MMax)] : The first N out of NMax quantities
-C           and the first M samples in Sample are used.
-C         NMax [INTEGER] : physical first dimension of array Sample.
-C         N [INTEGER] : actual number of meaningful quantities in array
-C           Sample.
-C         MMax [INTEGER] : physical second dimension of array Sample.
-C         M [INTEGER] : actual number of meaningful samples in array Sample.
-C         Flag [LOGICAL(NMax,MMax)] : if Flag(i,j) is true, then something
-C           is wrong with quantity i in sample j.
-C         XIndex [INTEGER] : indicator of first quantity involved in
-C           structure function.
-C         YIndex [INTEGER] : indicator of second quantity involved in
-C           structure function.
-C         R [REAL*8] : separation in meters at which one wants to estimate
-C           the structure function.
-C         Freq [REAL*8] : Sampling frequency in s^-1.
-C         CIndep [INTEGER[NMax,NMax]) : Number of independent contributions
-C           by array Sample to covariance between quantities selected with
-C           XIndex and YIndex.
-C output: dR [REAL*8] : separation in meters corresponding with a delay
-C           of one sample.
-C         cxy [REAL*8] : Structure parameter.
-C         dcxy [REAL*8] : Tolerance of cxy.
-C
-      INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
+C     ****f* ec_phys.f/EC_Ph_Struct
+C NAME
+C     EC_Ph_Struct
+C SYNOPSIS
+C     CALL EC_Ph_Struct(Sample,NMax,N,MMax,M,Flag,
+C                       XIndex,YIndex,
+C                       R,dR,Freq,CIndep,Cxy,dCxy)
+C FUNCTION
+C     Calculate structure parameters <(x(r)-x(r+R))*(y(r)-y(r+R))>/R^2/3
+C INPUTS
+C     Sample   : [REAL*8(NMax,MMax)]  
+C                Samples (quantities in first dimension, samples in 
+C                second dimension)
+C     NMax     : [INTEGER]  
+C                physical first dimension of array Sample.
+C     N        : [INTEGER] 
+C                actual number of meaningful quantities in array Sample.
+C     MMax     : [INTEGER]  
+C                physical second dimension of array Sample.
+C     M        : [INTEGER]  
+C                actual number of meaningful samples in array Sample.
+C     Flag     : [LOGICAL(NMax,MMax)] 
+C                if Flag(i,j) is true, then something is wrong with 
+C                quantity i in sample j.
+C     XIndex   : [INTEGER]  
+C                indicator of first quantity involved in 
+C                structure function.
+C     YIndex   : [INTEGER]  
+C                indicator of second quantity involved in
+C                structure function.
+C     R        : [REAL*8] : 
+C                separation in meters at which one wants to estimate
+C                the structure function.
+C     Freq     : [REAL*8] : 
+C                Sampling frequency in s^-1.
+C     CIndep   : [INTEGER[NMax,NMax])  
+C                Number of independent contributions by array Sample 
+C                to covariance between quantities selected with
+C                XIndex and YIndex.
+C     Rhov     : [REAL*8]
+C                Density of air (kg/m^3)
+C     T        : [REAL*8]
+C                Temperature (K)
+C     P        : [REAL*8]
+C                Pressure (Pa)
+C OUTPUT 
+C     dR       : [REAL*8]  
+C                separation in meters corresponding with a delay
+C                of one sample (i.e. tolerance in R)
+C     cxy      : [REAL*8] 
+C                Structure parameter.
+C     dcxy     : [REAL*8] 
+C                Tolerance of cxy.
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$ 
+C     $Id$
+C     ***
       INTEGER NMax,N,i,M,MMax,XIndex,YIndex,NOk,NSeparate,
      &  CIndep(NMax,NMax)
       LOGICAL Flag(NMax,MMax),ok

@@ -21,7 +21,13 @@ C  along with this program; if not, write to the Free Software
 C  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 C 
 
-
+C     ****f* parcnst.inc/parcnst.inc
+C NAME
+C     parcnst.inc
+C FUNCTION
+C     include file that defines various parameters (indicating
+C     instruments etc.)
+C     ***
 C
 C Constants to indicate files
 C

@@ -25,61 +25,269 @@ C
 C
 C Physics constants
 C
+C     ****d* physcnst.inc/Rd
+C NAME
+C     Rd
+C FUNCTION
+C     Gas constant for dry air
+C SOURCE
       REAL*8 Rd 			    ! Gass constant for dry air
       PARAMETER(Rd = 287.04D0)		    ! [J/Kg.K]
+C     ***
+
+C     ****d* physcnst.inc/Rv
+C NAME
+C     Rv
+C FUNCTION
+C     Gas constant for water vapour
+C SOURCE
       REAL*8 Rv 			    ! Gass constant for water vapour
       PARAMETER(Rv = 461.5D0)		    ! [J/Kg.K]
+C     ***
+
+C     ****d* physcnst.inc/RGas
+C NAME
+C     RGas
+C FUNCTION
+C     Universal gas constant 
+C SOURCE
       REAL*8 RGas			    ! Universal gas constant
-      PARAMETER(RGAs = 8314.D0) 	    ! [?]
+      PARAMETER(RGAs = 8314.D0) 	    ! [J/kmol.K]
+C     ***
+
+C     ****d* physcnst.inc/Epsilon
+C NAME
+C     Epsilon
+C FUNCTION
+C     Infinitisimal number 
+C SOURCE
       REAL*8 Epsilon			    ! Infinitesimal number
       PARAMETER(Epsilon = 1.D-20)	    ! [1]
+C     ***
+
+C     ****d* physcnst.inc/Pi
+C NAME
+C     Pi
+C FUNCTION
+C     Pi
+C SOURCE
       REAL*8 Pi 			    ! Pi
       PARAMETER(Pi=3.1415926535897932385D0) ! [1]
+C     ***
+
+C     ****d* physcnst.inc/Kelvin
+C NAME
+C     Kelvin
+C FUNCTION
+C     Temperature of 0 degree Celsius in Kelvin
+C SOURCE
       REAL*8 Kelvin			    ! 0 degrees Celsius
       PARAMETER(Kelvin = 273.15D0)	    ! [K]
+C     ***
+
+C     ****d* physcnst.inc/GammaR
+C NAME
+C     GammaR
+C FUNCTION
+C     Constant in correction of sonic temperature in voor corss-wind
+C     (part of the Schotanus correction)
+C SOURCE
       REAL*8 GammaR			    ! ?????????????
       PARAMETER(GammaR = 403.D0)	    ! [m^{2}s^{-2}K^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/DifCo2
+C NAME
+C     DiffCo2
+C FUNCTION
+C     Molecular diffusivity CO2 at 30 degree Celcius (?) 
+C SOURCE
       REAL*8 DifCO2		   ! Molecular diffusivity CO2 at 30 degr
       PARAMETER(DifCO2 = 15.6D-6)  ! [m^{2}s^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/DifH20
+C NAME
+C     DiffH20
+C FUNCTION
+C     Molecular diffusivity H20 at 30 degree Celcius (?) 
+C SOURCE
       REAL*8 DifH2O		   ! Molecular diffusivity H20 at 30 degr
       PARAMETER(DifH2O = 25.7D-6)  ! [m^{2}s^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/Karman
+C NAME
+C     Karman
+C FUNCTION
+C     Von Karman constant
+C SOURCE
       REAL*8 Karman		   ! Von Karman constant
       PARAMETER(Karman = 0.4)	   ! [1]
+C     ***
+
+C     ****d* physcnst.inc/GG
+C NAME
+C     GG
+C FUNCTION
+C     Gravitational acceleration
+C SOURCE
       REAL*8 GG 		   ! Gravitation constant
       PARAMETER(GG = 9.81)	   ! [m s^{-2}]
+C     ***
+
+C     ****d* physcnst.inc/MO2
+C NAME
+C     MO2
+C FUNCTION
+C     molecular weight of oxygen
+C SOURCE
       REAL*8 MO2		   ! molecular weight of oxygen
       PARAMETER(MO2 = 32.D0)	   ! [g mol^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/MAir
+C NAME
+C     MAir
+C FUNCTION
+C     molecular weight of dry air
+C SOURCE
       REAL*8 MAir		   ! Molecular weight of dry air
       PARAMETER(MAir = 28.966D0)   ! [g/mol]
+C     ***
+
+C     ****d* physcnst.inc/MVapour
+C NAME
+C     MVapour
+C FUNCTION
+C     molecular weight of water vapour
+C SOURCE
       REAL*8 MVapour		   ! Molecular weight of water vapour
       PARAMETER(MVapour = 18.016D0)! [g/mol]
+C     ***
+
+C     ****d* physcnst.inc/Mu
+C NAME
+C     Mu
+C FUNCTION
+C     ratio: Mu = Mair/Mv
+C SOURCE
       REAL*8 Mu 		   ! Ratio: Mu := Mair/Mv
       PARAMETER(Mu = 1.6078D0)	   ! [1]
-      REAL*8 KoK		   ! extinction for oxygen for Krypton
-C First value is from work of Webb, 1980
-c     PARAMETER(KoK = 0.0085D0)    ! [m^{3} g^{-1} cm^{-1}]
-C This value is due to Arjan van Dijk, 1999
-      PARAMETER(KoK = 0.0038)      ! [m^{3} g^{-1} cm^{-1}]
+C     ***
 
+C     ****d* physcnst.inc/Kok
+C NAME
+C     Kok
+C FUNCTION
+C     extinction for oxygen for Krypton hygrometer
+C NOTES
+C     First the value from work of Webb (1980) was used 
+C     (KoK = 0.0085 [m^{3} g^{-1} cm^{-1}]). Now
+C     a value due to van Dijk (1999) is used.
+C     This constant may disappear from the library and may become
+C     part of the user-supplied instrument specifications
+C SOURCE
+      REAL*8 KoK		   ! extinction for oxygen for Krypton
+      PARAMETER(KoK = 0.0038)      ! [m^{3} g^{-1} cm^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/Kwk
+C NAME
+C     Kwk
+C FUNCTION
+C     extinction for water vapour for Krypton hygrometer
+C SOURCE
       REAL*8 KwK		   ! extinction for water vapour Krypton
       PARAMETER(KwK = 0.143D0)	   ! [m^{3} g^{-1} cm^{-1}]
+C     ***
 
+C     ****d* physcnst.inc/Kola
+C NAME
+C     Kola
+C FUNCTION
+C     Extinction for oxygen for Lymann-alpha
+C SOURCE
       REAL*8 KoLa		   ! extinction for oxygen for Lymann-alpha
       PARAMETER(KoLa = 0.001085D0)      ! [m^{3} g^{-1} cm^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/Kwla
+C NAME
+C     Kwla
+C FUNCTION
+C     Extinction for water vapour for Lymann-alpha
+C SOURCE
       REAL*8 KwLa		   ! extinction for water vapour Lymann-alpha
       PARAMETER(KwLa = 0.09125D0)	   ! [m^{3} g^{-1} cm^{-1}]
+C     ***
 
+C     ****d* physcnst.inc/FracO2
+C NAME
+C     FracO2
+C FUNCTION
+C     Fraction of O2 molecules in air
+C SOURCE
       REAL*8 FracO2		   ! fraction of O2 molecules in air
       PARAMETER(FracO2 = 0.21D0)   ! [1]
+C     ***
+
+C     ****d* physcnst.inc/Cp
+C NAME
+C     Cp
+C FUNCTION
+C     Specific heat of air
+C SOURCE
       REAL*8 Cp 		   ! Specific heat of air
       PARAMETER(Cp = 1004.67D0)    ! [J Kg^{-1} K^{-1}]
+C     ***
+
+C     ****d* physcnst.inc/Lv
+C NAME
+C     Lv
+C FUNCTION
+C     Latent heat of vaporization of water
+C SOURCE
       REAL*8 Lv 		   ! Vaporisation heat of water
       PARAMETER(Lv = 2.45D6)	   ! [J Kg^{-1}]
-C
-C Limits for acceptance of humidity and temperature
-C
-      REAL*8 MinT,MaxT,MinRhoV,MaxRhoV
+C     ***
+
+c     ****d* physcnst.inc/MinT
+C NAME
+C     MinT
+C FUNCTION
+C     Lower limit for acceptance of temperature sample
+C SOURCE
+      REAL*8 MinT
       PARAMETER(MinT	= -20.D0) ! [Celsius]
+C     ***
+
+c     ****d* physcnst.inc/MaxT
+C NAME
+C     MaxT
+C FUNCTION
+C     Upper limit for acceptance of temperature sample
+C SOURCE
+      REAL*8 MaxT
       PARAMETER(MaxT	=  60.D0) ! [Celsius]
+C     ***
+
+c     ****d* physcnst.inc/MinRhov
+C NAME
+C     MinRhov
+C FUNCTION
+C     Lower limit for acceptance of water vapour sample
+C SOURCE
+      REAL*8 MinRhoV
       PARAMETER(MinRhoV =   0.D0) ! [kg m^{-3}]
+C     ***
+
+c     ****d* physcnst.inc/MaxRhov
+C NAME
+C     MaxRhov
+C FUNCTION
+C     Upper limit for acceptance of water vapour sample
+C SOURCE
+      REAL*8 MaxRhoV
       PARAMETER(MaxRhoV =   1.D0) ! [kg m^{-3}]
+C     *** 

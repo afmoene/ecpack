@@ -23,7 +23,34 @@ C
 
 
       SUBROUTINE EC_M_ABCForm(a,b,c,Root1, Root2, AllReal)
+C     ****f* ec_math.f/EC_M_ABCForm
+C NAME
+C     EC_M_ABCForm
+C SYNOPSIS
+C     CALL EC_M_ABCForm(a,b,c,Root1, Root2, AllReal)
+C FUNCTION
 C     Solves ax^2 + bx + c = 0
+C INPUTS
+C     a      : [REAL*8]
+C              first coefficient
+C     b      : [REAL*8]
+C              second coefficient
+C     c      : [REAL*8]
+C              third coefficient
+C OUTPUTS
+C     Root1  : [REAL*8]
+C              first root
+C     Root2  : [REAL*8]
+C              second root
+C     AllReal: [LOGICAL]
+C              all roots real? 
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       INTEGER Re, Im
       PARAMETER(Re = 1, Im = 2)
       REAL*8 a, b, c, Discrim, Root1(Re:Im), Root2(Re:Im)
@@ -57,35 +84,66 @@ C For both mean values and for covariances the tolerances are estimated.
 C
       SUBROUTINE EC_M_Averag(x,NMax,N,MMax,M,Flag,
      &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-C
-C From the given set of calibrated samples, calculate the averages,
-C variances, covariances and their tolerances.
-C
-C input : x : array with physical dimensions (NMax,MMax)
-C	      First index counts quantities; second counter
-C	      counts samples. Only the first N quantities
-C	      and the first M samples are used.
-C	  flag : LOGICAL array with physical dimensions NMAx by MMAx,
-C	      out of which only N by M are used. If flag(j,i) is true, then
-C	      quantity j in sample i is not ok.
-C
-C output : Mean : array with physical dimension NMax out of
-C		   which only N are used. Mean contains the average value
-C		   of array x. Only samples with Flag = 0 are used.
-C	   TolMean : tolerance of Mean, defined as
-C		       2 * sigma / sqrt(NIndep)
-C		   where sigma is the standarddeviation of the quantities
-C		   and where the number of independent samples is estimated
-C		   as twice the number of sign-changes of the fluctuations
-C		   of the respective quantities around their means.
-C	   Cov : REAL*8 (NMax,NMax) : covariances
-C	   TolCov : tolerances of Cov, estimated as tolerances of mean.
-C	   MIndep : INTEGER(NMAx) : Number of independent samples
-C		   in time series from which means are calculated
-C	   CIndep : INTEGER(NMAx,NMAx) : Number of independent samples
-C		   in time series from which covariances are calculated
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_math.f/EC_M_Averag
+C NAME
+C     EC_M_Averag
+C SYNOPSIS
+C     CALL EC_M_Averag(x,NMax,N,MMax,M,Flag,
+C    	               Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+C FUNCTION
+C     From the given set of calibrated samples, calculate the averages,
+C     variances, covariances and their tolerances.
+C INPUTS
+C     x      : [REAL*8(NMax,MMax)]
+C              Array with calibrated samples.
+C	       First index counts quantities; second counter
+C	       counts samples. Only the first N quantities
+C	       and the first M samples are used.
+C     NMax   : [INTEGER]
+C              maximum number of quantities
+C     N      : [INTEGER]
+C              actual number of quantities
+C     MMax   : [INTEGER]
+C              maximum number of samples
+C     M      : [INTEGER]
+C              actual number of samples
+C     Flag   : [LOGICAL(NMax, MMax)]
+C	       If flag(j,i) is true, then quantity j in sample
+C              i is not ok.
+C OUTPUTS
+C     Mean   : [REAL*8(NMax)]
+C	       The average value array x. Only samples with Flag = 0 
+C              are used.
+C     TolMean: tolerance of Mean, defined as 2 * sigma / sqrt(NIndep)
+C              where sigma is the standarddeviation of the quantities
+C              and where the number of independent samples is estimated
+C              as twice the number of sign-changes of the fluctuations
+C              of the respective quantities around their means.
+C     Cov    : [REAL*8(NMax,NMax)]  
+C              covariances
+C     TolCov : [REAL*8(NMax,NMax)]
+C              tolerances of Cov, estimated in same way as tolerances 
+C              of mean.
+C     MIndep : [INTEGER(NMAx)] 
+C              Number of independent samples in time series from
+C              which means are calculated
+C     CIndep : [INTEGER(NMAx,NMAx)]  
+C              Number of independent samples in time series from 
+C              which covariances are calculated
+C     Mok    : [INTEGER(NMax)]
+C              number of valid samples for each quantity
+C     Cok    : [INTEGER(NMax,NMax)]
+C              number of valid samples for each combination of 
+C              two quantities
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,MMax,M,i,j,k,NChange(NNMax,NNMax),
@@ -267,12 +325,37 @@ C
 
 
       REAL*8 FUNCTION EC_M_BaseF(x,FType,Order,C)
-C
-C Purpose : Calculate simple functions. Currently implemented:
-C  - Ordinary polynomials
-C  - Polynomials in the natural logarithm of x
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_math.f/EC_M_BaseF
+C NAME
+C     EC_M_BaseF
+C SYNOPSIS
+C     Value = EC_M_BaseF(x,FType,Order,C)
+C FUNCTION
+C     Purpose : Calculate simple functions. Currently implemented:
+C     - Ordinary polynomials
+C     - Polynomials in the natural logarithm of x
+C INPUTS
+C     x      : [REAL*8]
+C              argument of function 
+C     FType  : [INTEGER]
+C              function type: NormPoly or LogPoly (defined in
+C              parcnst.inc
+C     Order  : [INTEGER]
+C              order of the polynomial
+C     C      : [REAL*8(0:Order)]
+C              array with coefficients
+C RETURN VALUE
+C     return value  : [REAL*8]
+C              value of polynomial  
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       INTEGER FType,Order,i
@@ -296,8 +379,34 @@ C
       END
 
       SUBROUTINE EC_M_Cardano(Poly, Root, AllReal)
-C Uses the Cardano solution to solve exactly: ax^3 + bx^2 + cx + d = 0
-C See e.g. Abramowitz and Stegun. Here "a" is not allowed to be zero.
+C     ****f* ec_math.f/EC_M_Cardano
+C NAME
+C     EC_M_Cardano
+C SYNOPSIS
+C     CALL EC_M_Cardano(Poly, Root, AllReal)
+C FUNCTION
+C     Uses the Cardano solution to solve exactly:
+C     ax^3 + bx^2 + cx + d = 0
+C     "a" is not allowed to be zero.
+C INPUTS
+C     Poly   : [REAL*8(0:3)]
+C              coefficient of third order polynomial
+C OUTPUTS
+C     Root   : [REAL*8(2,3)]
+C              array with roots, first index are 
+C              real and imaginary part, respectively,
+C              second index for three roots
+C     AllReal: [LOGICAL]
+C              all roots real? 
+C AUTHOR
+C     Arjan van Dijk
+C SEE ALSO
+C     Abramowitz and Stegun
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       INTEGER Re, Im
       PARAMETER(Re = 1, Im = 2)
       REAL*8 Poly(0:3), a(0:2), q, r, Discrim, t1, t2,
@@ -344,16 +453,52 @@ C See e.g. Abramowitz and Stegun. Here "a" is not allowed to be zero.
 
 
       REAL*8 FUNCTION EC_M_Det2(x)
+C     ****f* ec_math.f/EC_M_Det2
+C NAME
+C     EC_M_Det2
+C SYNOPSIS
+C     Value =  EC_M_Det2(x)
+C FUNCTION
 C     Give determinant of REAL*8 2*2-matrix
+C INPUTS
+C     x      : [REAL*8(2,2)]
+C              matrix 
+C RETURN VALUE
+C     return value  : 
+C              [REAL*8]
+C              determinant 
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x(2,2)
       EC_M_Det2 = x(1,1)*x(2,2)-x(2,1)*x(1,2)
       END
 
 
       REAL*8 FUNCTION EC_M_Determ(x)
-C
+C     ****f* ec_math.f/EC_M_Determ
+C NAME
+C     EC_M_Determ
+C SYNOPSIS
+C     Value =  EC_M_Determ(x)
+C FUNCTION
 C     Give determinant of real 3*3-matrix
-C
+C INPUTS
+C     x      : [REAL*8(3,3)]
+C              matrix 
+C RETURN VALUE
+C     return value  : 
+C              [REAL*8]
+C              determinant 
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x(3,3)
       EC_M_Determ = x(1,1)*(x(2,2)*x(3,3)-x(2,3)*x(3,2))
      &        -x(2,1)*(x(1,2)*x(3,3)-x(1,3)*x(3,2))
@@ -379,21 +524,46 @@ C
 
 
       SUBROUTINE EC_M_Detren(x,NMax,N,MMAx,M,Mean,Cov,y,RC)
-C
-C Construct a linearly detrended dataset from a given dataset
-C
-C input : x : REAL*8(NMax,MMax) : x(i,j) = quantity i in sample j
-C		only the first N quantities and the first M samples
-C		are used.
-C	  Cov : REAL*8 (NMax,NMAx) : covariances of quantities.
-C		used to find trend.
-C output : y : REAL*8(NMAx,MMax) : detrended timeseries.
-C	   RC : REAL*8(NMAx) : Directional coefficients of linear
-C		regression trend-lines.
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_math.f/EC_M_Detren
+C NAME
+C     EC_M_Detren
+C SYNOPSIS
+C     CALL EC_M_Detren(x,NMax,N,MMAx,M,Mean,Cov,y,RC)
+C FUNCTION
+C     Construct a linearly detrended dataset from a given dataset
+C INPUTS
+C     x      : [REAL*8(NMax,MMax)] 
+C              array with samples: x(i,j) = quantity i in sample j
+C              only the first N quantities and the first M samples
+C              are used.
+C     NMax   : [INTEGER]
+C              maximum number of quantities in x
+C     N      : [INTEGER]
+C              actual number of quantities in x
+C     MMax   : [INTEGER]
+C              maximum number of samples in x
+C     M      : [INTEGER]
+C              actual number of samples in x
+C     Mean   : [REAL*8(NMax)]
+C              mean of all quantities
+C     Cov    : [REAL*8 (NMax,NMAx)]
+C              covariances of quantities used to find trend.
+C OUTPUT 
+C     y      : [REAL*8(NMAx,MMax)]
+C              detrended timeseries
+C     RC     : [REAL*8(NMAx)]  
+C              Directional coefficients of linear regression
+C              trend-lines.
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
-
       INTEGER NMax,N,i,MMax,M,j
       REAL*8 x(NMax,MMax),Mean(NMax),Cov(NMax,NMax),RC(NMax),
      &	y(NMax,MMax),Trend
@@ -418,7 +588,26 @@ C
 
 
       SUBROUTINE EC_M_DSwap(x,y)
+C     ****f* ec_math.f/EC_M_DSwap
+C NAME
+C     EC_M_DSwap
+C SYNOPSIS
+C     CALL EC_M_DSwap(x,y)
+C FUNCTION
 C     Interchanges x and y
+C INPUTS
+C     x,y    : [REAL*8] 
+C              quantities
+C OUTPUTS
+C     x,y    : [REAL*8] 
+C              quantities
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x,y,dum
       dum = x
       x = y
@@ -427,10 +616,35 @@ C     Interchanges x and y
       END
 
       SUBROUTINE EC_M_Ell1Q(phi,alpha,ff,ee)
+C     ****f* ec_math.f/EC_M_Ell1Q
+C NAME
+C     EC_M_Ell1Q
+C SYNOPSIS
+C     CALL EC_M_Ell1Q(phi,alpha,ff,ee)
+C FUNCTION
 C     Calculates the elliptic integrals F(Phi\Alpha) and
 C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
 C     as described in Abramowitz and Stegun, 17.6 (Numbers in
 C     text refer to equations in A&S). Only ok for first quadrant
+C INPUTS
+C     phi    : [REAL*8] 
+C              argument
+C     alpha  : [REAL*8] 
+C              argument
+C OUTPUTS
+C     ff     : [REAL*8] 
+C              result
+C     ee     : [REAL*8] 
+C              result
+C AUTHOR
+C     Arjan van Dijk
+C SEE ALSO
+C     Abramowitz and Stegun, 17.6 
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 phi,alpha,ff,ee,a,b,aprev,bprev,edum,eedum
      &   ,c(0:9),psi(0:9),PI,epsilon
       INTEGER It
@@ -479,19 +693,47 @@ C     A&S: 17.6.10:
 
 
       SUBROUTINE EC_M_EllCoords(x,b,y,DyDx)
-C Calculate the elliptic coordinates (Lambda, Mu, Nu) plus
-C derivatives Dy[i]/Dx[j] corresponding to the Carthesian coordinates
-C (x[1], x[2], x[3]) for an ellipsoid with semiaxes (b[1], b[2], b[3])
-C with b[1]>b[2]>b[3]. Procedure cannot handle points at coordinateplanes.
-C Outside the ellipsoid the elliptic coordinates satisfy:
-C -b[1]^2 < Nu < -b[2]^2 < Mu < -b[3]^2 < 0 < Lambda.  See e.g. :
-C "Einfuehrung in die Kurven- und Flaechentheorie auf vektorieller
-C Grundlage" by C.F. Baeschlin, Orell Fuessli Verlag, Zuerich, 1947,
-C but mind that there the elliptic coordinates differ from ours.
-       INTEGER Re,Im,Lambda,Mu,Nu
-       PARAMETER(Re=1,Im=2,Lambda=1,Mu=2,Nu=3)
+C     ****f* ec_math.f/EC_M_EllCoords
+C NAME
+C     EC_M_EllCoords
+C SYNOPSIS
+C     CALL EC_M_EllCoords(x,b,y,DyDx)
+C FUNCTION
+C     Calculate the elliptic coordinates (Lambda, Mu, Nu) plus
+C     derivatives Dy[i]/Dx[j] corresponding to the Carthesian
+C     coordinates (x[1], x[2], x[3]) for an ellipsoid with 
+C     semiaxes (b[1], b[2], b[3]) with b[1]>b[2]>b[3]. 
+C     Procedure cannot handle points at coordinateplanes.
+C     Outside the ellipsoid the elliptic coordinates satisfy:
+C     -b[1]^2 < Nu < -b[2]^2 < Mu < -b[3]^2 < 0 < Lambda.  
+C INPUTS
+C     x    : [REAL*8(3)] 
+C            Carthesian coordinate
+C     b    : [REAL*8(3)] 
+C            semi-axes of ellipsoid
+C     alpha  : [REAL*8] 
+C              argument
+C OUTPUTS
+C     y    : [REAL*8(3)] 
+C            new coordinate
+C     DyDx : [REAL*8(3,3)] 
+C            derivative
+C HISTORY
+C     $Name$
+C     $Id$
+C AUTHOR
+C     Arjan van Dijk
+C USES
+C     EC_M_Cardano
+C     EC_M_DSwap
+C     EC_M_SQR
+C     ***
+      IMPLICIT NONE
+      INTEGER Re,Im,Lambda,Mu,Nu
+      PARAMETER(Re=1,Im=2,Lambda=1,Mu=2,Nu=3)
       REAL*8 x(3), b(3), y(3), DyDx(3,3),Poly(0:3),
-     &  Root(Re:Im,3),SQR
+     &  Root(Re:Im,3), EC_M_SQR
+      EXTERNAL EC_M_SQR
       INTEGER i,j
       LOGICAL AllReal
 C First check if the semiaxes are in decreasing order and if the point x
@@ -547,10 +789,37 @@ C Carthesian coordinates
 
 
       SUBROUTINE EC_M_Ellint(phi,alpha,ff,ee)
+C     ****f* ec_math.f/EC_M_Ellint
+C NAME
+C     EC_M_Ellint
+C SYNOPSIS
+C     CALL EC_M_Ellint(phi,alpha,ff,ee)
+C FUNCTION
 C     Calculates the elliptic integrals F(Phi\Alpha) and
 C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
 C     as described in Abramowitz and Stegun, 17.6 (Numbers in
 C     text refer to equations in A&S). ok for all angles.
+C INPUTS
+C     phi    : [REAL*8] 
+C              argument
+C     alpha  : [REAL*8] 
+C              argument
+C OUTPUTS
+C     ff     : [REAL*8] 
+C              result
+C     ee     : [REAL*8] 
+C              result
+C AUTHOR
+C     Arjan van Dijk
+C SEE ALSO
+C     Abramowitz and Stegun, 17.6 
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     EC_M_Ell1Q
+C     ***
+      IMPLICIT NONE
       REAL*8 phi,alpha,ff,ee,ffcomp,eecomp,PI
       INTEGER SignArg, Wind
       PI = 2.D0*DASIN(1.D0)
@@ -577,9 +846,28 @@ C     A&S: 17.4.3:
 
 
       SUBROUTINE EC_M_InvM(a, aInv)
-C
+C     ****f* ec_math.f/EC_M_InvM
+C NAME
+C     EC_M_InvM
+C SYNOPSIS
+C     CALL EC_M_InvM(a, aInv)
+C FUNCTION
 C     Find the inverse of real 3*3 matrix "a"
-C
+C INPUTS
+C     a    : [REAL*8(3,3)] 
+C            matrix
+C OUTPUTS
+C     inv  : [REAL*8(3,3)] 
+C            inverse matrix
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     EC_M_Determ
+C     ***
+      IMPLICIT NONE
       REAL*8 a(3,3), aInv(3,3), Dum(3,3), Det, EC_M_Determ
       INTEGER i, j
       Det = EC_M_Determ(a)
@@ -603,7 +891,28 @@ C
       END
 
       SUBROUTINE EC_M_InvM2(a, aInv)
-C     Find the inverse of REAL*8 2*2 matrix "a"
+C     ****f* ec_math.f/EC_M_InvM2
+C NAME
+C     EC_M_InvM2
+C SYNOPSIS
+C     CALL EC_M_InvM2(a, aInv)
+C FUNCTION
+C     Find the inverse of real 2*2 matrix "a"
+C INPUTS
+C     a    : [REAL*8(2,2)] 
+C            matrix
+C OUTPUTS
+C     inv  : [REAL*8(2,2)] 
+C            inverse matrix
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     EC_M_Det2
+C     ***
+      IMPLICIT NONE
       REAL*8 a(2,2), aInv(2,2), Dum(2,2), Det, EC_M_Det2
       INTEGER i, j
       Det = EC_M_Det2(a)
@@ -622,7 +931,26 @@ C     Find the inverse of REAL*8 2*2 matrix "a"
       END
 
       SUBROUTINE EC_M_ISwap(x,y)
+C     ****f* ec_math.f/EC_M_ISwap
+C NAME
+C     EC_M_ISwap
+C SYNOPSIS
+C     CALL EC_M_ISwap(x,y)
+C FUNCTION
 C     Interchanges x and y
+C INPUTS
+C     x,y    : [INTEGER] 
+C              quantities
+C OUTPUTS
+C     x,y    : [INTEGER] 
+C              quantities
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       INTEGER x,y,dum
       dum = x
       x = y
@@ -631,19 +959,57 @@ C     Interchanges x and y
       END
 
       REAL*8 FUNCTION EC_M_ka(x,b)
+C     ****f* ec_math.f/EC_M_ka
+C NAME
+C     EC_M_ka
+C SYNOPSIS
+C     Value =  EC_M_ka(x,b)
+C FUNCTION
+C     Returns = DSQRT((x+b(1)**2)*(x+b(2)**2)*(x+b(3)**2))
 C     From equation 8
+C INPUTS
+C     x      : [REAL*8] 
+C              argument
+C     b      : [REAL*8(3)] 
+C              coefficient
+C RETURN VALUE
+C     return value : 
+C              [REAL*8] 
+C              result
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x,b(3)
-      ka = DSQRT((x+b(1)**2)*(x+b(2)**2)*(x+b(3)**2))
+      EC_M_ka = DSQRT((x+b(1)**2)*(x+b(2)**2)*(x+b(3)**2))
       END
 
+
       SUBROUTINE EC_M_Map2Vec(a,x,y)
-C
-C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
-C
-C input : a : REAL*8 (2,2) : the mapping matrix
-C	  x : REAL*8 (2)   : the vector to be mapped
-C output : y : REAL*8 (2)  : the image of the map
-C
+C     ****f* ec_math.f/EC_M_Map2Vec
+C NAME
+C     EC_M_Map2Vec
+C SYNOPSIS
+C     CALL EC_M_Map2Vec(a,x,y)
+C FUNCTION
+C     Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
+C INPUTS
+C     a      : [REAL*8(2,2)]
+C              the mapping matrix
+C     x      : [REAL*8(2)] 
+C              the vector to be mapped
+C OUTPUT 
+C     y      : [REAL*8(2)] 
+C              the image of the map
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
       IMPLICIT NONE
 
       REAL*8 a(2,2),x(2),y(2),Dum(2)
@@ -675,18 +1041,32 @@ C
 
 
       SUBROUTINE EC_M_MapMtx(a,x,y)
-C
-C Calculates the image of "x" under the map "a";
-C y(ji) = a(ki)a(lj)x(lk)
-C
-C input : a : REAL*8 (3,3) : the mapping matrix
-C	  x : REAL*8 (3,3) : the tensor to be mapped
-C output : y : REAL*8 (3,3) : the image of the map
-C
-C Revision: June 21, 2001:
+C     ****f* ec_math.f/EC_M_MapMtx
+C NAME
+C     EC_M_MapMtx
+C SYNOPSIS
+C     CALL EC_M_MapMtx(a,x,y)
+C FUNCTION
+C     Calculates the image of "x" under the map "a";
+C    y(ji) = a(ki)a(lj)x(lk)
+C INPUTS
+C     a      : [REAL*8(3,3)]
+C              the mapping matrix
+C     x      : [REAL*8(3,3)] 
+C              the tensor to be mapped
+C OUTPUT 
+C     y      : [REAL*8(3,3)] 
+C              the image of the map
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     Revision: June 21, 2001:
 C     - indices i and j in the mapping  have
 C       been interchanged. This has also been done in the
 C       routines that used EC_M_MapMtx (EC_C_T05)
+C     $Name$
+C     $Id$
+C     ***
 C
       IMPLICIT NONE
 
@@ -720,18 +1100,28 @@ C
 
 
 
-
-
-
       SUBROUTINE EC_M_MapVec(a,x,y)
-C
-C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
-C
-C input : a : REAL*8 (3,3) : the mapping matrix
-C	  x : REAL*8 (3)   : the vector to be mapped
-C output : y : REAL*8 (3)  : the image of the map
-c
-C
+C     ****f* ec_math.f/EC_M_MapVec
+C NAME
+C     EC_M_MapVec
+C SYNOPSIS
+C     CALL EC_M_MapVec(a,x,y)
+C FUNCTION
+C     Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
+C INPUTS
+C     a      : [REAL*8(3,3)]
+C              the mapping matrix
+C     x      : [REAL*8(3)] 
+C              the vector to be mapped
+C OUTPUT 
+C     y      : [REAL*8(3)] 
+C              the image of the map
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
       IMPLICIT NONE
 
       REAL*8 a(3,3),x(3),y(3),Dum(3)
@@ -777,12 +1167,44 @@ C ########################################################################
 
 
       SUBROUTINE EC_M_MinMax(x,NMax,N,MMax, M,Flag,Mins, Maxs)
-
-      INCLUDE 'parcnst.inc'
-
-      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax)
+C     ****f* ec_math.f/EC_M_MinMax
+C NAME
+C     EC_M_MinMax
+C SYNOPSIS
+C     Call EC_M_MinMax(x,NMax,N,MMax, M,Flag,Mins, Maxs)
+C FUNCTION
+C     Determines minimum and maximum of quantities
+C INPUTS
+C     x      : [REAL*8(Nmax,MMax)]
+C              the sampled quantities
+C     NMax   : [INTEGER] 
+C              maximum number of quantities
+C     N      : [INTEGER] 
+C              actual number of quantities
+C     MMax   : [INTEGER] 
+C              maximum number of samples
+C     M      : [INTEGER] 
+C              actual number of samples
+C     Flag   : [LOGICAL(NMax, MMax)]
+C	       If flag(j,i) is true, then quantity j in sample
+C              i is not ok.
+C OUTPUT 
+C     Mins   : [REAL*8(NMax)] 
+C              the minimum of each quantity, only taking into
+C              account samples with Flag = 0
+C     Maxs   : [REAL*8(NMax)] 
+C              the maximum of each quantity, only taking into
+C              account samples with Flag = 0
+C AUTHOR
+C     Arnold Moene 
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
+      INTEGER I,J, N, M, NSAMP, NMax, MMax
+      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax), DUMMY
       LOGICAL Flag(NMax,MMax)
-      INTEGER I,J, N, M, NSAMP
 
       DO I=1,N
          Mins(I) = 1e10
@@ -815,7 +1237,28 @@ C ########################################################################
 
 
       SUBROUTINE EC_M_MMul(a,b,c)
+C     ****f* ec_math.f/EC_M_MMul
+C NAME
+C     EC_M_MMul
+C SYNOPSIS
+C     CALL EC_M_MMul(a,b,c)
+C FUNCTION
 C     Matrix C is product of 3*3-matrices A and B
+C INPUTS
+C     a      : [REAL*8(3,3)]
+C              first matrix 
+C     b      : [REAL*8(3)] 
+C              second matrix 
+C OUTPUT 
+C     c      : [REAL*8(3)] 
+C              matrix product 
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       INTEGER I, J, K
       REAL*8 A(3,3),B(3,3),C(3,3),Dum(3,3)
       DO I=1,3
@@ -851,6 +1294,28 @@ C
 
 
       SUBROUTINE EC_M_MulVec(x,y)
+C     ****f* ec_math.f/EC_M_MulVec
+C NAME
+C     EC_M_MulVec
+C SYNOPSIS
+C     CALL EC_M_MulVec(x,y)
+C FUNCTION
+C     Multiply vector with a constant
+C INPUTS
+C     x      : [REAL*8(3)]
+C              vector 
+C     y      : [REAL*8] 
+C              constant
+C OUTPUT 
+C     x      : [REAL*8(3)] 
+C              vector multiplied with y
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x(3),y
       INTEGER I
       DO I=1,3
@@ -860,8 +1325,33 @@ C
       END
 
       SUBROUTINE EC_M_SortDecr(x,permutation)
+C     ****f* ec_math.f/EC_M_SortDecr
+C NAME
+C     EC_M_SortDecr
+C SYNOPSIS
+C     CALL EC_M_SortDecr(x,permutation)
+C FUNCTION
 C     Sorts the elements of vector x in decreasing order;
 C     permutation needed is returned as well
+C INPUTS
+C     x      : [REAL*8(3)]
+C              vector 
+C OUTPUT 
+C     x      : [REAL*8(3)]
+C              sorted vector 
+C     permutation :
+C              [INTEGER(3)]
+C              permutation to arrive at sorted vector
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     EC_M_DSwap
+C     EC_M_ISwap
+C     ***
+      IMPLICIT NONE
       REAL*8 x(3)
       INTEGER permutation(3),I,J
       permutation(1) = 1
@@ -879,7 +1369,29 @@ C     permutation needed is returned as well
       END
 
       SUBROUTINE EC_M_SortUse(x,permutation)
+C     ****f* ec_math.f/EC_M_SortUse
+C NAME
+C     EC_M_SortUse
+C SYNOPSIS
+C     CALL EC_M_SortUse(x,permutation)
+C FUNCTION
 C     Reorders the elements of x according to permutation
+C INPUTS
+C     x      : [REAL*8(3)]
+C              vector 
+C     permutation :
+C              [INTEGER(3)]
+C              permutation to arrive at sorted vector
+C OUTPUT 
+C     x      : [REAL*8(3)]
+C              sorted vector 
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x(3),dum(3)
       INTEGER permutation(3),I
       DO I=1,3
@@ -894,12 +1406,34 @@ C
 C All following procedures and functions are implementations of the details
 C
       SUBROUTINE EC_M_specint(lambda,b,integral)
-C
-C     Calculates the integrals at the bottom of page seven
+C     ****f* ec_math.f/EC_M_specint
+C NAME
+C     EC_M_specint
+C SYNOPSIS
+C     CALL EC_M_specint(lambda,b,integral)
+C FUNCTION
+C     Calculates the integrals:
 C     \INT_(\lambda)^(\infty) \frac{dq}{{b_{i}^{2}+q}k_{q}}
 C     References "G&R" in the code are to Gradshteyn and Ryzhik:
 C     Tables of Integrals, Series and Products, 4th ed.,Ac. Press,'65
-C
+C INPUTS
+C     lambda   : [REAL*8]
+C                one lambda
+C     b        : [REAL*8(3)]
+C                vector of b-values
+C OUTPUT 
+C     integral : [REAL*8(3)]
+C                result
+C AUTHOR
+C     Arjan van Dijk
+C SEE ALSO 
+C     References "G&R" in the code are to Gradshteyn and Ryzhik:
+C     Tables of Integrals, Series and Products, 4th ed.,Ac. Press,'65
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 lambda,b(3),integral(3),phi,alpha,ff,ee,dum1
      &   ,dum2,dum3,dum4,dum5,epsilon,PI
       PARAMETER (epsilon = 1.D-18)
@@ -950,13 +1484,55 @@ C      G&R 3.133.13
 
 
       REAL*8 FUNCTION EC_M_SQR(x)
+C     ****f* ec_math.f/EC_M_SQR
+C NAME
+C     EC_M_SQR
+C SYNOPSIS
+C     Value =  EC_M_SQR(x)
+C FUNCTION
 C     Give the square of x
+C INPUTS
+C     x        : [REAL*8]
+C RETURN VALUE 
+C     return value : 
+C                [REAL*8]
+C                result
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
+      REAL*8 lambda,b(3),integral(3),phi,alpha,ff,ee,dum1
       REAL*8 x
-      SQR = x*x
+      EC_M_SQR = x*x
       END
 
       SUBROUTINE EC_M_UnSort(x,permutation)
+C     ****f* ec_math.f/EC_M_UnSort
+C NAME
+C     EC_M_UnSort
+C SYNOPSIS
+C     CALL EC_M_UnSort(x, permutation)
+C FUNCTION
 C     Unsorts the elements of x originally sorted using permutation
+C INPUTS
+C     x      : [REAL*8(3)]
+C              vector 
+C     permutation :
+C              [INTEGER(3)]
+C              permutation to arrive at sorted vector
+C OUTPUT 
+C     x      : [REAL*8(3)]
+C              unsorted vector 
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
       REAL*8 x(3),dum(3)
       INTEGER permutation(3),I
       DO I=1,3

@@ -61,21 +61,239 @@ C ########################################################################
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,
      &  MEANW, TOLMEANW, HAVE_UNCAL)
-C
-C Purpose : Integrated routine which:
-C  - Calibrates raw samples
-C  - Estimates mean values and covariances with respective tolerances
-C  - Corrects the resulting mean values and covariances for all
-C    effects selected by the user
-C  - Estimates, from the final mean values and covariances, the surface-
-C    fluxes with tolerances.
-C
-C Revision: 03-04-2001: get mean W and its tolerance before tilt
-C                       correction; export via interface (AM)
-C Revision: 28-05-2001: added passing of info on whether uncalibrated
-C                       data are available (AM)
-
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_gene.f/EC_G_Main
+C NAME
+C     EC_G_Main
+C SYNOPSIS
+C     CALL EC_G_Main(OutF,DoPrint,
+C        RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
+C        Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
+C        Calibr,
+C        Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
+C        QName,UName,
+C        DoDetren,PDetrend,
+C        DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+C        DoYaw,PYaw,DirYaw,
+C        DoPitch,PPitch,PitchLim,DirPitch,
+C        DoRoll,PRoll,RollLim,DirRoll,
+C        DoSonic,PSonic,SonFactr,
+C        DoO2,PO2,O2Factor,
+C        DoFreq,PFreq,LLimit,ULimit,FrCor,
+C        DoWebb,PWebb,
+C        Mean,TolMean,Cov,TolCov,
+C        HSonic,dHSonic,HTc,dHTc,
+C        LvE,dLvE,LvEWebb,dLvEWebb,
+C        UStar,dUStar,Tau,dTau,
+C        MEANW, TOLMEANW, HAVE_UNCAL)
+C FUNCTION
+C     Integrated routine which:
+C     - Calibrates raw samples
+C     - Estimates mean values and covariances with respective tolerances
+C     - Corrects the resulting mean values and covariances for all
+C       effects selected by the user
+C     - Estimates, from the final mean values and covariances, the surface-
+C       fluxes with tolerances.
+C INPUTS
+C     OutF      : [INTEGER]
+C                 unit number of file for intermediate results
+C     DoPrint   : [LOGICAL]
+C                 write intermediate results to file?
+C     RawSampl  : [REAL*8(MaxChan, MMax)
+C                 raw, uncalibrated samples
+C     MaxChan   : [INTEGER]
+C                 maximum number of channels in RawSampl
+C     Channels  : [INTEGER]
+C                 actual number of channels in RawSampl
+C     NMax      : [INTEGER]
+C                 maximum number of calibrated quantities
+C     N         : [INTEGER]
+C                 actual number of calibrated quantities  
+C     MMax      : [INTEGER]
+C                 maximum number of samples
+C     M         : [INTEGER]
+C                 actual number of samples
+C     DoCrMean  : [LOGICAL]
+C                 correct mean quantities of drift-sensitive apparatus 
+C                 using slow signal?
+C     PCal      : [LOGICAL]
+C                 print results of slow sensor correction?
+C     PIndep    : [LOGICAL]
+C                 print number of independent samples?
+C     Psychro   : [REAL*8]
+C                 water vapour density of slow sensor (kg/m^3)
+C     Freq      : [REAL*8]
+C                 sampling frequency
+C     CalSonic  : [REAL*8(NNQ)]
+C                 array with calibration data of sonic
+C     CalTherm  : [REAL*8(NNQ)]
+C                 array with calibration data of thermocouple
+C     CalHyg    : [REAL*8(NNQ)]
+C                 array with calibration data of hygrometer
+C     P         : [REAL*8]
+C                 atmospheric pressure (Pa)
+C     Calibr    : [SUBROUTINE]
+C                 calibration subroutine
+C     DoDetren  : [LOGICAL]
+C                 do linear deterending?
+C     PDetrend  : [LOGICAL]
+C                 print results of linear detrending?
+C     DoTilt    : [LOGICAL]
+C                 do tilt correction with known tilt angles
+C     PTilt     : [LOGICAL]
+C                 print results of tilting?
+C     PreYaw    : [REAL*8]
+C                 known yaw angle (degree)
+C     PrePitch  : [REAL*8]
+C                 known pitch angle (degree)
+C     PreRoll   : [REAL*8]
+C                 known roll angle (degree)
+C     DoYaw     : [LOGICAL]
+C                 do yaw correction?
+C     PYaw      : [LOGICAL]
+C                 print results of yaw correction?
+C     DoPitch   : [LOGICAL]
+C                 do pitch correction?
+C     PPitch    : [LOGICAL]
+C                 print results of pitch correction?
+C     PitchLim  : [REAL*8]
+C                 maximum allowable pith rotation angle (degrees)
+C     DoRoll    : [LOGICAL]
+C                 do roll correction?
+C     PRoll     : [LOGICAL]
+C                 print results of roll correction?
+C     RollLim   : [REAL*8]
+C                 maximum allowable roll rotation angle (degrees)
+C     DoSonic   : [LOGICAL]
+C                 do correction of sonic temperature (Schotanus)?
+C     PSonic    : [LOGICAL]
+C                 print results of sonic temperature correction?
+C     DoO2      : [LOGICAL]
+C                 Correct hygrometer data for oxygen sensitivity ?
+C     PO2       : [LOGICAL]
+C                 Print intermediate result for oxygen correction ?
+C     DoFreq    : [LOGICAL]
+c                 Do frequency response correction ?
+C     PFreq     : [LOGICAL]
+C                 Print intermediate results for frequency response
+C                 correction ?
+C     LLimit    : [REAL*8]
+C                 Lower limit for correction factor for frequency response
+C     ULimit    : [REAL*8]
+C                 Upper limit for correction factor for frequency response
+C     DoWebb    : [LOGICAL]
+C                 Do Webb correction for humidity flux ?
+C     PWebb     : [LOGICAL]
+C                 Print intermediate results for Webb correction ?
+C     HAVE_UNCAL: [LOGICAL(NMax)]
+C                 switch whether data for uncalibrated data
+C                 are available for each channel
+C OUTPUTS
+C     Sample    : [REAL*8(NMax, MMax)]
+C                 array with calibrated samples
+C     Flag      : [LOGICAL(NMax, MMax)]
+C                 validity flag (true means invalid) for all
+C                 calibrated samples
+C     Mok       : [INTEGER(NMax)]
+C                 number of valid samples for each quantity
+C     Cok       : [INTEGER(NMax,NMax)]
+C                 number of valid samples for each combination of
+C                 two quantities
+C     MIndep    : [INTEGER(NMax)]
+C                 number of independent samples for each quantity
+C     CIndep    : [INTEGER(NMax, NMax)]
+C                 number of independent samples for each 
+C                 combination of two quantities
+C     Rc        : [REAL*8(NMax)]
+C                 slope of linear regression in case liner detrending
+C                 has been done (for each quanity)
+C     BadTc     : [LOGICAL]
+C                 if more than half of the thermocouple samples are 
+C                 wrong, flag thermocouple as bad
+C     QName     : [CHARACTER*6(NMax)]
+C                 names of quantities (is this logical, to
+C                 fill this array here?)
+C     UName     : [CHARACTER*9(NMax)]
+C                 units of quantities (is this logical, to
+C                 fill this array here?)
+C     DirYaw    : [REAL*8]
+C                 yaw angle (degrees)
+C     DirPitch  : [REAL*8]
+C                 pitch angle (degrees)
+C     DirRoll   : [REAL*8]
+C                 roll angle (degrees)
+C     SonFactr  : [REAL*8(NMax)]
+C                 correction factor for the covariances with specific
+C                 humidity
+C     O2Factor  : [REAL*8(NMax)] 
+C                 Correction factor due to oxygen correction for
+C                 covariance of humidity with each calibrated
+C     FrCor     : [REAL*8(NMax, NMax)]
+C                 Correction factors for covariances for frequency
+C                 response
+C     Mean      : [REAL*8(NMax)] (in/out)
+C                 Mean values of all calibrated signals
+C     TolMean   : [REAL*8(NMax)] (in/out)
+C                 Tolerances in mean values of all calibrated signals
+C     Cov       : [REAL*8(NMax,NMax)] (in/out)
+C                 Covariances of all calibrated signals
+C     TolCov    : [REAL*8(NMax,NMax)] (in/out)
+C                 Tolerances in covariances of all calibrated signals
+C     HSonic    : [REAL*8]
+C                 sensible heat flux with sonic temperature (W/m^2)
+C     dHSonic   : [REAL*8]
+C                 tolerance in sensible heat flux with sonic temperature (W/m^2)
+C     HTc       : [REAL*8]
+C                 sensible heat flux with thermocouple temperature (W/m^2)
+C     dHTc      : [REAL*8]
+C                 tolerance in sensible heat flux with thermocouple temperature (W/m^2)
+C     LvE       : [REAL*8]
+C                 wq-covariance latent heat flux (W/m^2)
+C     dLvE      : [REAL*8]
+C                 tolerance in wq-covariance latent heat flux (W/m^2)
+C     LvEWebb   : [REAL*8]
+C                 Webb term for latent heat  flux (W/m^2)
+C     dLvEWebb   : [REAL*8]
+C                 tolerance in Webb term for latent heat  flux (W/m^2)
+C     UStar     : [REAL*8]
+C                 friction velocity (m/s)
+C     dUStar    : [REAL*8]
+C                 tolerance in friction velocity (m/s)
+C     Tau       : [REAL*8]
+C                 surface shear stress (N/m^2)
+C     dTau      : [REAL*8]
+C                 tolerance in surface shear stress (N/m^2)
+C     MEANW     : [REAL*8]
+C                 mean vertical velocity before tilt correction (m/s)
+C     TOLMEANW  : [REAL*8]
+C                 tolerance in mean vertical velocity before 
+C                 tilt correction (m/s)
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     Revision: 03-04-2001: get mean W and its tolerance before tilt
+C                           correction; export via interface (AM)
+C     Revision: 28-05-2001: added passing of info on whether uncalibrated
+C                           data are available (AM)
+C     $Name$
+C     $Id$
+C USES
+C     EC_C_Main
+C     EC_C_T05
+C     EC_C_T06
+C     EC_C_T08
+C     EC_C_T10
+C     EC_G_Reset
+C     EC_G_ShwInd
+C     EC_G_Show
+C     EC_M_Averag
+C     EC_M_MinMax
+C     EC_M_Detren
+C     EC_Ph_Q
+C     EC_Ph_Flux
+C     parcnst.inc
+C     calcomm.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
       INCLUDE 'calcomm.inc'
 
@@ -474,31 +692,49 @@ C
       RETURN
       END
       
-C...........................................................................
-C Routine   : EC_G_CLEARSTR
-C Purpose   : To set all characters in a string to CHAR(0)
-C Interface : STRING      intent(INOUT)   string to be changed
-C Author    : Arnold Moene
-C Date      : May 25, 2000
-C...........................................................................
-      SUBROUTINE EC_G_CLEARSTR(STRING)
-
-      IMPLICIT NONE
-      CHARACTER*(*) STRING
-      INTEGER       I
-
-      DO 15, I=1,LEN(STRING)
-         STRING(I:I) = CHAR(0)
-   15 CONTINUE
-      END
 
 
 
 
-C.........................................................................
-C Routine to reset means and covariances
-C.........................................................................
       SUBROUTINE EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+C     ****f* ec_gene.f/EC_G_Reset
+C NAME
+C     EC_G_Reset
+C SYNOPSIS
+C     CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+C FUNCTION
+C     Routine to reset means and covariances based on availability
+C     of the uncalibrated data
+C INPUTS
+C     Have_Uncal  : [LOGICAL(NMax)]
+C                   switch for each channel whether uncalibrated
+C                   data are available
+C     Mean        : [REAL*8(NMax)]
+C                   mean of quantities
+C     TolMean     : [REAL*8(NMax)]
+C                   tolerance in mean of quantities
+C     Cov         : [REAL*8(NMax,NMax)]
+C                   covariances of quantities
+C     TolMean     : [REAL*8(NMax,NMax)]
+C                   tolerance in covariances of quantities
+C OUTPUT
+C     Mean        : [REAL*8(NMax)]
+C                   mean of quantities
+C     TolMean     : [REAL*8(NMax)]
+C                   tolerance in mean of quantities
+C     Cov         : [REAL*8(NMax,NMax)]
+C                   covariances of quantities
+C     TolMean     : [REAL*8(NMax,NMax)]
+C                   tolerance in covariances of quantities
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
       LOGICAL Have_Uncal(NNMax)
@@ -568,9 +804,44 @@ C
 
       SUBROUTINE EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,
      &	TolCov,NMax,N)
-C
-C Prints mean values and (co-)variances plus respective tolerances
-C
+C    ****f* ec_gene.f/EC_G_Show
+C NAME
+C     EC_G_Show
+C SYNOPSIS
+C     CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,
+C     	             TolCov,NMax,N)
+C FUNCTION
+C     Prints mean values and (co-)variances plus respective 
+C     tolerances
+C INPUTS
+C     OUTF    : [INTEGER]
+C               unit number of file
+C     QName   : [CHARACTER*6(NMax)]
+C               names of quantities
+C     UName   : [CHARACTER*9(NMax)]
+C               names of units
+C     Mean    : [REAL*8(NMax)]
+C               means of quantities
+C     TolMean : [REAL*8(NMax)]
+C               tolerance in means of quantities
+C     Cov     : [REAL*8(NMax,NMax)]
+C               covariances  of quantities
+C     TolCov  : [REAL*8(NMax,NMax)]
+C               tolerance in covariances of quantities
+C     NMax    : [INTEGER]
+C               maximum number of quantities
+C     N       : [INTEGER]
+C               actual number of quantities
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     Epsilon
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -637,12 +908,35 @@ C
 
 
       SUBROUTINE EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
-C
-C Prints correction factors associated with frequency response
-C
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_gene.f/EC_G_ShwFrq
+C NAME
+C     EC_G_ShwFrq
+C SYNOPSIS
+C     CALL EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
+C FUNCTION
+C     Prints correction factors associated with frequency response
+C INPUTS
+C     OUTF    : [INTEGER]
+C               unit number of file
+C     QName   : [CHARACTER*6(NMax)]
+C               names of quantities
+C     FrCor   : [REAL*8(NMax,NMax)]
+C               freqency response correction factors for
+C               each combination of quantities
+C     NMax    : [INTEGER]
+C               maximum number of quantities
+C     N       : [INTEGER]
+C               actual number of quantities
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INCLUDE 'parcnst.inc'
-
       INTEGER i,j,N,NMax,OutF
       REAL*8 FrCor(NMax,NMax)
       CHARACTER*6 QName(NMax)
@@ -669,12 +963,42 @@ C
 
       SUBROUTINE EC_G_ShwInd(OutF,QName,MIndep,
      &	CIndep,NMax,N,M,Freq)
-C
-C Prints number of independent observations
-C
-      INCLUDE 'physcnst.inc'
-      INCLUDE 'parcnst.inc'
-
+C     ****f* ec_gene.f/EC_G_ShwInd
+C NAME
+C     EC_G_ShwInd
+C SYNOPSIS
+C     CALL EC_G_ShwInd(OutF,QName,MIndep,
+C                      CIndep,NMax,N,M,Freq)
+C FUNCTION
+C     Prints number of independent observations
+C INPUTS
+C     OUTF    : [INTEGER]
+C               unit number of file
+C     QName   : [CHARACTER*6(NMax)]
+C               names of quantities
+C     MIndep  : [INTEGER(NMax)]
+C               number of independent samples for
+C               means
+C     CIndep  : [INTEGER(NMax,NMax)]
+C               number of independent samples for
+C               covariances
+C     NMax    : [INTEGER]
+C               maximum number of quantities
+C     N       : [INTEGER]
+C               actual number of quantities
+C     M       : [INTEGER]
+C               total number of samples
+C     Freq    : [REAL*8]
+C               sampling frequency (Hz)
+C AUTHOR
+C     Arjan van Dijk
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
       INTEGER i,j,N,NMax,OutF,MIndep(NMax),CIndep(NMax,NMax),M
       REAL*8 Freq
       CHARACTER*6 QName(NMax)
@@ -721,126 +1045,7 @@ C
 
       RETURN
       END
-C...........................................................................
-C routine   : strcat
-C Purpose   : to concatenate a string to another
-C Interface : STRING1     intent(INOUT)   string to be added to (supposed
-C                                         to be of sufficient length)
-C             STRING2     intent(IN)      string to add
-C Author    : Arnold Moene
-C Date      : May 24, 2000
-C...........................................................................
-      SUBROUTINE EC_G_STRCAT(STRING1, STRING2)
-
-      IMPLICIT NONE
-      CHARACTER*(*) STRING1, STRING2
-      INTEGER       I, LEN1
-      INTEGER       EC_G_STRLEN
-      EXTERNAL      EC_G_STRLEN
 
 
-      LEN1 = EC_G_STRLEN(STRING1)
-      DO 15, I = 1, EC_G_STRLEN(STRING2)
-        STRING1(LEN1+I:LEN1+I) = STRING2(I:I)
-   15 CONTINUE
-      END
-
-C...........................................................................
-C Routine   : stripstr
-C Purpose   : to replace all trailing spaces in a string by NULL characters
-C             and strip all leading spaces. Furthermore, remove
-C             opening and closing quotes
-C Interface : STRING      intent(INOUT)   string to be checked
-C Author    : Arnold Moene
-C Date      : May 24, 2000
-C...........................................................................
-      SUBROUTINE EC_G_STRIPSTR(STRING)
-
-      IMPLICIT NONE
-      CHARACTER*(*) STRING
-      INTEGER       I, J, K, CHANGED, EC_G_STRLEN
-      EXTERNAL EC_G_STRLEN
-
-      CHARACTER     QUOTE(2)
-
-C Remove trailing spaces
-      DO 15, I = LEN(STRING), 1, -1
-        IF (STRING(I:I) .NE. ' ') GO TO 20
-        IF (STRING(I:I) .EQ. ' ') STRING(I:I) = CHAR(0)
-   15 CONTINUE
-   20 CONTINUE
-C Remove leading spaces
-      CHANGED = 1      
-      I = 1
-      DO 30, WHILE (CHANGED .EQ. 1)
-        CHANGED = 0
-        IF ((STRING(I:I) .EQ. ' ') .OR.
-     &      (STRING(I:I) .EQ. CHAR(0))) THEN
-           DO 35, J = I+1,LEN(STRING)-1
-              STRING(J-1:J-1) = STRING(J:J)
-   35      CONTINUE
-           CHANGED = 1
-        ELSE
-           I = I + 1
-        ENDIF
-   30 CONTINUE
-C Remove outer quotes
-      QUOTE(1) = "'"
-      QUOTE(2) = '"'
-      DO 75, K = 1,2
-         IF (STRING(1:1) .EQ. QUOTE(K)) THEN
-              DO 55, I = LEN(STRING),1,-1
-                 IF (STRING(I:I) .EQ. QUOTE(K)) THEN
-                    STRING(I:I) = CHAR(0)
-                    DO 65, J = I+1,LEN(STRING)-1
-                       STRING(J-1:J-1) = STRING(J:J)
-   65               CONTINUE
-                 ENDIF
-   55         CONTINUE
-         ENDIF
-   75 CONTINUE
-      END
 
 
-C...........................................................................
-C Function  : strlen
-C Purpose   : to return the length of a string
-C Interface : STRING      intent(IN)      string to be checked
-C             return value                length of string (integer)
-C Author    : after function in book of Clive Page (Professional programmer's
-C             guide to Fortran 77)
-C Date      : May 24, 2000
-C...........................................................................
-      INTEGER FUNCTION EC_G_STRLEN(STRING)
-
-      IMPLICIT NONE
-      CHARACTER*(*) STRING
-      INTEGER       I
-
-      DO 15, I = LEN(STRING), 1, -1
-        IF ((STRING(I:I) .NE. ' ') .AND.
-     &      (STRING(I:I) .NE. CHAR(0)))
-     &     GO TO 20
-   15 CONTINUE
-   20 EC_G_STRLEN = I
-      END
-
-C...........................................................................
-C Routine   : EC_G_UPCASE
-C Purpose   : To convert a string to upper case
-C Interface : STRING      intent(INOUT)   string to be changed
-C Author    : Arnold Moene
-C Date      : May 24, 2000
-C...........................................................................
-      SUBROUTINE EC_G_UPCASE(STRING)
-
-      IMPLICIT NONE
-      CHARACTER*(*) STRING
-      INTEGER       I
-
-      DO 15, I=1,LEN(STRING)
-         IF ((ICHAR(STRING(I:I)) .GT. 96) .AND.
-     &       (ICHAR(STRING(I:I)) .LT. 124))
-     &       STRING(I:I) = CHAR(ICHAR(STRING(I:I))-32)
-   15 CONTINUE
-      END
