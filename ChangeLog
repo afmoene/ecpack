@@ -140,4 +140,6 @@ Revision 2.2: April 22, 2002
           - Code is now GPL'de
 	  - started conversion of documentation to robodoc format
 	  - now makefile builds separate library and two demo programs
+Revision 2.2.1: April 23, 2002
+          - changed a variable name in planar fit routines
 
