@@ -84,3 +84,6 @@ Revision 1.20: June 21, 2001
 	  - indices interchanged in mappings in routines that use ECMapMtx:
 	    ECRotate)
           - MaxRhoV in physcnst.inc changed from 100 to 1 (in kg/m3 !!)
+Revision 1.21: June 25, 2001
+          - fixed error in time interval search routine (now really discards
+	    samples with incorrect DOY and/or HOURMIN.

@@ -1031,7 +1031,8 @@ C...........................................................................
       DO WHILE (.NOT. OK)
         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
-	IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR. 
+	IF (((DOY1 .GT. 0) .AND. (DOY1 .LE. 366) .AND.
+     +       (HM1 .GE. 0) .AND. (HM1 .LE. 2400)) .OR. 
      +      (IND1 .EQ. MAXIND)) THEN
 	   OK = .TRUE.
 	ELSE
@@ -1042,7 +1043,8 @@ C...........................................................................
       DO WHILE (.NOT. OK) 
         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
-	IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR. 
+	IF (((DOY3 .GT. 0) .AND. (DOY3 .LE. 366) .AND.
+     +       (HM3 .GE. 0) .AND. (HM3 .LE. 2400)) .OR. 
      +      (IND3 .EQ. 1)) THEN
 	   OK = .TRUE.
 	ELSE
