@@ -3743,13 +3743,6 @@ C
       CALL ECSchot(Mean,NMax,N,Cov,SonFactr)
       CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
-      DO I=1,N
-        WRITE(OUTF,*) Qname(I), MEAN(I)
-	DO J=1,N
-	  WRITE(OUTF,*) Qname(I), Qname(J), COV(i,j)
-	ENDDO
-      ENDDO
-
       IF (DoPrint) THEN
 	WRITE(OutF,*)
 	WRITE(OutF,*) 'Correction factors for H2O-sensitivity of ',

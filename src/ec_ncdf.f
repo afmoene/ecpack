@@ -34,6 +34,7 @@ C...........................................................................
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
       INCLUDE 'calcomm.inc'
+      INCLUDE 'version.inc'
 
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
      &              ParmName,InterName
@@ -88,13 +89,16 @@ C
       IF (ECConfFile .NE. 5) THEN
          OPEN(ECConfFile, FILE='ecconf')
       ENDIF
+
+C Report version number (VERSION is defined in version.inc)
+      WRITE(*,*) 'EC_NCDF Version: ', VERSION
+      WRITE(*,*) '$Id:'
       
       CALL GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName,
      &             SonName, CoupName, HygName,
      &             NCVarname, NNNMax)
-      write(*,*) 'Got conf'
 C
 C Check whether we have a reference temperature for a thermocouple
       IF (STRLEN(NCVarName(Tref)) .GT. 0) THEN

@@ -11,7 +11,7 @@ LDFLAGS=$(LIBDIR) -lnetcdf
 ec_ncdf$(EXT): ec_ncdf.o slatec.o ecpack.o getconf.o
 	g77 -o ec_ncdf$(EXT) slatec.o ecpack.o getconf.o ec_ncdf.o  $(LDFLAGS)
 
-ec_ncdf.o: ec_ncdf.f physcnst.inc parcnst.inc calcomm.inc
+ec_ncdf.o: ec_ncdf.f physcnst.inc parcnst.inc calcomm.inc version.inc
 	g77 $(FFLAGS) -c ec_ncdf.f
 
 slatec.o: slatec.f
