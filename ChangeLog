@@ -293,6 +293,13 @@ Revision 2.5.2: March 11, 2003 (Arnold.Moene@wur.nl)
 	    and in ec_g_main.
 Revision 2.5.3: June 3, 2003 (Arnold.Moene@wur.nl)
           - fixed wind direction again
+Revision 2.5.4: August 20, 2003 (Arnold.Moene@wur.nl)
+          - now reset contents of calibration info to DUMMY (in planang and ec_ncdf)
+		  - New routine in ec_phys to calculate Obukhov length (for use in freq. response correction)
+		  - Now use new routine for Obukhov length  in freq. response correction in ec_corr
+		  - fixed bug in writing of flux file: in new format intervals with zero samples
+		    repeated data from last interval with more than zero samples. Now handled correctly.
 
-	    
+
+
 

@@ -640,3 +640,45 @@ C
       ENDIF
       RETURN
       END
+
+      REAL*8 FUNCTION EC_Ph_Obukhov(Ustar, Tstar, Qstar, MeanT)
+C     ****f* ec_phys.f/EC_Ph_Obukhov
+C NAME
+C     EC_Ph_Obukhov
+C SYNOPSIS
+C     L =  EC_Ph_Obukhov(Ustar,Tstar,Qstar ,MeanT)
+C FUNCTION
+C     Calculate Obukhov length (taking into account buoyancy effect of
+C     water vapour)
+C INPUTS
+C     Ustar   : [REAL*8]  
+C                u* (m/s) 
+C     Tstar   : [REAL*8]  
+C                T* (K) 
+C     Qstar   : [REAL*8]  
+C                q* (kg/kg)
+C     MeanT   : [REAL*8]  
+C                mean temperature (K)
+C                actual number of meaningful samples in array Sample.
+C OUTPUT 
+C     return value  : [REAL*8]  
+C                obukhov length (m)
+C AUTHOR
+C     Arnold Moene 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     physcnst.inc
+C     GG
+C     Karman
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'physcnst.inc'
+
+      REAL*8 Ustar, Tstar, Qstar, MeanT
+
+      EC_Ph_Obukhov = (MeanT/(Karman*GG)) *
+     &                  Ustar**2/(Tstar + 0.61*MeanT*Qstar)
+      END
+

@@ -162,6 +162,15 @@ C
          HAVE_UNCAL(I) = .FALSE.
       ENDDO
 C
+C Reset calibration information
+C
+      DO I=1,NQQ
+        CalSonic(I) = DUMMY
+        CalHyg(I) = DUMMY
+        CalTherm(I) = DUMMY
+        CalCO2(I) = DUMMY
+      ENDDO
+C
 C Check whether we have a reference temperature for a thermocouple
       IF (EC_T_STRLEN(NCVarName(QUTref)) .GT. 0) THEN
          HAVE_UNCAL(QUTref) = .TRUE.

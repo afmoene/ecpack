@@ -104,7 +104,16 @@ C
       DO I=1,NNNMax
          HAVE_UNCAL(I) = .FALSE.
       ENDDO
-
+C
+C Reset calibration information
+C
+      DO I=1,NQQ
+        CalSonic(I) = DUMMY
+        CalHyg(I) = DUMMY
+        CalTherm(I) = DUMMY
+        CalCO2(I) = DUMMY
+      ENDDO
+C
 C
 C Check which calibration files we have
 C

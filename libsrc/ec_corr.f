@@ -242,9 +242,8 @@ C       27-01-2003: replaced Nint by NumInt
 C     $Name$ 
 C     $Id$
 C USES
-C     GG
-C     Karman
 C     Pi
+C     EC_Ph_Obukhov
 C     ***
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
@@ -258,7 +257,11 @@ C     ***
      &  TRANCO21, TRANWCO21,
      &	XI,ZETA,CW,CU,WT,UW,TT,UU,WW,F,NS,C,NSTA,NEND,N,LF,X,ZL,
      &	INTTS(NNMax,NNMAX),G(NNMAX,NNMAX),
-     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),UStar
+     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),Ustar, Tstar, Qstar
+
+      REAL*8 EC_Ph_Obukhov
+      EXTERNAL EC_Ph_Obukhov
+
 C
 C-- Declarations of constants ----------------------------------------
 C
@@ -274,9 +277,17 @@ C
          ENDDO
       ENDDO
 
-      Ustar = (Cov(U,W)**2.D0)**0.25D0
-      ZL = (CalSonic(QQZ)*Karman*GG*Cov(W,WhichTemp))/
-     &	(-Mean(WhichTemp)*Ustar**3.0D0)
+C Make scales for Obukhov length calculation 
+      Ustar = (Cov(U,W)**2.D0 + Cov(V,W)**2.D0)**0.25D0
+      Tstar = -Cov(W, WhichTemp)/Ustar
+C Take care of situation when we don't have a hygrometer
+      IF (INT(CalHyg(QQType)) .NE. INT(DUMMY)) THEN
+         Qstar = -Cov(W, SpecHum)/Ustar
+      ELSE 
+         Qstar = 0
+      ENDIF
+      ZL = CalSonic(QQZ)/EC_Ph_Obukhov(Ustar, Tstar, Qstar,
+     &                                 Mean(WhichTemp))
 
       IF(ZL.GE.0.D0) THEN
 C

@@ -1082,32 +1082,32 @@ C     parcnst.inc
 C     EC_T_STRLEN
 C     EC_T_STRIPSTR
 C     ***
-C  
+C
       SUBROUTINE  EC_F_WFlux(Outunit, Header,
      &                 StartTime, StopTime,
      &                 M, Mok, Mean, dMean, Cov, dCov,
      &                 Phys, dPhys, Std, dStd, Struct,
      &                 dStruct, R, dR,DiagFlag,
-     &                 OutMean, OutCov, OutPh, 
+     &                 OutMean, OutCov, OutPh,
      &                 OutStd, OutStr, Outputs)
       IMPLICIT NONE
       include 'parcnst.inc'
-      
+
       INTEGER OutUnit, StartTime(3), StopTime(3), M, Mok(NNMax),
      &        I, J, DiagFlag(NMaxDiag)
       LOGICAL Header, OutMean(NNMax), OutCov(NNMax,NNMax),
      &        OutPh(NMaxPhys), OutStd(NNMax), OutStr(NNMax,NNMax),
      &        Outputs(NMaxOS), AnyStruct
-      REAL*8  Mean(NNMax), dMean(NNMax), 
+      REAL*8  Mean(NNMax), dMean(NNMax),
      &        Cov(NNMax,NNMax), dCov(NNMax,NNMax),
      &        Std(NNMax),dStd(NNMax),
      &        Struct(NNMax,NNMax), dStruct(NNMax,NNMax),
      &        Phys(NMaxPHys), dPhys(NMaxPhys), R, dR
       CHARACTER*20  FRM, NAME, NAME1, NAME2, OUTNAME
-      
+
       INTEGER EC_T_STRLEN
       EXTERNAL EC_T_STRLEN
-      
+
 C You really want the old format !!?
       IF (Outputs(OSOLD)) THEN
          IF (Header) THEN
@@ -1177,9 +1177,9 @@ C Check if any structure parameter needs to be written
            DO J=1,NNMax
               IF (OutStr(I,J)) AnyStruct = .TRUE.
            ENDDO
-        ENDDO        
+        ENDDO
         IF (HEADER) THEN
-C First line of header         
+C First line of header
 C Special format for first column
            IF (Outputs(OSCSV)) THEN
               FRM='(A,$)'
@@ -1212,13 +1212,13 @@ C Means
              IF (OutMean(I)) THEN
                 NAME = QName(I)
                 CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "('Mean(',A,')')") 
+                WRITE(OUTNAME, "('Mean(',A,')')")
      &                NAME(:EC_T_STRLEN(NAME))
                 write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 IF (Outputs(OSTol)) THEN
                    NAME = QName(I)
                    CALL EC_T_STRIPSTR(NAME)
-                   WRITE(OUTNAME, "('TolMean(',A,')')") 
+                   WRITE(OUTNAME, "('TolMean(',A,')')")
      &                NAME(:EC_T_STRLEN(NAME))
                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 ENDIF
@@ -1229,15 +1229,15 @@ C Standard deviations
              IF (OutStd(I)) THEN
                 NAME = QName(I)
                 CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "('Std(',A,')')") 
+                WRITE(OUTNAME, "('Std(',A,')')")
      &                NAME(:EC_T_STRLEN(NAME))
                 write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 IF (Outputs(OSTol)) THEN
-                   WRITE(OUTNAME, "('TolStd(',A,')')") 
+                   WRITE(OUTNAME, "('TolStd(',A,')')")
      &                NAME(:EC_T_STRLEN(NAME))
                     write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 ENDIF
-             ENDIF             
+             ENDIF
            ENDDO
 C Covariances
            DO I=1,NNMax
@@ -1247,18 +1247,18 @@ C Covariances
                    NAME2 = QName(J)
                    CALL EC_T_STRIPSTR(NAME1)
                    CALL EC_T_STRIPSTR(NAME2)
-                   WRITE(OUTNAME, "('Cov(',A,'*',A,')')") 
+                   WRITE(OUTNAME, "('Cov(',A,'*',A,')')")
      &                NAME1(:EC_T_STRLEN(NAME1)),
      &                NAME2(:EC_T_STRLEN(NAME2))
                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                    IF (Outputs(OSTol)) THEN
-                      WRITE(OUTNAME, "('TolCov(',A,'*',A,')')") 
+                      WRITE(OUTNAME, "('TolCov(',A,'*',A,')')")
      &                   NAME1(:EC_T_STRLEN(NAME1)),
      &                   NAME2(:EC_T_STRLEN(NAME2))
-                      write(OutUnit, FRM) 
+                      write(OutUnit, FRM)
      &                  OUTNAME(:EC_T_STRLEN(OUTNAME))
                    ENDIF
-                ENDIF             
+                ENDIF
              ENDDO
            ENDDO
 C Physical quantities
@@ -1266,22 +1266,22 @@ C Physical quantities
              IF (OutPh(I)) THEN
                 NAME = QPName(I)
                 CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)") 
+                WRITE(OUTNAME, "(A)")
      &                NAME(:EC_T_STRLEN(NAME))
                 write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 IF (Outputs(OSTol)) THEN
-                   WRITE(OUTNAME, "('Tol(',A,')')") 
+                   WRITE(OUTNAME, "('Tol(',A,')')")
      &                NAME(:EC_T_STRLEN(NAME))
                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 ENDIF
-             ENDIF             
+             ENDIF
            ENDDO
 C Diagnostics
            IF (Outputs(OSDiag)) THEN
               DO I=1,NMaxDiag
                 NAME = QDName(I)
                 CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)") 
+                WRITE(OUTNAME, "(A)")
      &                NAME(:EC_T_STRLEN(NAME))
                 write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
               ENDDO
@@ -1297,23 +1297,23 @@ C Structure parameters
                      NAME2 = QName(J)
                      CALL EC_T_STRIPSTR(NAME1)
                      CALL EC_T_STRIPSTR(NAME2)
-                     WRITE(OUTNAME, "('C_(',A,'*',A,')')") 
+                     WRITE(OUTNAME, "('C_(',A,'*',A,')')")
      &                  NAME1(:EC_T_STRLEN(NAME1)),
      &                  NAME2(:EC_T_STRLEN(NAME2))
                      write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                      IF (Outputs(OSTol)) THEN
-                        WRITE(OUTNAME, "('TolC_(',A,'*',A,')')") 
+                        WRITE(OUTNAME, "('TolC_(',A,'*',A,')')")
      &                     NAME1(:EC_T_STRLEN(NAME1)),
      &                     NAME2(:EC_T_STRLEN(NAME2))
-                        write(OutUnit, FRM) 
+                        write(OutUnit, FRM)
      &                    OUTNAME(:EC_T_STRLEN(OUTNAME))
                      ENDIF
-                  ENDIF             
+                  ENDIF
                 ENDDO
              ENDDO
            ENDIF
            WRITE(OutUnit,*)
-C Second line of header         
+C Second line of header
 C Special format for first column
            IF (Outputs(OSCSV)) THEN
               FRM='(A,$)'
@@ -1360,7 +1360,7 @@ C Standard deviations
                 IF (Outputs(OSTol)) THEN
                     write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 ENDIF
-             ENDIF             
+             ENDIF
            ENDDO
 C Covariances
            DO I=1,NNMax
@@ -1370,15 +1370,15 @@ C Covariances
                    NAME2 = UName(J)
                    CALL EC_T_STRIPSTR(NAME1)
                    CALL EC_T_STRIPSTR(NAME2)
-                   WRITE(OUTNAME, "(A,A)") 
+                   WRITE(OUTNAME, "(A,A)")
      &                NAME1(:EC_T_STRLEN(NAME1)),
      &                NAME2(:EC_T_STRLEN(NAME2))
                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                    IF (Outputs(OSTol)) THEN
-                      write(OutUnit, FRM) 
+                      write(OutUnit, FRM)
      &                  OUTNAME(:EC_T_STRLEN(OUTNAME))
                    ENDIF
-                ENDIF             
+                ENDIF
              ENDDO
            ENDDO
 C Physical quantities
@@ -1386,20 +1386,20 @@ C Physical quantities
              IF (OutPh(I)) THEN
                 NAME = UPName(I)
                 CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)") 
+                WRITE(OUTNAME, "(A)")
      &                NAME(:EC_T_STRLEN(NAME))
                 write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 IF (Outputs(OSTol)) THEN
                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                 ENDIF
-             ENDIF             
+             ENDIF
            ENDDO
 C Diagnostics
            IF (Outputs(OSDiag)) THEN
               DO I=1,NMaxDiag
                 NAME = UDName(I)
                 CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)") 
+                WRITE(OUTNAME, "(A)")
      &                NAME(:EC_T_STRLEN(NAME))
                 write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
               ENDDO
@@ -1415,16 +1415,16 @@ C Structure parameters
                      NAME2 = UName(J)
                      CALL EC_T_STRIPSTR(NAME1)
                      CALL EC_T_STRIPSTR(NAME2)
-                     WRITE(OUTNAME, "(A,A,A)") 
+                     WRITE(OUTNAME, "(A,A,A)")
      &                  NAME1(:EC_T_STRLEN(NAME1)),
      &                  NAME2(:EC_T_STRLEN(NAME2)),
      &                  '[m^-2/3]'
                      write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
                      IF (Outputs(OSTol)) THEN
-                        write(OutUnit, FRM) 
+                        write(OutUnit, FRM)
      &                    OUTNAME(:EC_T_STRLEN(OUTNAME))
                      ENDIF
-                  ENDIF             
+                  ENDIF
                 ENDDO
              ENDDO
            ENDIF
@@ -1441,52 +1441,52 @@ C General format for other columns
               FRM='(" ",I20,$)'
            ENDIF
            write(OutUnit, FRM) StartTime(2)
-           write(OutUnit, FRM) StartTime(3)           
+           write(OutUnit, FRM) StartTime(3)
            write(OutUnit, FRM) StopTime(1)
            write(OutUnit, FRM) StopTime(2)
            write(OutUnit, FRM) StopTime(3)
            write(OutUnit, FRM) M
            DO I=1,NNMax
-             write(OutUnit, FRM) Mok(I)
+             CALL EC_F_WINT(OutUnit, FRM, Mok(I), M)
            ENDDO
            IF (Outputs(OSCSV)) THEN
-              FRM='(",",G20.5,$)' 
+              FRM='(",",G20.5,$)'
            ELSE
               FRM='(" ",G20.5,$)'
            ENDIF
            DO I=1,NNMax
              IF (OutMean(I)) THEN
-                write(OutUnit, FRM) Mean(I)
+                CALL EC_F_WREAL(OutUnit, FRM, Mean(I), M)
                 IF (Outputs(OSTol)) THEN
-                   write(OutUnit, FRM) dMean(I)
-                ENDIF
+                   CALL EC_F_WREAL(OutUnit, FRM, dMean(I), M)
+               ENDIF
              ENDIF
            ENDDO
            DO I=1,NNMax
              IF (OutStd(I)) THEN
-                write(OutUnit, FRM) Std(I)
+                CALL EC_F_WREAL(OutUnit, FRM, Std(I), M)
                 IF (Outputs(OSTol)) THEN
-                    write(OutUnit, FRM) dStd(I)
+                    CALL EC_F_WREAL(OutUnit, FRM, dStd(I), M)
                 ENDIF
-             ENDIF             
+             ENDIF
            ENDDO
            DO I=1,NNMax
              DO J=1,NNMax
                 IF (OutCov(I,J)) THEN
-                   write(OutUnit, FRM) Cov(I,J)
+                   CALL EC_F_WREAL(OutUnit, FRM, Cov(I,J), M)
                    IF (Outputs(OSTol)) THEN
-                      write(OutUnit, FRM) dCov(I,J)
+                      CALL EC_F_WREAL(OutUnit, FRM, dCov(I,J), M)
                    ENDIF
-                ENDIF             
+                ENDIF
              ENDDO
            ENDDO
            DO I=1,NMaxPhys
              IF (OutPh(I)) THEN
-                write(OutUnit, FRM) Phys(I)
+                CALL EC_F_WREAL(OutUnit, FRM, Phys(I), M)
                 IF (Outputs(OSTol)) THEN
-                   write(OutUnit, FRM) dPhys(I)
+                   CALL EC_F_WREAL(OutUnit, FRM, dPhys(I), M)
                 ENDIF
-             ENDIF             
+             ENDIF
            ENDDO
            IF (Outputs(OSDiag)) THEN
               IF (Outputs(OSCSV)) THEN
@@ -1495,7 +1495,7 @@ C General format for other columns
                  FRM='(" ",I20,$)'
               ENDIF
               DO I=1,NMaxDiag
-                write(OutUnit, FRM) DiagFlag(I)
+                CALL EC_F_WINT(OutUnit, FRM, DiagFlag(I), M)
               ENDDO
               IF (Outputs(OSCSV)) THEN
                  FRM='(",",G20.5,$)'
@@ -1504,16 +1504,16 @@ C General format for other columns
               ENDIF
            ENDIF
            IF (AnyStruct) THEN
-             write(OutUnit, FRM) R
-             write(OutUnit, FRM) dR
+             CALL EC_F_WREAL(OutUnit, FRM, R, M)
+             CALL EC_F_WREAL(OutUnit, FRM, dR, M)
              DO I=1,NNMax
                 DO J=1,NNMax
                   IF (OutStr(I,J)) THEN
-                     write(OutUnit, FRM) Struct(I,J)
+                     CALL EC_F_WREAL(OutUnit, FRM, Struct(I,J), M)
                      IF (Outputs(OSTol)) THEN
-                        write(OutUnit, FRM) dStruct(I,J)
+                        CALL EC_F_WREAL(OutUnit, FRM, dStruct(I,J), M)
                      ENDIF
-                  ENDIF             
+                  ENDIF
                 ENDDO
              ENDDO
            ENDIF
@@ -1577,7 +1577,7 @@ C General format for other columns
      &  'Cov(W,V)       Cov(W,W)         ')
   57   FORMAT(     
      &  '-  -  -   ',
-     &  '-  -  -  ',    
+     &  '-  -  -  ',
      &  '[-]     ',
      &  '  [-]    [-]    [-] [-]    [-]    [-]       [-] [-]     ',
      &  '[degr] [degr]',
@@ -1626,4 +1626,33 @@ C General format for other columns
      &  '[m/s]**2       [m/s]**2         ',     
      &  '[m/s]**2       [m/s]**2         ',
      &  '[m/s]**2       [m/s]**2         ')     
+      END
+
+
+      SUBROUTINE EC_F_WREAL(OUTUNIT, FRM, NUMBER, NSAMP)
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+      REAL*8 NUMBER
+      CHARACTER*(*) FRM
+      INTEGER NSAMP, OUTUNIT
+
+      IF (NSAMP .GT. 0) THEN
+          write(OutUnit, FRM) NUMBER
+      ELSE
+          write(OutUnit, FRM) DUMMY
+      ENDIF
+      END
+
+      SUBROUTINE EC_F_WINT(OUTUNIT, FRM, NUMBER, NSAMP)
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+
+      CHARACTER*(*) FRM
+      INTEGER NSAMP, OUTUNIT, NUMBER
+
+      IF (NSAMP .GT. 0) THEN
+          write(OutUnit, FRM) NUMBER
+      ELSE
+          write(OutUnit, FRM) INT(DUMMY)
+      ENDIF
       END

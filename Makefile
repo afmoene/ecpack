@@ -25,9 +25,9 @@ FC=g77
 AR=ar
 #
 # For some Unix
-#INCDIR=-I/usr/local/include
-#LIBDIR=-L/usr/local/lib
-#EXT=
+INCDIR=-I/usr/include
+LIBDIR=-L/usr/lib
+EXT=
 #
 # For DJGPP
 # INCDIR=-Ic:/djgpp/include
@@ -35,9 +35,9 @@ AR=ar
 # EXT=.exe
 #
 # For MingW
-INCDIR=-Ic:/gcc-2.95.2/include
-LIBDIR=-Lc:/gcc-2.95.2/lib
-EXT=.exe
+#INCDIR=-Ic:/gcc-2.95.2/include
+#LIBDIR=-Lc:/gcc-2.95.2/lib
+#EXT=.exe
 
 FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g
 LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
