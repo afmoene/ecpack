@@ -20,7 +20,11 @@ C                                for thermocouple: Tref is in Celcius (not
 C                                Kelvin !)
 C             November 1, 2000:  fixed error in sonic calibration (azimuth
 C                                angle replaced elevation angle)
-C Current version: 1.09
+C             February 28, 2001: fixed error in computation of density of
+C                                dry air (it was correct in the original
+C                                version of ECpack, but incorrectly changed
+C                                by me (AM)
+C Current version: 1.10
 C...........................................................................
       PROGRAM EC_NCDF
 

@@ -16,7 +16,10 @@ Revision: October 30, 2000: check for validity of Tref (for thermocouple
           calibration) -> Tref is in Celcius, not Kelvin !
 Revision: November 1, 2000:  fixed error in sonic calibration (azimuth
 	  angle replaced elevation angle)
-Current version: 1.09
+Revision: February 28, 2001: fixed an error in computation of density
+          of dry air (it was correct in the original version of ECpack
+	  but incorrectly changed by me (AM).
+Current version: 1.10
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html

@@ -16,7 +16,7 @@ C     EC Special Interest Group of Wag-UR-METAIR Wageningen and KNMI
 C
 C
 C
-C Version of release    : 1.06
+C Version of release    : 1.10
 C (note that version numbers of subroutines are not maintained)
 C Date	   : September 26 2000
 C Author		: Arjan van Dijk
@@ -1833,7 +1833,7 @@ C
 
       REAL*8 RhoV,T,P
 
-      ECRhoDry = P/(Rd*T)	  ! [kg m^{-3}]
+      ECRhoDry = P/(Rd*T) - RhoV*Rv/Rd	  ! [kg m^{-3}]
 
       RETURN
       END
