@@ -475,7 +475,6 @@ C Undo Yaw angle of planar fit untilt matrix
            Yaw(3,3) = 1.D0
 	   CALL EC_M_InvM(Yaw,InvYaw)
 	   CALL EC_M_MMul(InvYaw, Apf, Apf)
-           write(*,*) ((Apf(i,j),i=1,3),j=1,3)
         ELSE
            M = 0
         ENDIF
