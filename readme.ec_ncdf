@@ -220,6 +220,8 @@ T	PWebb	  = Indicator if these intermediate results are wanted
 0.15    StructSep = separation (in m) used for calculation of structure parameters
 T       DoPF      = Do planar fit untilting (requires that untilting angles have been produced before with planang)
 T       PPF       = Print intermediate results after planar fit untilting
+0.99    PFValid   = Fraction of samples that should be valid to inclue interval in planar fit calculation (see readme.planang)
+
 ------------end----------------
 
 If you use planar fit untilting, the 'classic' axis rotation should be switched

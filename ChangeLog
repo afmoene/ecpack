@@ -238,5 +238,17 @@ Revision 2.4.3: January 7, 2003 (arnold.moene@wur.nl)
             to Kelvin, now in Celcius again.
           - converted StartTime and StopTime into integers (in ec_ncdf, planang
             EC_F_ReadNCDF and EC_F_GetPF
-
+Revision 2.4.4: January 14, 2003
+          - writing og planar fit angles by planang fixed (sometimes no spacing)
+          - moved planar fit rotation of samples to very start of all rotation stuff (in EC_G_Main)
+          - Now wind direction should be correct irrespective of whether one uses planar
+            fit only, or with yaw-rotation, or the 'classic' one-run rotations (yaw, pitch and roll).
+          - computation of vector wind and wind direction has been moved to EC_Ph_Flux
+          - output of ec_ncdf now gives real vector wind, rather than mean(U) (which is meaningless
+            when the coordinate system is not turned into the mean wind.
+          - likewise u* and tau are now calculated such that both cov(u,w) and cov(v,w) are taken
+            into account.
+          - 12 extra columns have been added to the output of ec_ncdf (why not!), giving the mean 
+            velocity components and the components of the stress tensor (it's becoming time
+            for output-on-demand).
 

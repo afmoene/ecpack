@@ -55,7 +55,8 @@ C
 
       SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel)
+     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel,
+     &  VectWind, dVectWind, DirFrom, dDirFrom, dirYaw)
 C     ****f* ec_phys.f/EC_Ph_Flux
 C NAME
 C     EC_Ph_Flux
@@ -64,7 +65,7 @@ C     CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
 C                     HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
 C                     UStar,dUStar,Tau,dTau, 
 C                     FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-C                     WebVel)
+C                     WebVel, VectWind, dVectWind, DirFrom, dDirFrom, dirYaw)
 C FUNCTION
 C     Construct estimates for surface fluxes from mean values and covariances
 C INPUTS
@@ -84,6 +85,8 @@ C     BadTc  : [LOGICAL]
 C              indicator whether thermocouple temperature is corrupt
 C     WebVel : [REAL*8]
 C              Webb velocity (m/s)
+C     DirYaw : [Real*8]
+C              Yaw rotation angle (degrees)
 C OUTPUT
 C     HSonic : [REAL*8]
 C              sensible heat flux with sonic temperature (W/m^2)
@@ -117,6 +120,14 @@ C     FCO2Webb: [REAL*8]
 C              Webb term for CO2  flux (kg/m^2 s)
 C     dLvEWebb: [REAL*8]
 C              tolerance in Webb term for CO2 flux (kg/m^2 s)
+C     VectWind: [Real*8]
+C              vector wind velocity (m/s)
+C     dVectWind: [Real*8]
+C              tolerance in vector wind velocity (m/s)
+C     DirFrom : [Real*8]
+C              wind direction (degrees)
+C     dDirFrom : [Real*8]
+C              tolerance in wind direction (degrees)
 C AUTHOR
 C     Arjan van Dijk, Arnold Moene
 C HISTORY
@@ -141,7 +152,8 @@ C     ***
      &  dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
      &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar,
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel
+     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel, VectWind, dVectWind,
+     &  DirFrom, dDirFrom, DirYaw, LocalDir
 C
 C Sensible heat flux [W m^{-2}]
 C
@@ -179,27 +191,27 @@ C      ENDIF                               ! statement 4
 
       dLvEWebb = LvEWebb*(Frac1**2.D0+Frac2**2.D0)**0.5D0
 C
-C Friction velocity
+C Friction velocity (vector sum of two components
 C
-      IF (Cov(W,U).GT.0.D0) THEN
-	Sgn = -1.D0
-	UStar = -SQRT(Cov(W,U))
-      ELSE
-	Sgn = 1.D0
-	UStar = SQRT(-Cov(W,U))
+      IF (.NOT. ((COV(W,U) .EQ. DUMMY) .AND.
+     &            (COV(W,V) .EQ. DUMMY))) THEN
+	  UStar = SQRT(SQRT(Cov(W,U)**2+Cov(W,U)**2))
       ENDIF
 
-      dUStar = 0.5*ABS(TolCov(W,U)/Cov(W,U))*UStar
+      dUStar = (0.25*(2*TolCov(W,U)*ABS(COV(W,U)) + 
+     &                 2*TolCov(W,V)*ABS(COV(W,V)))/UStar**2)*
+     &           UStar
 C
 C Friction force [N m^{-2}]
 C
       IF (.NOT.BadTc) THEN
-        Tau = Sgn*0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
+        Tau = 0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
       ELSE
-        Tau = Sgn*(RhoSon)*(ABS(UStar))**2.D0
+        Tau = (RhoSon)*(ABS(UStar))**2.D0
       ENDIF
-      dTau = ABS(TolCov(W,U)/Cov(W,U))*Tau
-
+      dTau = (0.5*(2*ABS(COV(W,U))*TolCov(W,U) + 
+     &             2*ABS(COV(W,V))*TolCov(W,V))/UStar**2)*
+     &         Ustar**2
 C
 C CO2 flux [kg m^{-2} s^{-1}]
 C
@@ -211,7 +223,33 @@ C Webb term would be enormous
       Frac1 = 0.D0
       Frac2 = ABS(TolMean(CO2)/Mean(CO2))
 
-      dFCO2Webb = FCO2Webb*(Frac1**2.D0+Frac2**2.D0)**0.5D0
+      dFCO2Webb = FCO2Webb*(Frac1**2.D0+Frac2**2.D0)**0.5D0   
+C 
+C Vector wind
+C
+      VectWind = SQRT(Mean(U)**2+Mean(V)**2)
+      dVectWind = 0.5 * (TolMean(U)*ABS(Mean(U)) + 
+     &                   TolMean(V)*ABS(Mean(V)))
+C      
+C Wind direction
+C
+      IF (DirYaw.LT.180.D0) THEN
+          DirFrom = DirYaw - 180.D0
+      ELSE
+          DirFrom = DirYaw + 180.D0
+      ENDIF
+      DirFrom = DirFrom - ATAN2(Mean(V), -Mean(U))*180/PI
+      IF (DirFrom .LT. 0) THEN
+         DirFrom = DirFrom + 360.0D0
+      ENDIF
+      IF (DirFrom .GT. 360.D0) THEN
+         DirFrom = DirFrom - 360.0D0
+      ENDIF
+      
+      LocalDir = ATAN2(Mean(U), Mean(V))
+      dDirFrom = 2.D0*180.D0*ATAN(
+     &              SQRT(Cos(LocalDir)*Cov(V,V)+
+     &                   SIN(LocalDir)*Cov(U,U))/VectWind)/Pi
       RETURN
       END
 

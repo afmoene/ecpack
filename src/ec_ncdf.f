@@ -69,7 +69,7 @@ C...........................................................................
      &  DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &  DoSonic,DoTilt,PTilt,DoPrint,Flag(NNMAx,MMMax),DoDetren,
      &  PDetrend,DoStruct,BadTc, DoPF, PPf
-      INTEGER N,i,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
+      INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
      &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3)
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
@@ -80,12 +80,13 @@ C...........................................................................
      &  SonFactr(NNMax),PreYaw,PrePitch,PreRoll,
      &  HSonic,dHSonic,HTc,dHTc,
      &  LvE,dLvE,LvEWebb,dLvEWebb,
-     &  UStar,dUStar,Tau,dTau,CorMean(NNMax),DirFrom,
+     &  UStar,dUStar,Tau,dTau,CorMean(NNMax),
      &  Gain(NNNMax),Offset(NNNMax),
      &  StructSep,
      &  FCO2,dFCO2, FCO2Webb, dFCO2Webb,
      &  Apf(3,3), Alpha, Beta, Gamma, WBias,
-     &  CosGamma, SinGamma, Yaw(3,3), InvYaw(3,3), PFValid
+     &  CosGamma, SinGamma, Yaw(3,3), InvYaw(3,3), PFValid,
+     &  VectWind, dVectWind, DirFrom, dDirFrom
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
@@ -176,7 +177,7 @@ C
      &  '#samples',
      &  '  #U     #V     #W  #TSon  #TCop  #RhoV     #q  #time   ',
      &  'Dir d(dir)   ',
-     &  'Mean(U)        dMean(U)         ',
+     &  'Mean(vectorU)  dMean(vectorU)   ',
      &  'Mean(TSon)     dMean(TSon)      ',
      &  'Mean(TCop)     dMean(TCop)      ',
      &  'Mean(q)        dMean(q)         ',
@@ -214,8 +215,13 @@ C
      &  'FCO2Webb       dFCO2Webb        ',
      &  'FCO2           dFCO2            ',
      &  '#DeltaTemp     #PoorSignalLock  ',
-     &  '#AmplHigh      #AmplLow        '
-     &  )
+     &  '#AmplHigh      #AmplLow         ',
+     &  'Mean(U)        Mean(V)          ',
+     &  'Mean(W)        Cov(U,U)         ',
+     &  'Cov(U,V)       Cov(U,W)         ',
+     &  'Cov(V,U)       Cov(V,V)         ',
+     &  'Cov(V,W)       Cov(W,U)         ',
+     &  'Cov(W,V)       Cov(W,W)         ')
   57   FORMAT(     
      &  '  -  -  - ',
      &  ' -  -  - ',    
@@ -260,7 +266,13 @@ C
      &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
      &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
      &  '[-]            [-]              ',
-     &  '[-]            [-]              ')     
+     &  '[-]            [-]              ',
+     &  '[m/s]          [m/s]            ',
+     &  '[m/s]          [m/s]**2         ',
+     &  '[m/s]**2       [m/s]**2         ',
+     &  '[m/s]**2       [m/s]**2         ',     
+     &  '[m/s]**2       [m/s]**2         ',
+     &  '[m/s]**2       [m/s]**2         ')     
 C
 C Number of quantities involved in this experiment
 C
@@ -463,6 +475,7 @@ C Undo Yaw angle of planar fit untilt matrix
            Yaw(3,3) = 1.D0
 	   CALL EC_M_InvM(Yaw,InvYaw)
 	   CALL EC_M_MMul(InvYaw, Apf, Apf)
+           write(*,*) ((Apf(i,j),i=1,3),j=1,3)
         ELSE
            M = 0
         ENDIF
@@ -495,7 +508,8 @@ C
      &    LvE,dLvE,LvEWebb,dLvEWebb,
      &    UStar,dUStar,Tau,dTau,
      &    FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-     &    MeanW, TolMeanW, HAVE_UNCAL, FirstDay)
+     &    MeanW, TolMeanW, VecTWind, dVectWind,
+     &    DirFrom, dDirFrom, HAVE_UNCAL, FirstDay)
 C
 C Calculate structure parameters
 C
@@ -532,11 +546,6 @@ C
 C Print fluxes
 C
 C
-        IF (DirYaw.GE.180.D0) THEN
-          DirFrom = DirYaw-180.D0
-        ELSE
-          DirFrom = DirYaw+180.D0
-        ENDIF
 	IF (Cov(Tsonic,TSonic) .EQ. DUMMY) THEN
 	   StdTs = DUMMY
 	   dStdTs = DUMMY
@@ -645,9 +654,8 @@ C
      &    (StartTime(i),i=1,3),
      &    (StopTime(i),i=1,3),
      &    M,(Mok(i),i=1,7), Mok(TTime),
-     &    NINT(DirFrom),
-     &    NINT(2.D0*180.D0*ATAN(SQRT(Cov(V,V))/Mean(U))/Pi),
-     &    Mean(U),TolMean(U),
+     &    NINT(DirFrom), NINT(dDirFrom),
+     &    VectWind, dVectWind,
      &    Mean(TSonic),TolMean(TSonic),
      &    Mean(TCouple),TolMean(TCouple),
      &    Mean(SpecHum),TolMean(SpecHum),
@@ -683,18 +691,22 @@ C
      &    StdspecCO2, dStdspecCO2,
      &    FCO2,dFCO2,FCO2Webb,dFCO2Webb,
      &    SumFCO2, dSumFCO2,
-     &    NDelta, NLock, NHigh, NLow
+     &    NDelta, NLock, NHigh, NLow,
+     &    (Mean(I), I=1,3),
+     &    ((COV(I,J),I=1,3),J=1,3)  
         
   
- 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),29(2(G15.5:,1X)),
+ 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),
+     &        29(2(G15.5:,1X)),
      &        I13,  1X,
-     &        7(2(G15.5:,1X)), 4(I15,1X))
+     &        7(2(G15.5:,1X)), 4(I15,1X), 12(G15.5:,1X))
       ELSE
         WRITE(FluxFile,55)
      &    (StartTime(i),i=1,3),
      &    (StopTime(i),i=1,3),
      &    M,(0,i=1,8), INT(DUMMY),INT(DUMMY),(DUMMY,i=1,58),
-     &    0, (DUMMY,i=1,14), (INT(DUMMY), i=1,4)
+     &    0, (DUMMY,i=1,14), (INT(DUMMY), i=1,4),
+     &    ((DUMMY,I=1,3),J=1,3), (DUMMY,I=1,3)
       ENDIF
 
       IF (DoPrint) CLOSE(OutFile)

@@ -61,7 +61,9 @@ C ########################################################################
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,
      &  FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-     &  MEANW, TOLMEANW, HAVE_UNCAL, FirstDay)
+     &  MEANW, TOLMEANW, VectWind, dVectWind,
+     &  DirFrom, dDirFrom,
+     &  HAVE_UNCAL, FirstDay)
 C     ****f* ec_gene.f/EC_G_Main
 C NAME
 C     EC_G_Main
@@ -86,7 +88,9 @@ C        HSonic,dHSonic,HTc,dHTc,
 C        LvE,dLvE,LvEWebb,dLvEWebb,
 C        UStar,dUStar,Tau,dTau,
 C        FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-C        MEANW, TOLMEANW, HAVE_UNCAL, FirstDay)
+C        MEANW, TOLMEANW, VectWind, dVectWind,
+C        DirFrom, dDirFrom,
+C        HAVE_UNCAL, FirstDay)
 C FUNCTION
 C     Integrated routine which:
 C     - Calibrates raw samples
@@ -277,6 +281,14 @@ C     FCO2Webb  : [REAL*8]
 C                 Webb contribution to CO2 flux (kg/m^2 s)
 C     dFCO2Webb : [REAL*8]
 C                 tolerance in Webb contribution to CO2 flux (kg/m^2 s)
+C     VectWind: [Real*8]
+C                 vector wind velocity (m/s)
+C     dVectWind: [Real*8]
+C                 tolerance in vector wind velocity (m/s)
+C     DirFrom  : [Real*8]
+C                 direction of vector wind (degrees)
+C     dDirFrom : [Real*8]
+C                 tolerance in direction of vector wind (degrees)
 C     MEANW     : [REAL*8]
 C                 mean vertical velocity before tilt correction (m/s)
 C     TOLMEANW  : [REAL*8]
@@ -292,6 +304,7 @@ C                           data are available (AM)
 C     Revision: 18-09-2002: removed calcomm.inc and added FirstDay
 C                           to interface (to pass it to calibration routine
 C     Revision: 5-12-2002:  added DoPF, PPF, Apf to interface to include planar fit 
+C     Revision: 13-01-2003: added vectorwind and dirfrom to interface
 C     $Name$
 C     $Id$
 C USES
@@ -331,11 +344,13 @@ C     ***
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3),
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel
+     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel, VectWind, 
+     &  dVectWind,
+     &  DirFrom, dDirFrom
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
       REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3), Apf(3,3), 
-     &        DumOut(3)
+     &        DumOut(3) 
       LOGICAL HAVE_CAL(NMax)
       LOGICAL HAVE_UNCAL(NMax)
 C
@@ -545,8 +560,60 @@ C
       TOLMEANW = TolMean(W)
 C
 C Correct mean values and covariances for all thinkable effects, first
-C time only to get run-based tilt correction (if needed)
+C time only to get run-based tilt correction (if needed). But 
+C before all that, the planar fit untilting needs to be applied.
 C
+C Do Planar fit tilt correction (only) here 
+C
+      IF (DoPF) THEN
+C
+C Tilt ALL samples
+        DO i=1,M
+          Speed(1) = Sample(U,i)
+          Speed(2) = Sample(V,i)
+          Speed(3) = Sample(W,i)
+C
+C         Speed(3) = Speed3) - WBias
+
+          CALL EC_M_MapVec(Apf,Speed,Dumout)
+C
+C Feed planarfit rotated sample back into Sample array
+C
+          Sample(U,i) = Dumout(1)
+          Sample(V,i) = Dumout(2)
+          Sample(W,i) = Dumout(3)	  
+        ENDDO
+      ENDIF
+      CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      IF (.NOT. Have_Uncal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+      ENDIF
+      CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+
+      IF (DoPrint.AND.PPF) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After planar fit untilting : '
+	  WRITE(OutF,*)
+
+	  WRITE(OUTF,*) 'Min/max of samples'
+          DO I=1,N
+             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
+     &                Maxs(I)
+          ENDDO
+	  IF (PIndep) THEN
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
+	  ENDIF
+
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+      ENDIF
+      
+C If 'classic' run-based tilt corrections are not done, 
+C the first call to EC_C_Main is redundant and skipped), else
+C this run is only done to establish the 'classic' rotation
+C angles.
       AnyTilt = ((DoTilt.OR.DoYaw).OR.(DoPitch.OR.DoRoll))
       IF (AnyTilt) THen
         CALL EC_C_Main(OutF,
@@ -575,65 +642,10 @@ C Therefore we return to the calibrated time series and
 C make the transformations BEFORE averaging. Then averaging and corrections
 C are repeated all over again.
 C
-C Do Planar fit tilt correction (only) here (if 'classic' run-based tilt 
-C correction is not done, the first call to EC_C_Main is redundant and skipped)
-C
-      IF (DoPF) THEN
-C
-C Tilt ALL samples
-C
-        DO i=1,M
-          Speed(1) = Sample(U,i)
-          Speed(2) = Sample(V,i)
-          Speed(3) = Sample(W,i)
-C
-C         Speed(3) = Speed3) - WBias
-
-          CALL EC_M_MapVec(Apf,Speed,Dumout)
-C
-C Feed planarfit rotated sample back into Sample array
-C
-          Sample(U,i) = Dumout(1)
-          Sample(V,i) = Dumout(2)
-          Sample(W,i) = Dumout(3)	  
-        ENDDO
-      ENDIF
-C
 C Estimate mean values, covariances and tolerances of both
 C for the plnar fit untilted series
 C
 C
-
-      CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-      IF (.NOT. Have_Uncal(Humidity)) THEN
-          Mean(Humidity) = Psychro
-          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
-      ENDIF
-      CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-
-      IF (DoPrint.AND.PPF) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After planar fit untilting : '
-	  WRITE(OutF,*)
-
-	  WRITE(OUTF,*) 'Min/max of samples'
-          DO I=1,N
-             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
-     &                Maxs(I)
-          ENDDO
-	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
-	  ENDIF
-
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
-
-      
-
-      
-
       IF (AnyTilt) THEN
         DO i=1,3
           DO j=1,3
@@ -642,7 +654,7 @@ C
         ENDDO
 C
 C Tilt ALL samples
-C
+C     
         DO i=1,M
           Speed(1) = Sample(U,i)
           Speed(2) = Sample(V,i)
@@ -729,11 +741,15 @@ C
 C Calculate fluxes from processed mean values and covariances.
 C
 C
+C The 180 degrees is to trick ec_Ph_Flux
+C
+      IF (.NOT. DoYaw) DirYaw = 180D0
+C
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-     &  WebVel)
+     &  WebVel, VectWind, dVectWind, DirFrom, dDirFrom, DirYaw)
 
       CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
@@ -742,6 +758,10 @@ C
      +    (.NOT. HAVE_Uncal(W))) THEN
          Ustar = DUMMY
          dUstar = DUMMY
+         VectWind = Dummy
+         dVectWind = Dummy
+         Tau = Dummy
+         dTau = Dummy
       ENDIF
       IF (.NOT. HAVE_Uncal(TSonic)) THEN
 	  HSonic = DUMMY

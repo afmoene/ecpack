@@ -361,7 +361,7 @@ C
            Write(PlfFile,100) (StartTime(i),i=1,3), 
      &           (StopTime(i),i=1,3), Alpha, Beta, Gamma, WBias,
      &           ((Apf(i,j),i=1,3),j=1,3)
- 100       FORMAT(6(I8,1X),1X,13(F20.15))
+ 100       FORMAT(6(I8,1X),1X,13(F20.10,1X))
         ENDIF
       ENDDO
       GOTO 36
