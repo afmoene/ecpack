@@ -142,4 +142,7 @@ Revision 2.2: April 22, 2002
 	  - now makefile builds separate library and two demo programs
 Revision 2.2.1: April 23, 2002
           - changed a variable name in planar fit routines
+Revision 2.2.2: July 3, 2002
+          - added chack on value of diagnostic (if available): sample is
+	    flagged invalid if diagnostic < 0 or > 100 (check has been disabled             since  version of June 2000)
 
