@@ -1,3 +1,4 @@
+C $Id$
 C###########################################################################
 C
 C
@@ -125,6 +126,7 @@ C    fluxes with tolerances.
 C
 
       INCLUDE 'physcnst.for'
+      INCLUDE 'calcomm.inc'
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
      &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut
@@ -145,6 +147,27 @@ C
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
+      LOGICAL HAVE_CAL(NMax)
+C
+C Check whether we have the needed calibration info
+C
+      DO I=1,NMax
+         HAVE_CAL(i) = .FALSE.
+      ENDDO
+      IF (HAVE_SONCAL) THEN
+         HAVE_CAL(U) = .TRUE.
+         HAVE_CAL(V) = .TRUE.
+         HAVE_CAL(W) = .TRUE.
+         HAVE_CAL(TSonic) = .TRUE.
+      ENDIF
+      IF (HAVE_HYGCAL) THEN
+         HAVE_CAL(Humidity) = .TRUE.
+         HAVE_CAL(SpecHum) = .TRUE.
+      ENDIF
+      IF (HAVE_TCCAL) THEN
+         HAVE_CAL(TCouple) = .TRUE.
+      ENDIF
+
 C
 C Names of quantities and units
 C
@@ -171,13 +194,13 @@ C Calibrate the raw samples for the first time ignoring drift in apparatus.
 C
 C
       DO i=1,N
-	CorMean(i) = 0.D0
+       	CorMean(i) = 0.D0
       ENDDO
 
       NTcOut = 0
       BadTc = (.FALSE.)
       DO i=1,M
-	CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+         CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
      &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
         IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
       ENDDO
@@ -218,7 +241,8 @@ C
       IF (DoPrint.AND.PCal) THEN
 	DO i=1,M
 	  DO j=1,N
-	    IF (Flag(j,i)) WRITE(OutF,*) 'Error in sample ',i,' = ',
+	    IF (Flag(j,i) .AND. HAVE_CAL(j))
+     &       WRITE(OutF,*) 'Error in sample ',i,' = ',
      &	      QName(j),' = ',Sample(j,i)
 	  ENDDO
 	ENDDO
@@ -399,8 +423,7 @@ C
      &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoPitch,DoYaw,
      &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
      &	PRaw,PCal,PDetrend,PIndep,PTilt,PPitch,PYaw,
-     &	PRoll,PSonic,PO2,PFreq,PWebb,SonName,CoupName,HygName,
-     &  InterName)
+     &	PRoll,PSonic,PO2,PFreq,PWebb)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECParams
@@ -427,9 +450,14 @@ C
       LOGICAL DoCrMean,DoSonic,DoTilt,DoPitch,DoYaw,DoRoll,DoFreq,DoO2,
      &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PPitch,PYaw,PRoll,PSonic,
      &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct
-      CHARACTER*12 SonName,CoupName,HygName,InName,InterName
+      CHARACTER*(*) InName
+      INTEGER      IOCODE
 
-      OPEN(TempFile,FILE=InName)
+      OPEN(TempFile,FILE=InName, STATUS='old', IOSTAT=IOCODE)
+      IF (IOCODE .NE. 0) THEN
+         WRITE(*,*) 'ERROR: could not open parameter file ', InName
+         STOP
+      ENDIF
 
       READ(TempFile,*) Freq	  ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
@@ -469,12 +497,6 @@ C
       READ(TempFile,*) PO2	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PFreq	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PWebb	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*)
-      READ(TempFile,*) SonName	  ! Name of calibration file of anemometer
-      READ(TempFile,*) CoupName   ! Name of calibration file of thermometer
-      READ(TempFile,*) HygName	  ! Name of calibration file of hygrometer
-      READ(TempFile,*)
-      READ(TempFile,*) InterName  ! Name of file containing time intervals
 
       CLOSE(TempFile)
 
@@ -758,7 +780,8 @@ C
 
 
       SUBROUTINE ECReadNCDF(InName,StartTime,StopTime,
-     &  Delay,Gain,Offset,x,NMax,N,MMax,M)
+     &  Delay,Gain,Offset,x,NMax,N,MMax,M, NCVarName,
+     &  Have_Uncal)
 C
 C Read raw data from NETCDF-file
 C
@@ -774,10 +797,9 @@ C			  and the first M samples are used.
 C	   M : Number of samples in file
 C
       INCLUDE 'physcnst.for'
-
       INCLUDE 'netcdf.inc'
 
-      CHARACTER*255 InNAME
+      CHARACTER*(*) InNAME
       CHARACTER*40 NAME ! Maximum length of names is given by NF_MAX_NAME
       INTEGER STATUS,
      &        NCID,       ! ID for file
@@ -789,11 +811,21 @@ C
      &        VARDIMS,    ! # of dimensions for variable
      &        DIMIDS(NF_MAX_VAR_DIMS), ! ID's of dimensions
      &        NATTS       ! # of attributes
-      INTEGER i,NMax,N,MMax,M,Delay(NMax),HMStart,HMStop,Counter
+      INTEGER I, J, K
+      INTEGER NMax,N,MMax,M,Delay(NMax),HMStart,HMStop,Counter
       REAL Dum
       LOGICAL ok,Ready,Started,NotStopped
       REAL*8 x(NMax,MMax),Gain(NMax),Offset(NMax),StartTime(3),
      &  StopTime(3)
+      CHARACTER*(*) NCVarName(NMax)
+      LOGICAL       Have_Uncal(NMax)
+
+      CHARACTER*255 ATT_NAME
+      INTEGER       NCVarID(NNNMax)
+      LOGICAL       HAS_SCALE(NMax), HAS_OFFSET(NMax)
+      REAL*8        NC_SCALE(NMax), NC_OFFSET(NMax)
+      INTEGER       STRLEN
+      EXTERNAL      STRLEN
 
       HMStart = 100*ANINT(StartTime(2))+ANINT(StartTime(3))
       HMStop  = 100*ANINT(StopTime( 2))+ANINT(StopTime( 3))
@@ -812,10 +844,53 @@ C
 C
 C Inquire about variables
 C
+      DO I=1,NMax
+         NCVarID(I) = 0
+         HAS_SCALE(I) = .FALSE.
+         HAS_OFFSET(I) = .FALSE.
+      ENDDO
       DO I=1,NVARS
         STATUS = NF_INQ_VAR(NCID,I,NAME,XTYPE,VARDIMS,DIMIDS,NATTS)
         IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
+        DO J=1,NMax
+           IF (Name .EQ. NCVarName(J)) THEN
+              NCVarID(J) = I
+              Have_Uncal(J) = .TRUE.
+              DO K=1,NATTS
+                 STATUS = NF_INQ_ATTNAME(NCID, I, K, ATT_NAME)
+                 IF (STATUS .NE. NF_NOERR)
+     &              CALL EC_NCDF_HANDLE_ERR(STATUS)
+                 IF (INDEX(ATT_NAME, 'scale_factor') .GT. 0) THEN
+                    STATUS = NF_GET_ATT_DOUBLE(NCID, I, 'scale_factor',
+     &                       NC_SCALE(J))
+                    IF (STATUS .NE. NF_NOERR)
+     &                    CALL EC_NCDF_HANDLE_ERR(STATUS)
+                    HAS_SCALE(J) = .TRUE.
+                 ENDIF
+                 IF (INDEX(ATT_NAME, 'add_offset') .GT. 0) THEN
+                    STATUS = NF_GET_ATT_DOUBLE(NCID, I, 'add_offset',
+     &                       NC_OFFSET(J))
+                    IF (STATUS .NE. NF_NOERR)
+     &                  CALL EC_NCDF_HANDLE_ERR(STATUS)
+                    HAS_OFFSET(J) = .TRUE.
+                 ENDIF
+              ENDDO
+           ENDIF
+        ENDDO
       ENDDO
+C
+C Check whether all variables found
+C
+      OK = (.TRUE.)
+      DO I=1,NMax
+        IF ((STRLEN(NCVarName(I)) .GT. 0) .AND.
+     &      (NCVarID(I) .EQ. 0)) THEN
+            WRITE(*,5110) NCVarName(I)(:STRLEN(NCVarName(I)))
+            OK = (.FALSE.)
+        ENDIF
+      ENDDO
+ 5110 FORMAT('ERROR: variable ',A,' not found')
+      IF (.NOT. OK) STOP
 C
 C Read all data from file
 C
@@ -823,48 +898,74 @@ C
       Counter = 1
       M = 1
  81   CONTINUE
-      DO i=1,NVars
+C
+      DO i=1,NMax
 C
 C Try to read one channel of one sample from file
 C
-        STATUS = NF_GET_VAR1_REAL(NCID,i,(Counter+Delay(i)),Dum)
-        OK = (STATUS .EQ. NF_NOERR)
-        Ready = (STATUS .EQ. nf_einvalcoords)
+        IF (NCVarID(I) .GT. 0) THEN
+           STATUS = NF_GET_VAR1_REAL(NCID,NCVarID(I),
+     &                               (Counter+Delay(i)),Dum)
+           OK = (STATUS .EQ. NF_NOERR)
+           Ready = (STATUS .EQ. nf_einvalcoords)
 C
 C If there is no more data, then jump out of this data-reading loop
 C
-        IF (Ready) GOTO 82
+           IF (Ready) GOTO 82
 C
 C If something went wrong, then abort further execution of the program
 C
-        IF (.NOT. ok) THEN
-          CALL EC_NCDF_HANDLE_ERR(STATUS)
-          STOP
+           IF (.NOT. ok) THEN
+             CALL EC_NCDF_HANDLE_ERR(STATUS)
+             STOP
+           ENDIF
+C
+C Apply NetCDF gain and offset first, if present
+C
+           IF (HAS_SCALE(I)) DUM = DUM * NC_SCALE(I)
+           IF (HAS_OFFSET(I)) DUM =  DUM + NC_OFFSET(I)
+C
+C Apply gain and offset given in calibration file
+C
+           x(i,M) = DBLE(Dum)/Gain(i) + Offset(i)
         ENDIF
-
-        x(i,M) = DBLE(Dum)/Gain(i) + Offset(i)
       ENDDO
 C
 C Either the sample has the correct day and the requested start
 C time is less than the time of the sample, or the sample has a
 C day that is past the requested start time.
 C
-      Started = (((ANINT(StartTime(1)).EQ.ANINT(x(1,M))).AND.
-     &  (HMStart.LE.ANINT(x(2,M))))
+      Started = (((ANINT(StartTime(1)).EQ.
+     &             ANINT(x(Doy,M))).AND.
+     &            (HMStart.LE.ANINT(x(HourMin,M))))
      &  .OR.
-     &  (ANINT(StartTime(1)).LT.ANINT(x(1,M))))
+     &            (ANINT(StartTime(1)).LT.
+     &             ANINT(x(Doy,M))))
 C
 C Either the sample has correct day and the requested stop time is
 C larger than the time of the sample, or the sample has a day
 C that is before the day of the requested stop time.
 C
-      NotStopped = (((ANINT(StopTime(1)).EQ.ANINT(x(1,M))).AND.
-     &  (HMStop.GT.ANINT(x(2,M))))
+      NotStopped = (((ANINT(StopTime(1)).EQ.ANINT(x(Doy,M))).AND.
+     &  (HMStop.GT.ANINT(x(HourMin,M))))
      &  .OR.
-     &  (ANINT(StopTime(1)).GT.ANINT(x(1,M))))
+     &  (ANINT(StopTime(1)).GT.ANINT(x(Doy,M))))
+     
       IF (Started) M = M + 1
       Counter = Counter + 1
+      
+      IF (NotStopped .AND. M.GT. MMMax) THEN
+         WRITE(*,5500)
+      ENDIF
+ 5500 FORMAT('WARNING: stopped reading data because compiled ',
+     &              ' size of storage is unsufficient')
+C
+C Continue reading
+C
       IF ((M.LE.MMMax).AND.(NotStopped)) GOTO 81
+C
+C Or exit and adjust counter M
+C
  82   M = M-1
 C
 C Close file again
@@ -1063,14 +1164,21 @@ C Read specifications of an apparatus from file
 C
       INCLUDE 'physcnst.for'
 
-      CHARACTER*12 InName
+      CHARACTER*(*) InName
       REAL*8 CalSpec(NQQ)
-      INTEGER i
+      INTEGER i, IOCODE
+      INTEGER STRLEN
+      EXTERNAL STRLEN
 
-      OPEN(TempFile,FILE=InName,STATUS='OLD')
+      OPEN(TempFile,FILE=InName,STATUS='OLD', IOSTAT=IOCODE)
+      IF (IOCODE .NE. 0) THEN
+         WRITE(*,5100) InName(:STRLEN(InName))
+         STOP
+      ENDIF
+ 5100 FORMAT ('ERROR: can not open calibration file ', (A))
 
       DO i=1,NQQ
-	READ(TempFile,*) CalSpec(i)
+       	READ(TempFile,*) CalSpec(i)
       ENDDO
 
       CLOSE(TempFile)
