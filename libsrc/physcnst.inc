@@ -89,10 +89,11 @@ C     ****d* physcnst.inc/GammaR
 C NAME
 C     GammaR
 C FUNCTION
-C     Constant in correction of sonic temperature in voor corss-wind
+C     Constant in correction of sonic temperature for cross-wind
 C     (part of the Schotanus correction)
 C SOURCE
-      REAL*8 GammaR			    ! ?????????????
+      REAL*8 GammaR			    ! gamma*R (in relationship between 
+	                                    ! sonic temperature and speed of sound
       PARAMETER(GammaR = 403.D0)	    ! [m^{2}s^{-2}K^{-1}]
 C     ***
 

@@ -224,6 +224,8 @@ C NetCdF variable names
      &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'TREF_VAR') .GT. 0) THEN
                NCVarName(QUTref) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+            ELSE IF (INDEX(TOKLINE, 'SSPEED_VAR') .GT. 0) THEN
+               NCVarName(QUSSpeed) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
 C Output definitions
             ELSE IF (INDEX(TOKLINE, 'OUT_MEAN') .GT. 0) THEN
                CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),

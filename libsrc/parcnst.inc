@@ -64,8 +64,8 @@ C
      
       INTEGER QUU,QUV,QUW,QUTSonic,QUTcouple,QUHumidity,
      &        QUDoy, QUHourMin, QUSec, QUDiagnost, 
-     &        QUTref, QUCO2
-      PARAMETER(NNNMax	  = 12) ! Maximum number of uncalibrated quantities in 1 sample
+     &        QUTref, QUCO2, QUSSpeed
+      PARAMETER(NNNMax	  = 13) ! Maximum number of uncalibrated quantities in 1 sample
 
       PARAMETER(QUU	  = 1)
       PARAMETER(QUV	  = 2)
@@ -79,6 +79,7 @@ C
       PARAMETER(QUSec     = 10)
       PARAMETER(QUDiagnost= 11)
       PARAMETER(QUTref    = 12)
+      PARAMETER(QUSSpeed  = 13)
 C
 C These constants are used to indicate calibrated quantities
 C If you add a variable here, increase NNMax as well!

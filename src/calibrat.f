@@ -46,7 +46,7 @@ C
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ),
      &  CorMean(N),
      &  Hours,Minutes,Days,Secnds, TsCorr, WDum
-      REAL*8 EC_PH_Q,EC_M_BaseF, EC_Ph_QCO2 ! External function calls
+      REAL*8 EC_PH_Q,EC_M_BaseF, EC_Ph_QCO2, EC_Ph_SS2TS ! External function calls
 
       REAL*8 C(0:NMaxOrder)
       INTEGER IFLG, DUMORDER, DUMTYP, DIAG_WORD, SampNum
@@ -150,7 +150,13 @@ C
                Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
            ENDIF
 
-           Sample(TSonic) = RawSampl(QUTSonic) + Kelvin
+C Take care that we have a sonic temperature (either directly, or
+C from the sonic speed of sound
+           IF (Have_Uncal(QUTSonic)) THEN
+             Sample(TSonic) = RawSampl(QUTSonic) + Kelvin
+           ELSE IF (Have_Uncal(QUSSpeed)) THEN
+             Sample(TSonic) = EC_Ph_SS2Ts(RawSampl(QUSSpeed))
+           ENDIF
 C
 C Here the Schotanus et al. correction for sensitivity of the sonic for
 C lateral velocity is applied directly to the raw data. This is only

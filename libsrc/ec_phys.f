@@ -689,3 +689,34 @@ C     ***
      &                  Ustar**2/(Tstar + 0.61*MeanT*Qstar)
       END
 
+
+      REAL*8 FUNCTION EC_Ph_SS2Ts(SSpeed)
+C     ****f* ec_phys.f/EC_Ph_SS2Ts
+C NAME
+C     EC_Ph_SS2Ts
+C SYNOPSIS
+C     Tsonic =  EC_Ph_SS2Ts(SSpeed)
+C FUNCTION
+C     Calculate Sonic temperature (in Kelvin) from the speed of sound 
+C INPUTS
+C     SSpeed  : [REAL*8]  
+C                speed of sound (m/s) 
+C OUTPUT 
+C     return value  : [REAL*8]  
+C                sonic temperature (K)
+C AUTHOR
+C     Arnold Moene 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     physcnst.inc
+C     GammaR
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'physcnst.inc'
+
+      REAL*8 SSpeed
+
+      EC_Ph_SS2Ts = SSpeed**2/GammaR
+      END
