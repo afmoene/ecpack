@@ -1,4 +1,6 @@
 //
+// Example configuration file for ec_ncdf
+//
 // directories
 OutDir='d:\data\rapid'
 DatDir='d:\data\rapid'
