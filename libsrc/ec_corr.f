@@ -1517,7 +1517,7 @@ C
 
 
 
-      SUBROUTINE EC_C_T01(TrustWilczak,SingleRun,uMean,NRuns,Apf,
+      SUBROUTINE EC_C_T01(DoWBias,SingleRun,uMean,NRuns,Apf,
      &  Alpha,Beta,Gamma,WBias)
 
 C
@@ -1538,7 +1538,7 @@ C        Beta  : tiltangle beta in degrees
 C        Gamma : Fixed yaw-angle in degrees associated with mean over all runs
 C        WBias : The bias in the vertical velocity
 C
-      LOGICAL SingleRun,TrustWilczak
+      LOGICAL SingleRun,DoWBias
       INTEGER i,j,k,NRuns,UmeanMax
       REAL*8 uMean(3,NRuns),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
      &  UUSum(3,3)
@@ -1570,7 +1570,7 @@ C
 C
 C Call to slave-routine for details
 C
-      CALL EC_C_T02(TrustWilczak,SingleRun,uSum,UUSum,Apf,
+      CALL EC_C_T02(DoWBias,SingleRun,uSum,UUSum,Apf,
      &  Alpha,Beta,Gamma,WBias)
 
 
@@ -1581,12 +1581,12 @@ C
 
 
 
-      SUBROUTINE EC_C_T02(TrustWilczak,SingleRun,uSum,UUSum,Apf,
+      SUBROUTINE EC_C_T02(DoWBias,SingleRun,uSum,UUSum,Apf,
      &  Alpha,Beta,Gamma,WBias)
 C
 C Supportive routine for planar fit method for tilt-correction
 C
-      LOGICAL SingleRun,TrustWilczak
+      LOGICAL SingleRun,DoWBias
       REAL*8 b(0:2),S(3,3),SInv(3,3),x(3),Apf(3,3),SS2(2,2),SS2Inv(2,2),
      &  Sqrt1,Sqrt2,Alpha,Beta,SinAlpha,SinBeta,CosAlpha,CosBeta,Pi,
      &  Gamma,WBias,SinGamma,CosGamma,UHor,Yaw(3,3),USum(3),UUSum(3,3),
@@ -1596,7 +1596,7 @@ C
 
 
       IF (.NOT.SingleRun) THEN
-        IF (TrustWilczak) THEN
+        IF (DoWBias) THEN
 C
 C Make matrix in relation W.48
 C
