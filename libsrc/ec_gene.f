@@ -648,7 +648,7 @@ C
      &	  DoO2,PO2,O2Factor,
      &	  DoFreq,PFreq,LLimit,ULimit,Freq,
      &    CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
-     &	  DoWebb,PWebb,P, WebVel, Have_Uncal)
+     &	  DoWebb,PWebb, WebVel, P, Have_Uncal)
         CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
       ENDIF
 C
@@ -656,6 +656,7 @@ C
 C Calculate fluxes from processed mean values and covariances.
 C
 C
+      write(*,*) 'pressure =', p
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,

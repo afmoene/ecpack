@@ -211,11 +211,14 @@ Revision 2.4: October 8, 2002
 	    -9999 and the summed flux just gives the covariance flux.
           - moved filling of variable name and unit strings to parcnt.inc
 	  - started to check source with ftnchek (not finished yet)
-Revision 2.4.1: (arnold.moene@wur.nl)
+Revision 2.4.1: October 9, 2002 (arnold.moene@wur.nl)
           - Change ApGillSonic to ApCSATSonic (since the way it works now is
 	    correct for a CSAT, but not for a Gill (in terms of wind direction).
           - updated some parts in the readme.ec_ncdf
 	  - improved alignment of column headings with column data in output
 	    of ec_ncdf
+Revision 2.4.2: October 10, 2002 (arnold.moene@wur.nl)
+          - fixed bug in call to EC_C_Main in EC_G_Main (pressure and
+	    web velocity were interchanged -> wrong density in EC_Ph_Flux
 
 
