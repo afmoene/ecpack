@@ -14,7 +14,8 @@ C
       CHARACTER*255 SonName,CoupName,HygName, DUMSTRING
       CHARACTER*255 NCvarname(NNNMax)
       INTEGER N,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
-     &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax)
+     &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax),
+     &  ii, jj
 
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
@@ -30,24 +31,30 @@ C
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
-
-
-
       INTEGER RunLength,NRuns,  MaxRuns
       PARAMETER (MaxRuns=1000)
       INTEGER i,j,k,l
-      REAL*8 UMean(3, MaxRuns),Apf(3,3),Alpha,Beta,Gamma,WBias,Dum(4),
+      REAL*8 UMean(3,MaxRuns),Apf(3,3),Alpha,Beta,Gamma,WBias,Dum(3),
+     &  Dumout(3),
      &  UUSum(3,3),RApf(3,3),RAlpha,RBeta,RGamma,RWBias,USum(3),
      &  Swing,SinSwing,CosSwing,UHor, RunStart(3, MaxRuns),
-     &  RunStop(3, MaxRuns)
+     &  RunStop(3, MaxRuns), 
+     &  MEAN1(3), STRESS1(3,3),
+     &  MEAN2(3), STRESS2(3,3), Yaw1, Roll1, Pitch1,
+     &  dYaw1, dRoll1, dPitch1, Speed(3), DumCov(3,3),
+     &  GMEAN(NNMAX), GCOV(NNMax,NNMax),
+     &  GTolMEAN(NNMAX), GTolCOV(NNMax,NNMax),
+     &  Yaw(3,3), InvYaw(3,3), SinGamma, CosGamma, MAP(3,3)
 
-      LOGICAL       HAVE_UNCAL(NNNMax),Flag(NNMAx,MMMax)
-      LOGICAL ENDINTERVAL, BadTc, DoPrint, HAVE_SAMP
-      INTEGER STRLEN
+
+      LOGICAL       HAVE_UNCAL(NNNMax),Flag(NNMAx,MMMax),
+     &        TrustWilczak, SingleRun
+      LOGICAL ENDINTERVAL, BadTc, DoPrint, HAVE_SAMP, DoPf
+      INTEGER EC_G_STRLEN
 C
 C The name of the calibration routine specified at the end of this file
 C
-      EXTERNAL Calibrat, STRLEN
+      EXTERNAL Calibrat, EC_G_STRLEN
 
 
 C...........................................................................
@@ -55,6 +62,7 @@ C Start of executable statements
 C...........................................................................
 C Set DoPrint to true
       DoPrint = .TRUE.
+      DoPF = .TRUE.
 C
 C Open and read configuration file
 C
@@ -69,7 +77,7 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
       
-      CALL GetConf(ECConfFile,
+      CALL EC_F_GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName,
      &             PlfName,
@@ -78,17 +86,17 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
 C
 C Check which calibration files we have
 C
-      IF (STRLEN(SonName) .GT. 0) THEN
+      IF (EC_G_STRLEN(SonName) .GT. 0) THEN
          HAVE_SONCAL = .TRUE.
       ELSE
          HAVE_SONCAL = .FALSE.
       ENDIF
-      IF (STRLEN(HygName) .GT. 0) THEN
+      IF (EC_G_STRLEN(HygName) .GT. 0) THEN
          HAVE_HYGCAL = .TRUE.
       ELSE
          HAVE_HYGCAL = .FALSE.
       ENDIF
-      IF (STRLEN(CoupName) .GT. 0) THEN
+      IF (EC_G_STRLEN(CoupName) .GT. 0) THEN
          HAVE_TCCAL = .TRUE.
       ELSE
          HAVE_TCCAL = .FALSE.
@@ -103,11 +111,11 @@ C
         Offset(i) = 0.D0
       ENDDO
       IF (HAVE_SONCAL)
-     &     CALL ECReadAp(SonName,CalSonic) ! The sonic
+     &     CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
       IF (HAVE_TCCAL)
-     &     CALL ECReadAp(CoupName,CalTherm) ! A thermo-couple
+     &     CALL EC_F_ReadAp(CoupName,CalTherm) ! A thermo-couple
       IF (HAVE_HYGCAL)
-     &     CALL ECReadAp(HygName,CalHyg) ! A Krypton hygrometer
+     &     CALL EC_F_ReadAp(HygName,CalHyg) ! A Krypton hygrometer
 C
 C Set delays, gains and offset of all channels in raw datafile
 C At reading time all channels are corrected by mapping:
@@ -153,8 +161,8 @@ C and clear those files
      &        (StopTime(i),i=1,3), Psychro, p, Fname, OutName,
      &        PlfIntName
          DUMSTRING =  OutDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, PlfIntName)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, PlfIntName)
          PlfIntName = DUMSTRING
          OPEN(PlfIntFile,FILE=PlfIntName,STATUS='REPLACE')
          CLOSE(PlfIntFile)
@@ -165,9 +173,19 @@ C and clear those files
 C Open file where results of Planar fit method are written
       OPEN(PlfFile, FILE=PlfName, status='Replace',
      &     FORM='FORMATTED')
-      WRITE(PlfFile,*) 'Doy  Hourmin  Sec Doy Hourmin  Sec  ',
-     &                 '   Alpha   Beta    Gamma WBias   Swing'
+      WRITE(PlfFile,62) 'Doy', 'Hourmin', 'Sec', 'Doy', 'Hourmin',
+     &                  'Sec', 'Alpha',  'Beta', 'Gamma', 'WBias',
+     &                  'Alpha1',  'Beta1', 'Gamma1', 'WBias1',
+     &                  'Swing', 'meanu1',  'meanv1', 'meanw1',
+     &                  'uu1', 'uv1', 'uw1', 'vu1', 'vv1', 'vw1',
+     &                  'wu1','wv1','ww1',
+     &                  'yaw','pitch','roll',
+     &                  'meanu2',  'meanv2', 'meanw2',
+     &                  'uu2', 'uv2', 'uw2', 'vu2', 'vv2', 'vw2',
+     &                  'wu2', 'wv2', 'ww2', 'dyaw', 'dpitch', 'droll'
 
+
+      if (.not. DOPF) GOTO 4000
 C Open interval file again
       OPEN(IntervalFile,FILE = InterName,IOSTAT=FOO,STATUS='OLD')
       IF (FOO.NE.0) THEN
@@ -182,29 +200,29 @@ C Read one line of comments (blindly, it is supposed to be a comment line)
      &        (StopTime(i),i=1,3), Psychro, p, Fname, OutName,
      &        PlfIntName
          DUMSTRING =  DatDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, Fname)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, Fname)
          Fname = DUMSTRING
 
          DUMSTRING =  OutDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, OutName)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, OutName)
          OutName = DUMSTRING
          OPEN(OutFile, FILE=OutName, Status='UNKNOWN')
 
          DUMSTRING =  OutDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, PlfIntName)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, PlfIntName)
          PlfIntName = DUMSTRING
 C
 C Show which file is currently being analysed
 C
-         WRITE(*,951) FName(:STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
+         WRITE(*,951) FName(:EC_G_STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
  951     FORMAT(a,1X,3(I5,1X))
 C
 C Read raw data from file
 C
-         CALL ECReadNCDF(FName,StartTime,StopTime,
+         CALL EC_F_ReadNCDF(FName,StartTime,StopTime,
      &     Delay,Gain,Offset,RawSampl,NNNMax,Channels,MMMax,M,
      &     NCVarName, HAVE_UNCAL)
 C 
@@ -237,7 +255,7 @@ C Determine mean velocity and write them to an intermediate file
      &          FORM='formatted')
            WRITE(PlfIntFile,100) (StartTime(i),i=1,3), 
      &           (StopTime(i),i=1,3),(Umean(k,1), k=1,3)
- 100  FORMAT(2(F8.0,1X,F8.0,1X,F8.2),1X,3(F20.15))
+ 100       FORMAT(2(F8.0,1X,F8.0,1X,F8.2),1X,3(F20.15))
            CLOSE(PlfIntFile)
 	 ENDIF
       ENDDO
@@ -247,6 +265,7 @@ C Determine mean velocity and write them to an intermediate file
 C
 C Now start over again, and get the mean velocities from the intermediate files
 C
+ 4000 CONTINUE
       OPEN(IntervalFile,FILE = InterName,IOSTAT=FOO,STATUS='OLD')
       IF (FOO.NE.0) THEN
         WRITE(*,*) 'Could not open interval-file ',InterName
@@ -259,21 +278,23 @@ C Read one line of comments (blindly, it is supposed to be a comment line)
          READ(IntervalFile,*,END=1100) (StartTime(i), i=1,3),
      &        (StopTime(i),i=1,3), Psychro, p, Fname, OutName,
      &        PlfIntName
+         write(*,*) (starttime(i),i=1,3)
          DUMSTRING =  DatDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, Fname)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, Fname)
          Fname = DUMSTRING
 
          DUMSTRING =  OutDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, OutName)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, OutName)
          OutName = DUMSTRING
 
          DUMSTRING =  OutDir
-         CALL STRCAT(DUMSTRING, "/")
-         CALL STRCAT(DUMSTRING, PlfIntName)
+         CALL EC_G_STRCAT(DUMSTRING, "/")
+         CALL EC_G_STRCAT(DUMSTRING, PlfIntName)
          PlfIntName = DUMSTRING
 C
+         IF (DOPF) THEN
          OPEN(PlfIntFile,FILE=PlfIntName,STATUS='OLD')
          i=0
          DO WHILE (.TRUE.)
@@ -291,7 +312,25 @@ C
  1200    CONTINUE
          CLOSE(PlfIntFile)
          Nruns = i
-         CALL PlanarFit(uMean,Nruns,Apf,Alpha,Beta,Gamma,WBias)
+	 SingleRun = (.FALSE.)
+	 TrustWilczak = (.TRUE.)
+	 TrustWilczak = (.FALSE.)
+         CALL EC_C_T01(TrustWilczak, SingleRun, uMean,Nruns,
+     &                  Apf,Alpha,Beta,Gamma,WBias)
+C Turn back the Gamma rotation
+         CosGamma = COS(GAMMA*pi/180)
+         SinGamma = SIN(GAMMA*pi/180)
+         Yaw(1,1) = CosGamma
+         Yaw(1,2) = SinGamma
+         Yaw(1,3) = 0.D0
+         Yaw(2,1) = -SinGamma
+         Yaw(2,2) = CosGamma
+         Yaw(2,3) = 0.D0
+         Yaw(3,1) = 0.D0
+         Yaw(3,2) = 0.D0
+         Yaw(3,3) = 1.D0
+	 CALL EC_M_InvM(Yaw,InvYaw)
+	 CALL EC_M_MMul(InvYaw, Apf, Apf)
 
          IF (DoPrint) THEN
            WRITE(OutFile,*)
@@ -343,11 +382,14 @@ C      WRITE(*,50) Apf(3,1),Apf(3,2),Apf(3,3)
 C
 C Now perform individual tilt-corrections per run
 C
+C ENDIF of IF (DOPF)
+         ENDIF
+         SingleRun = (.TRUE.)
 
 C
 C Read raw data from file
 C
-         CALL ECReadNCDF(FName,StartTime,StopTime,
+         CALL EC_F_ReadNCDF(FName,StartTime,StopTime,
      &     Delay,Gain,Offset,RawSampl,NNNMax,Channels,MMMax,M,
      &     NCVarName, HAVE_UNCAL)
 C 
@@ -358,6 +400,10 @@ C
      &	      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
      &        Have_Uncal)
          ENDDO
+
+C
+C To which numbers should N and M be set ??? M has been set already above
+         N = 3
          Runlength = M
          DO k=1,3
             USum(k) = 0.D0
@@ -368,38 +414,48 @@ C
             ENDDO
          ENDDO
          DO j=1,RunLength
+            IF (DOPF) THEN
             DO k=1,3
 C Since U=1, V=2, and W=3 !!
               Dum(k) = Sample(k,j)
             ENDDO
             Dum(3) = Dum(3) - WBias
 
-	    CALL ECMapVec(Apf,Dum,Dum)
+	    CALL EC_M_MapVec(Apf,Dum,Dumout)
+
+C Feed planarfit rotated sample back into Sample array
+            do k=1,3
+	       Sample(k,j) = Dumout(k)
+	    enddo
+	    ENDIF
+
 	    DO k=1,3
                IF (.NOT. Flag(k,j)) THEN
                   Mok(k) = Mok(k) + 1
-	          USum(k) = USum(k) + Dum(k)
+	          USum(k) = USum(k) + Dumout(k)
                ENDIF
 	       DO l=1,3
                   IF ((.NOT. Flag(k,j)) .AND.
      &                (.NOT. Flag(l,j))) THEN
-	             UUSum(k,l) = UUSum(k,l) + Dum(k)*Dum(l)
+	             UUSum(k,l) = UUSum(k,l) + Dumout(k)*Dumout(l)
                      Cok(k,l) = Cok(k,l) + 1
                   ENDIF
 	       ENDDO
 	    ENDDO
 	 ENDDO
 	 DO k=1,3
-c	    USum(k) = USum(k)/Mok(k)
-	    USum(k) = USum(k)
+ 	    USum(k) = USum(k)/Mok(k)
 	    DO l=1,3
-c	      UUSum(k,l) = UUSum(k,l)/Cok(k,l)
- 	      UUSum(k,l) = UUSum(k,l)
+ 	      UUSum(k,l) = UUSum(k,l)/Cok(k,l)
 	    ENDDO
 	 ENDDO
-
-
-         CALL PFit(uSum,UUSum,RApf,RAlpha,RBeta,RGamma,RWBias)
+C
+C Compute the residual angles per run
+C
+         IF (RUNLENGTH .GT. 0) THEN
+            CALL EC_C_T02(TrustWilczak, SingleRun,uSum,UUSum,RApf,RAlpha,
+     &             RBeta,RGamma,RWBias)
+         ENDIF
 
 
          UHor = (RAlpha**2+RBeta**2)**0.5
@@ -408,7 +464,139 @@ c	      UUSum(k,l) = UUSum(k,l)/Cok(k,l)
          Swing = 180.D0*ACOS(CosSwing)/PI
          IF (SinSwing.LT.0.D0) Swing = 360.D0-Swing
          IF (Swing.GT.180.D0) Swing = Swing-360.D0
-       
+	 if (Runlength .EQ. 0) THEN
+	     RALPHA = DUMMY
+	     RBETA = DUMMY
+	     RGAMMA = DUMMY
+	     RWBIAS = DUMMY
+	     SWING = DUMMY
+	     DO I=1,3
+		MEAN1(I) = DUMMY
+	        DO J=1,3
+		   STRESS1(I,J) = DUMMY
+		ENDDO
+             ENDDO
+	 ELSE
+	     DO I=1,3
+		MEAN1(I) = USUM(I)
+		MEAN2(I) = MEAN1(I)
+	        DO J=1,3
+		   STRESS1(I,J) = UUSUM(I,J)-USUM(I)*USUM(J)
+		   STRESS2(I,J) = STRESS1(I,J)
+		ENDDO
+             ENDDO
+	 ENDIF
+C
+C Compute the rotations using classic rotations
+C
+	 IF (RUNLENGTH .GT. 0) THEN
+C Determine means and covariances after planarfit,
+C tolerance in Yaw angle, compute yaw angle and
+C apply it to raw data
+	    CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
+     &                 GMean, GTolMean, GCov, GTolCov, MIndep, CIndep,
+     &                 Mok, Cok)
+	    dYaw1 = (1/(1+(GMean(1)/GMean(2))**2))*
+     &              abs(GMean(1)/GMean(2))*
+     &              (abs(GTolMean(1)/GMean(1)) + 
+     &               abs(GTolMean(2)/GMean(2)))
+            DO i=1,3
+	       Mean2(I) = Gmean(I)
+	       DO j=1,3
+	          Stress2(i,j) = GCov(i,j)
+	       ENDDO
+	    ENDDO
+	    CALL EC_C_T07(Mean2(U), MEAN2(V), Yaw1)
+	    CALL EC_C_T06(Yaw1, MAP)
+	    CALL EC_C_T05(Mean2, 3, 3, STRESS2, MAP)
+c	    CALL ECYaw(MEAN2, 3, 3, STRESS2, Yaw1)
+	    DO I=1,RunLength
+	       DO J=1,3
+	         Speed(J)=Sample(j,i)
+	       ENDDO
+	       CALL EC_C_T05(Speed,3,3, DumCov, MAP)
+	       DO J=1,3
+	         Sample(j,i)=Speed(J)
+	       ENDDO
+	    ENDDO
+C Recompute means, covariances and tolerances
+C Determine tolerance in Pitch angle, compute Pitch angle and
+C apply it to raw data
+	    CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
+     &                 Gmean, GTolMean, GCov, GTolCov, MIndep, CIndep,
+     &                 Mok, Cok)
+	    dPitch1 = (1/(1+(GMean(3)/GMean(1))**2))*
+     &              abs(GMean(3)/GMean(1))*
+     &              (abs(GTolMean(1)/GMean(1)) + 
+     &               abs(GTolMean(3)/GMean(3)))
+            DO i=1,3
+	       Mean2(I) = Gmean(I)
+	       DO j=1,3
+	          Stress2(i,j) = GCov(i,j)
+	       ENDDO
+	    ENDDO
+	    CALL EC_C_T09(Mean2(U), MEAN2(W), Pitch1)
+	    CALL EC_C_T08(Pitch1, MAP)
+	    CALL EC_C_T05(Mean2, 3, 3, STRESS2, MAP)
+C	    CALL ECPitch(MEAN2, 3, 3, STRESS2, 30.0D0, Pitch1)
+	    DO I=1,RunLength
+	       DO J=1,3
+	         Speed(J)=Sample(j,i)
+	       ENDDO
+	       CALL EC_C_T05(Speed,3,3, DumCov, MAP)
+	       DO J=1,3
+	         Sample(j,i)=Speed(J)
+	       ENDDO
+	    ENDDO
+C Recompute means and coveriances and their tolerances
+C Determine tolerance in Roll angle, compute Roll angle and
+C apply it to raw data
+	    CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
+     &                 GMean, GTolMean, GCov, GTolCov, MIndep, CIndep,
+     &                 Mok, Cok)
+            dRoll1 = (1/(1+(2*GCov(2,3)/
+     &                (GCov(2,2)-GCov(3,3)))**2)) *
+     &               abs(2*GCov(2,3)/(GCov(2,2)-GCov(3,3)))*
+     &               (abs(GTolCov(2,3)/GCov(2,3)) +
+     &                abs((GTolCov(2,2)+GTolCov(3,3))/
+     &                    (GCov(2,2)-GCov(3,3))))
+            DO i=1,3
+	       Mean2(I) = Gmean(I)
+	       DO j=1,3
+	          Stress2(i,j) = GCov(i,j)
+	       ENDDO
+	    ENDDO
+	    CALL EC_C_T11(STRESS2(V,V),STRESS2(V,W), STRESS2(W,W), Roll1)
+	    CALL EC_C_T10(Roll1, MAP)
+	    CALL EC_C_T05(Mean2, 3, 3, STRESS2, MAP)
+C	    CALL ECRoll(MEAN2, 3, 3, STRESS2, 30.0D0, Roll1)
+	    DO I=1,RunLength
+	       DO J=1,3
+	         Speed(J)=Sample(j,i)
+	       ENDDO
+	       CALL EC_C_T05(Speed, 3, 3, DUMCOV, MAP)
+	       DO J=1,3
+	         Sample(j,i)=Speed(J)
+	       ENDDO
+	    ENDDO
+	    CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
+     &                 GMean, GTolMean, GCov, GTolCov, MIndep, CIndep,
+     &                 Mok, Cok)
+            dYaw1 = dYaw1*(180.0/Pi)
+            dPitch1 = dPitch1*(180.0/Pi)
+            dRoll1 = dRoll1*(180.0/Pi)
+	 ELSE
+	    DO I=1,3
+	       MEAN2(I) = DUMMY
+	       DO J=1,3
+	          STRESS2(I,J) = DUMMY
+               ENDDO
+	    ENDDO
+	    Yaw1 = DUMMY
+	    Roll1 = DUMMY
+	    Pitch1 = DUMMY
+         ENDIF      
+
          WRITE(OutFile,*)
          WRITE(OutFile,*) 'This run: ', (StartTime(i),i=1,3),
      &                    (StopTime(i),i=1,3)
@@ -417,9 +605,17 @@ c	      UUSum(k,l) = UUSum(k,l)/Cok(k,l)
          WRITE(OutFile,*) 'Alpha   Beta    Gamma WBias Swing'
          WRITE(OutFile, 60)  RAlpha,RBeta,RGamma,RWBias,Swing
          WRITE(PlfFile, 61) (StartTime(i),i=1,3), (StopTime(i),i=1,3),
-     &                       RAlpha,RBeta,RGamma,RWBias,Swing
- 60      FORMAT(3(F7.2,1X),F7.4,1X,F7.1)
- 61      FORMAT(6(F5.0,1X),1X,3(F7.2,1X),F7.4,1X,F7.1)
+     &                       Alpha,Beta,Gamma,WBias,
+     &                       RAlpha,RBeta,RGamma,RWBias,Swing,
+     &                       (MEAN1(ii), ii=1,3),
+     &                       ((STRESS1(ii,jj), jj=1,3), ii=1,3),
+     &                       Yaw1, Pitch1, Roll1,
+     &                       (MEAN2(ii), ii=1,3),
+     &                       ((STRESS2(ii,jj), jj=1,3), ii=1,3),
+     &                       dYaw1, dPitch1, dRoll1
+ 60      FORMAT(3(F10.2,1X),F10.4,1X,F10.1)
+ 61      FORMAT(6(F10.0,1X),39(G14.6:,1X))
+ 62      FORMAT('#', 6(A10,1X), 39(A14,1X))
       ENDDO
  1100 CONTINUE
       CLOSE(IntervalFile)
@@ -472,14 +668,14 @@ C
       REAL*8 RawSampl(Channels),Sample(N),P,UDum,VDum,Hook,Dum,
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CorMean(N),
      &  Hours,Minutes,Days,Secnds, TsCorr, WDum
-      REAL*8 ECQ,ECBaseF ! External function calls
+      REAL*8 EC_PH_Q,EC_M_BaseF ! External function calls
       
       REAL*8 C(0:NMaxOrder)
       INTEGER IFLG, DUMORDER, DUMTYP
       REAL*8 ABSERROR, RELERROR, ESTIM, DNLIMIT, UPLIMIT
 
-      REAL*8 DUMFUNC, ECRawSchot
-      EXTERNAL DUMFUNC, ECRawSchot
+      REAL*8 DUMFUNC, EC_C_Schot3
+      EXTERNAL DUMFUNC, EC_C_Schot3
 C
 C To communicate with function of which zero is searched
 C
@@ -533,7 +729,7 @@ C we can apply the KNMI calibrations
 C
          IF (CalSonic(1) .EQ. ApSon3Dcal) THEN
             WDum = Sample(W)
-            CALL ECSCal(CalSonic,
+            CALL EC_C_SCal(CalSonic,
      &                  UDUM, VDUM, WDum,
      &                  ERROR(U), ERROR(V), ERROR(W))
             Sample(W) = WDum
@@ -621,7 +817,7 @@ C
 	                ERROR(TCouple) = .TRUE.
 	            ENDIF
                Sample(Tcouple) = Kelvin +
-     &             ECBaseF(DNLIMIT + RawSampl(Tcouple),
+     &             EC_M_BaseF(DNLIMIT + RawSampl(Tcouple),
      &              NINT(CalTherm(QQFunc)),
      &              NINT(CalTherm(QQOrder)),c)
             ENDIF
@@ -656,7 +852,7 @@ C
             ENDDO
 
             Sample(Humidity) = CorMean(Humidity) +
-     &         ECBaseF(Dum,NINT(CalHyg(QQFunc)),
+     &         EC_M_BaseF(Dum,NINT(CalHyg(QQFunc)),
      &           NINT(CalHyg(QQOrder)),c)/1000.D0
 
             Error(Humidity) = ((Sample(Humidity).GT.MaxRhoV)
@@ -668,21 +864,21 @@ C
             IF (.NOT.Error(Humidity)) THEN
               IF (.NOT.BadTc) THEN
                 IF (.NOT.Error(TCouple)) THEN
-                  Sample(SpecHum)=ECQ(Sample(Humidity),
+                  Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                Sample(TCouple),P)
                 ELSE IF (.NOT.Error(TSonic)) THEN
-                  TsCorr = ECRawSchot(Sample(TSonic),
+                  TsCorr = EC_C_Schot3(Sample(TSonic),
      &                                Sample(Humidity), P)
-                  Sample(SpecHum)=ECQ(Sample(Humidity),
+                  Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                TsCorr,P)
                 ELSE
                   Error(SpecHum) = (.TRUE.)
                 ENDIF
               ELSE
                 IF (.NOT.Error(TSonic)) THEN
-                  TsCorr = ECRawSchot(Sample(TSonic),
+                  TsCorr = EC_C_Schot3(Sample(TSonic),
      &                                Sample(Humidity), P)
-                  Sample(SpecHum)=ECQ(Sample(Humidity),
+                  Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                TsCorr,P)
                 ELSE
                   Error(SpecHum) = (.TRUE.)
@@ -725,15 +921,15 @@ C
       REAL*8 C(0:NMaxOrder), DUM
       INTEGER DUMORDER, DUMTYP
 
-      REAL*8 ECBaseF
-      EXTERNAL ECBaseF
+      REAL*8 EC_M_BaseF
+      EXTERNAL EC_M_BaseF
 
 C
 C To communicate with function of which zero is searched
 C
       COMMON /DUMCOM/ C, DUM, DUMORDER, DUMTYP
 
-      DUMFUNC = ECBaseF(X, DUMTYP, DUMORDER, C) - DUM
+      DUMFUNC = EC_M_BaseF(X, DUMTYP, DUMORDER, C) - DUM
       END
       
 

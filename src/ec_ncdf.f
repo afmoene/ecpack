@@ -13,7 +13,7 @@ C             October 11 2000:   check for validity of reference temperature
 C                                for thermocouple and for validity of
 C                                iteration used in thermocouple calibration
 C             October 18, 2000:  in calibration of wind tunnel calibrated
-C                                sonic: check for valid wind direction 
+C                                sonic: check for valid wind direction
 C                                before interation (change in ec_pack)
 C             October 30, 2000:  check for validity of reference temperature
 C                                for thermocouple: Tref is in Celcius (not
@@ -59,7 +59,7 @@ C...........................................................................
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
-      REAL*8 MeanW, TolMeanW, 
+      REAL*8 MeanW, TolMeanW,
      &       StdTs, dStdTs,
      &       StdTc, dStdTc,
      &       Stdq, dStdq,
@@ -73,11 +73,11 @@ C...........................................................................
       CHARACTER*255 NCvarname(NNNMax)
       LOGICAL       HAVE_UNCAL(NNNMax)
 
-      INTEGER STRLEN
+      INTEGER EC_G_STRLEN
 C
 C The name of the calibration routine specified at the end of this file
 C
-      EXTERNAL Calibrat, STRLEN
+      EXTERNAL Calibrat, EC_G_STRLEN
 
 C...........................................................................
 C Start of executable statements
@@ -92,20 +92,20 @@ C
 
 C Report version number (VERSION is defined in version.inc)
       WRITE(*,*) 'EC_NCDF Version: ', VERSION
-C Give some RCS info (do not edit this!!, RCS does it for us) 
+C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Name$'
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
-      
-      CALL GetConf(ECConfFile,
+
+      CALL EC_F_GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName,
-     &             PlfName, 
+     &             PlfName,
      &             SonName, CoupName, HygName,
      &             NCVarname, NNNMax)
 C
 C Check whether we have a reference temperature for a thermocouple
-      IF (STRLEN(NCVarName(Tref)) .GT. 0) THEN
+      IF (EC_G_STRLEN(NCVarName(Tref)) .GT. 0) THEN
          HAVE_TREF = .TRUE.
       ELSE
          HAVE_TREF = .FALSE.
@@ -113,17 +113,17 @@ C Check whether we have a reference temperature for a thermocouple
 C
 C Check which calibration files we have
 C
-      IF (STRLEN(SonName) .GT. 0) THEN
+      IF (EC_G_STRLEN(SonName) .GT. 0) THEN
          HAVE_SONCAL = .TRUE.
       ELSE
          HAVE_SONCAL = .FALSE.
       ENDIF
-      IF (STRLEN(HygName) .GT. 0) THEN
+      IF (EC_G_STRLEN(HygName) .GT. 0) THEN
          HAVE_HYGCAL = .TRUE.
       ELSE
          HAVE_HYGCAL = .FALSE.
       ENDIF
-      IF (STRLEN(CoupName) .GT. 0) THEN
+      IF (EC_G_STRLEN(CoupName) .GT. 0) THEN
          HAVE_TCCAL = .TRUE.
       ELSE
          HAVE_TCCAL = .FALSE.
@@ -177,7 +177,7 @@ C
 C
 C Read parameters from file with name ParmName
 C
-      CALL ECParams(ParmName,
+      CALL EC_F_Params(ParmName,
      &  Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
      &  LLimit,ULimit,DoCrMean,DoDetren,DoSonic,
      &  DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
@@ -192,11 +192,11 @@ C
         Offset(i) = 0.D0
       ENDDO
       IF (HAVE_SONCAL)
-     &     CALL ECReadAp(SonName,CalSonic) ! The sonic
+     &     CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
       IF (HAVE_TCCAL)
-     &     CALL ECReadAp(CoupName,CalTherm) ! A thermo-couple
+     &     CALL EC_F_ReadAp(CoupName,CalTherm) ! A thermo-couple
       IF (HAVE_HYGCAL)
-     &     CALL ECReadAp(HygName,CalHyg) ! A Krypton hygrometer
+     &     CALL EC_F_ReadAp(HygName,CalHyg) ! A Krypton hygrometer
 C
 C Set delays, gains and offset of all channels in raw datafile
 C At reading time all channels are corrected by mapping:
@@ -216,14 +216,14 @@ C
       Gain(Humidity) = CalHyg(QQGain)
       Gain(Tcouple)  = CalTherm(QQGain)
       Gain(Tsonic)   = CalSonic(QQGain)
-      
+
       Offset(U)        = CalSonic(QQOffset)
       Offset(V)        = CalSonic(QQOffset)
       Offset(W)        = CalSonic(QQOffset)
       Offset(Humidity) = CalHyg(QQOffset)
       Offset(Tcouple)  = CalTherm(QQOffset)
       Offset(Tsonic)   = CalSonic(QQOffset)
-      
+
 C
 C Get names of files
 C
@@ -244,7 +244,7 @@ C######################################################################
 C######################################################################
 C
 C
-C Read time-interval from file, plus value of psychrometer RhoV and atm. pressure
+C Read time-interval from file, plus value of psychrometer RhoV and atm.  pressure
 C
  36   READ(IntervalFile,*,END=37) (StartTime(i),i=1,3),
      &  (StopTime(i),i=1,3),Psychro,p,DumName1,DumName2
@@ -252,26 +252,26 @@ C
       OutName = DumName2
 C
       DUMSTRING=DatDir
-      CALL STRCAT(DUMSTRING, '/')
-      CALL STRCAT(DUMSTRING, Fname)
+      CALL EC_G_STRCAT(DUMSTRING, '/')
+      CALL EC_G_STRCAT(DUMSTRING, Fname)
       Fname=DUMSTRING
-      
+
       DUMSTRING=OutDir
-      CALL STRCAT(DUMSTRING, '/')
-      CALL STRCAT(DUMSTRING, OutName)
+      CALL EC_G_STRCAT(DUMSTRING, '/')
+      CALL EC_G_STRCAT(DUMSTRING, OutName)
       OutName=DUMSTRING
-      
+
 C
 C Show which file is currently being analysed
 C
-      WRITE(*,951) FName(:STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
+      WRITE(*,951) FName(:EC_G_STRLEN(Fname)),(NINT(StartTime(i)),i=1,3)
  951  FORMAT(a,1X,3(I5,1X))
 C
 C If wanted, make a file for printing intermediate results
 C
       IF (DoPrint) THEN
         OPEN(OutFile,FILE=OutName,FORM='FORMATTED')
-        WRITE(OutFile,54) FName(:STRLEN(Fname))
+        WRITE(OutFile,54) FName(:EC_G_STRLEN(Fname))
  54     FORMAT('File = ',A)
         WRITE(OutFile,*) 'From (day,hour,minute)',
      &    (StartTime(i),' ',i=1,3),' to ',(StopTime(i),i=1,3)
@@ -285,7 +285,7 @@ C
 C
 C Read raw data from file
 C
-      CALL ECReadNCDF(FName,StartTime,StopTime,
+      CALL EC_F_ReadNCDF(FName,StartTime,StopTime,
      &  Delay,Gain,Offset,RawSampl,NNNMax,Channels,MMMax,M,
      &  NCVarName, HAVE_UNCAL)
 
@@ -304,7 +304,7 @@ C
 C
 C Call to main routine
 C
-        CALL ECMain(OutFile,DoPrint,
+        CALL EC_G_Main(OutFile,DoPrint,
      &    RawSampl,NNNMax,Channels,NNMax,N,MMMax,M,
      &    DoCrMean,PCal,PIndep,
      &    Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
@@ -330,15 +330,15 @@ C Calculate structure parameters
 C
         IF (DoStruct) THEN
           R = StructSep
-          CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,TSonic ,
+          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,TSonic ,
      &      R,dR,Freq,CIndep,CTSon2,dCTSon2)
-          CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,TCouple,TCouple,
+          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TCouple,TCouple,
      &      R,dR,Freq,CIndep,CTCop2,dCTCop2)
-          CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,SpecHum,SpecHum,
+          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,SpecHum,SpecHum,
      &      R,dR,Freq,CIndep,Cq2   ,dCq2   )
-          CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,SpecHum,
+          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,SpecHum,
      &      R,dR,Freq,CIndep,CTSonq,dCTSonq)
-          CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,TCouple,SpecHum,
+          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TCouple,SpecHum,
      &      R,dR,Freq,CIndep,CTCopq,dCTCopq)
         ELSE
            CTSon2 = -9999.D0
@@ -427,12 +427,12 @@ C
      &    Mean(TSonic),TolMean(TSonic),
      &    Mean(TCouple),TolMean(TCouple),
      &    Mean(SpecHum),TolMean(SpecHum),
-     &    StdTs, 
+     &    StdTs,
      &    dStdTs,
-     &    StdTc, 
+     &    StdTc,
      &    dStdTc,
-     &    Stdq, 
-     &    dStdq, 
+     &    Stdq,
+     &    dStdq,
      &    StdU,
      &    dStdU,
      &    StdV,
@@ -515,7 +515,7 @@ C
      &  CalSonic,CalTherm,CalHyg,BadTc,Sample,N,Error, Have_Uncal)
 
       IMPLICIT NONE
-      
+
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
       INCLUDE 'calcomm.inc'
@@ -526,14 +526,14 @@ C
       REAL*8 RawSampl(Channels),Sample(N),P,UDum,VDum,Hook,Dum,
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CorMean(N),
      &  Hours,Minutes,Days,Secnds, TsCorr, WDum
-      REAL*8 ECQ,ECBaseF ! External function calls
-      
+      REAL*8 EC_PH_Q,EC_M_BaseF ! External function calls
+
       REAL*8 C(0:NMaxOrder)
       INTEGER IFLG, DUMORDER, DUMTYP
       REAL*8 ABSERROR, RELERROR, ESTIM, DNLIMIT, UPLIMIT
 
-      REAL*8 DUMFUNC, ECRawSchot
-      EXTERNAL DUMFUNC, ECRawSchot
+      REAL*8 DUMFUNC, EC_C_Schot3
+      EXTERNAL DUMFUNC, EC_C_Schot3
 C
 C To communicate with function of which zero is searched
 C
@@ -577,7 +577,7 @@ C
          UDum      =  RawSampl(ColU) ! U [m/s]
          VDum      =  RawSampl(ColV) ! V [m/s]
          Sample(W) =  RawSampl(ColW) ! W [m/s]
-         
+
          Error(U) = (ABS(UDum).GT.40.D0)
          Error(V) = (ABS(VDum).GT.40.D0)
          Error(W) = (ABS(Sample(W)).GT.20.D0)
@@ -587,12 +587,12 @@ C we can apply the KNMI calibrations
 C
          IF (CalSonic(1) .EQ. ApSon3Dcal) THEN
             WDum = Sample(W)
-            CALL ECSCal(CalSonic,
+            CALL EC_C_Scal(CalSonic,
      &                  UDUM, VDUM, WDum,
      &                  ERROR(U), ERROR(V), ERROR(W))
             Sample(W) = WDum
          ENDIF
-   
+
 C This is the construction when we have a diagnostic variable
 C      IF (((Error(U).OR.Error(V)).OR.Error(W)).OR.
 C     &  ((RawSampl(ColDiagnostic).LT.0.D0).OR.
@@ -602,7 +602,7 @@ C     &   (RawSampl(ColDiagnostic).GT.100.D0))) THEN
            Error(V) = (.TRUE.)
            Error(W) = (.TRUE.)
          ENDIF
-   
+
          IF (.NOT.((Error(U).OR.Error(V)).OR.Error(W))) THEN
 
 C
@@ -616,7 +616,7 @@ C the wind speed with wind to north as positive substract 180 degrees:
 	   ELSE
                Hook = PI*(CalSonic(QQYaw)+180)/180.D0
            ENDIF
-	       
+
 C Apparently V is defined other way around
            Sample(U) =  COS(Hook)*UDum + SIN(Hook)*(-VDum)
            Sample(V) = -SIN(Hook)*UDum + COS(Hook)*(-VDum)
@@ -667,7 +667,7 @@ C
               c(i) = CalTherm(QQC0+i)
             ENDDO
             Dum = RawSampl(ColTref)
-            Error(TCouple) = 
+            Error(TCouple) =
      &           (((Kelvin + DUM) .GT.(Kelvin+MaxT))
      &             .OR. ((Kelvin + DUM) .LT.(Kelvin+MinT)))
             IF (.NOT. Error(TCouple)) THEN
@@ -684,7 +684,7 @@ C
 	                ERROR(TCouple) = .TRUE.
 	            ENDIF
                Sample(Tcouple) = Kelvin +
-     &             ECBaseF(DNLIMIT + RawSampl(Tcouple),
+     &             EC_M_BaseF(DNLIMIT + RawSampl(Tcouple),
      &              NINT(CalTherm(QQFunc)),
      &              NINT(CalTherm(QQOrder)),c)
             ENDIF
@@ -694,10 +694,10 @@ C Suppose that sample is already temperature
 C
              Sample(TCouple) = RawSampl(ColTCple)+Kelvin
          ENDIF
-        
+
          Error(TCouple) = ((Sample(TCouple).GT.(Kelvin+MaxT))
      &     .OR. (Sample(TCouple).LT.(Kelvin+MinT)))
-         Error(TCouple) = (Error(TCouple) .OR. 
+         Error(TCouple) = (Error(TCouple) .OR.
      &                        (.NOT. Have_Uncal(TCouple)))
       ELSE
          Error(Tcouple) = .TRUE.
@@ -719,7 +719,7 @@ C
             ENDDO
 
             Sample(Humidity) = CorMean(Humidity) +
-     &         ECBaseF(Dum,NINT(CalHyg(QQFunc)),
+     &         EC_M_BaseF(Dum,NINT(CalHyg(QQFunc)),
      &           NINT(CalHyg(QQOrder)),c)/1000.D0
 
             Error(Humidity) = ((Sample(Humidity).GT.MaxRhoV)
@@ -731,21 +731,21 @@ C
             IF (.NOT.Error(Humidity)) THEN
               IF (.NOT.BadTc) THEN
                 IF (.NOT.Error(TCouple)) THEN
-                  Sample(SpecHum)=ECQ(Sample(Humidity),
+                  Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                Sample(TCouple),P)
                 ELSE IF (.NOT.Error(TSonic)) THEN
-                  TsCorr = ECRawSchot(Sample(TSonic),
+                  TsCorr = EC_C_Schot3(Sample(TSonic),
      &                                Sample(Humidity), P)
-                  Sample(SpecHum)=ECQ(Sample(Humidity),
+                  Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                TsCorr,P)
                 ELSE
                   Error(SpecHum) = (.TRUE.)
                 ENDIF
               ELSE
                 IF (.NOT.Error(TSonic)) THEN
-                  TsCorr = ECRawSchot(Sample(TSonic),
+                  TsCorr = EC_C_Schot3(Sample(TSonic),
      &                                Sample(Humidity), P)
-                  Sample(SpecHum)=ECQ(Sample(Humidity),
+                  Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                TsCorr,P)
                 ELSE
                   Error(SpecHum) = (.TRUE.)
@@ -753,7 +753,7 @@ C
               ENDIF
             ENDIF
          ENDIF
-         Error(Humidity) = (Error(Humidity) .OR. 
+         Error(Humidity) = (Error(Humidity) .OR.
      &                        (.NOT. Have_Uncal(Humidity)))
          Error(SpecHum) = (Error(SpecHum) .OR. Error(Humidity))
       ELSE
@@ -783,22 +783,22 @@ C
 
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
-      
+
       REAL*8 X
       REAL*8 C(0:NMaxOrder), DUM
       INTEGER DUMORDER, DUMTYP
 
-      REAL*8 ECBaseF
-      EXTERNAL ECBaseF
+      REAL*8 EC_M_BaseF
+      EXTERNAL EC_M_BaseF
 
 C
 C To communicate with function of which zero is searched
 C
       COMMON /DUMCOM/ C, DUM, DUMORDER, DUMTYP
 
-      DUMFUNC = ECBaseF(X, DUMTYP, DUMORDER, C) - DUM
+      DUMFUNC = EC_M_BaseF(X, DUMTYP, DUMORDER, C) - DUM
       END
-      
+
 
 
 
