@@ -1019,6 +1019,7 @@ C...........................................................................
       REAL*8 SEC1, SEC2, SEC3, DOY1, DOY2, DOY3, HM1, HM2, HM3,
      +     SAMPF, TIME1, TIME2, TIME3, SEC4, HM4, DOY4,
      +     DOYD, HOURD, SECD, TIMED
+      LOGICAL OK
 
       REAL*8 CSI2HOUR
 
@@ -1026,6 +1027,29 @@ C...........................................................................
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
       IND1 = 1
       IND3 = MAXIND
+      OK = .FALSE.
+      DO WHILE (.NOT. OK)
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+	IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR. 
+     +      (IND1 .EQ. MAXIND)) THEN
+	   OK = .TRUE.
+	ELSE
+	   IND1 = IND1 + 1
+	ENDIF
+      ENDDO
+      OK = .FALSE.
+      DO WHILE (.NOT. OK) 
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+	IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR. 
+     +      (IND3 .EQ. 1)) THEN
+	   OK = .TRUE.
+	ELSE
+	   IND3 = IND3 - 1
+	ENDIF
+      ENDDO
+
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND1, SEC1)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND3, SEC3)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
@@ -1144,13 +1168,35 @@ C...........................................................................
       REAL*8 DOY1, DOY2, DOY3, HM1, HM2, HM3,
      +     SAMPF, TIME1, TIME2, TIME3, HM4, DOY4,
      +     DOYD, HOURD, TIMED
-
       REAL*8 CSI2HOUR
+      LOGICAL OK
 
       STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
       IND1 = 1
       IND3 = MAXIND
+      OK = .FALSE.
+      DO WHILE (.NOT. OK)
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+	IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR. 
+     +      (IND1 .EQ. MAXIND)) THEN
+	   OK = .TRUE.
+	ELSE
+	   IND1 = IND1 + 1
+	ENDIF
+      ENDDO
+      OK = .FALSE.
+      DO WHILE (.NOT. OK) 
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+	IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR. 
+     +      (IND3 .EQ. 1)) THEN
+	   OK = .TRUE.
+	ELSE
+	   IND3 = IND3 - 1
+	ENDIF
+      ENDDO
       IND2 = ANINT((IND3+IND1)/2.0)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)

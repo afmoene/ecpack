@@ -69,6 +69,11 @@ Revision 1.18: June 12, 2001
 	    file while file was not open (gave fort.14 file)
           - Removed redunant debugging write statement
 	  - Now report version number and RCS-Id of ec_ncdf.f at startup
+Revision 1.19: Jun 14, 2001
+          - in time interval searching: skip points at start of file
+	    and at end of file for which either DOY or HOURMIN is negative.
+	    In this way missing values for either DOY or HOURMIN (-32767)
+	    are not spoiling the search routine.
 
 
 
