@@ -113,3 +113,8 @@ C
       PARAMETER(QQExt9	 = 31) ! Additional calibration coefficient
       PARAMETER(QQExt10	 = 32) ! Additional calibration coefficient
       PARAMETER(QQExt11	 = 33) ! Additional calibration coefficient
+
+      REAL DUMMY
+      PARAMETER(DUMMY = -9999)
+
+

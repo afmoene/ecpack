@@ -29,7 +29,13 @@ Revision: May 28, 2001:
           - now we can deal with files without sonic temperatures. In those
 	    calibrations where temperature is needed, sonic temperature
 	    is automatically replaced by thermocouple temperature.
-Current version: 1.12
+Revision: May 29, 2001:
+          Made search for time interval more robust (also works if sample
+	  ate start of interval is not present.
+	  Now take care that some quantities derived with missing data
+	  (i.e. variances etc.) are flagged in the output as dummy (-9999).
+	  This is not yet finished.
+Current version: 1.13
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html

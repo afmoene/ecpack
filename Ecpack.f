@@ -579,7 +579,7 @@ C                      for sonic and/or Couple temperature since that
 C                      is used for various corrections)
       INCLUDE 'physcnst.for'
 
-      INTEGER N,NInt,NMAx,OutF, WhichTemp
+      INTEGER N,NInt,NMAx,OutF, WhichTemp, I, J
       LOGICAL PPitch,PYaw,PRoll,PFreq,PO2,PWebb,
      &	DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
@@ -638,6 +638,19 @@ C
 C
       IF (DoRoll) CALL ECPRoll(QRoll,OutF,Mean,TolMean,
      &	NMax,N,Cov,TolCov,RollLim,QName,UName,DirRoll)
+C
+C Reset the coveriances for which no data available
+C
+      DO I=1,NMax
+          DO J=1,NMax
+	     IF ((.NOT. HAVE_UNCAL(I)) .OR.
+     +           (.NOT. HAVE_UNCAL(J))) THEN
+                COV(I,J) = DUMMY
+	     ENDIF
+	  ENDDO
+      ENDDO
+     
+C
 C
 C
 C Correct sonic temperature and all covariances with sonic temperature
@@ -849,15 +862,15 @@ C            return value      decimal hours (REAL)
 C AUTHOR:    Arnold Moene
 C DATE:      May 28, 2001
 C...........................................................................
-      REAL FUNCTION CSI2HOUR(HOURMIN)
+      REAL*8 FUNCTION CSI2HOUR(HOURMIN)
 
-      REAL HOURMIN
+      REAL*8 HOURMIN
       INTEGER HOUR, MIN
 
-      HOUR = INT(HOURMIN/100.0)
-      MIN = INT(HOURMIN-HOUR*100)
+      HOUR = INT(HOURMIN/100.0D0)
+      MIN = INT(HOURMIN-HOUR*100D0)
       
-      CSI2HOUR = HOUR + MIN/60.0
+      CSI2HOUR = DBLE(HOUR + MIN/60.0D0)
       END
       
 C...........................................................................
@@ -867,88 +880,120 @@ C...........................................................................
       SUBROUTINE FINDTIME(FDOY, FHOURMIN, NCID,
      +                    NCdoyID, NChmID, NCsecID,IND)
       INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, NCsecID, IND,
-     +        DIMID, MAXIND, ATTEMPTS, PREVCH
-      REAL SEC1, SEC2, DOY1, DOY2, HM1, HM2, SAMPF, TIME1, TIME2,
+     +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
+     +        CURCH
+      REAL*8 SEC1, SEC2, SEC3, DOY1, DOY2, DOY3, HM1, HM2, HM3,
+     +     SAMPF, TIME1, TIME2, TIME3, 
      +     DOYD, HOURD, SECD, TIMED
+
+      REAL*8 CSI2HOUR
 
       STATUS = NF_INQ_VARDIMID(NCID,NCsecID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
-      STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, 1, SEC1)
-      STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, 2, SEC2)
-      STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, 1, DOY1)
-      STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, 2, DOY2)
-      STATUS = NF_GET_VAR1_REAL(NCID,NChmID, 1, HM1)
-      STATUS = NF_GET_VAR1_REAL(NCID,NChmID, 2, HM2)
-      IF ((DOY1 .EQ. DOY2) .AND. (HM1 .EQ. HM2)) THEN
-          SAMPF = SEC2-SEC1
-      ELSE IF (DOY1 .EQ. DOY2) THEN
+      IND1 = 1
+      IND3 = MAXIND
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND1, SEC1)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND3, SEC3)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+      IF ((DOY1 .EQ. DOY3) .AND. (HM1 .EQ. HM3)) THEN
+          SAMPF = SEC3-SEC1
+      ELSE IF (DOY1 .EQ. DOY3) THEN
           TIME1 = CSI2HOUR(HM1)
-          TIME2 = CSI2HOUR(HM2)
-          SAMPF = (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
+          TIME3 = CSI2HOUR(HM3)
+          SAMPF = (TIME3*3600+SEC3) - (TIME1*3600 + SEC1)
       ELSE
           TIME1 = CSI2HOUR(HM1)
-          TIME2 = CSI2HOUR(HM2)
-          SAMPF = (DOY2-DOY1)*3600*24 +
-     +         (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
+          TIME3 = CSI2HOUR(HM3)
+          SAMPF = (DOY3-DOY1)*3600*24 +
+     +         (TIME3*3600+SEC3) - (TIME1*3600 + SEC1)
       ENDIF
-
+      DOYD = DOY3 - DOY1
+      HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM1)
+      SECD = SEC3 - SEC1
+      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+      SAMPF = MAXIND/ABS(TIMED)
 
       DOYD = FDOY - DOY1
-      HOURD = CSI2HOUR(REAL(FHOURMIN)) - CSI2HOUR(HM1)
+      HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
       SECD = 0 - SEC1
       TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
       ATTEMPTS = 0
-      PREVCH = TIMED/SAMPF+1
-      CURCH = TIMED/SAMPF
-      IND = 0
+      IND2 = TIMED*SAMPF
+      CURCH = IND2
+
       DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
 C Determine time difference between current sample and required time
-         IF (ABS(CURCH) .GT. ABS(PREVCH)) THEN
-             CURCH = CURCH*0.8
-         ENDIF
-         IND = IND + CURCH
          PREVCH = CURCH
-         IF ((IND .LT. 1) .OR. (IND .GT. MAXIND)) THEN
-             WRITE(*,*)
-     +         'ERROR: requested data appear to be not in this file'
+         IF ((IND2 .LT. 1) .OR. (IND2 .GT. MAXIND)) THEN
              IND = -1
              RETURN
          ENDIF
-         STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, IND, SEC1)
-         STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, IND, DOY1)
-         STATUS = NF_GET_VAR1_REAL(NCID,NChmID, IND, HM1)
-         STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, IND+1, SEC2)
-         STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, IND+1, DOY2)
-         STATUS = NF_GET_VAR1_REAL(NCID,NChmID, IND+1, HM2)
-         IF ((DOY1 .EQ. DOY2) .AND. (HM1 .EQ. HM2)) THEN
-             SAMPF = SEC2-SEC1
-         ELSE IF (DOY1 .EQ. DOY2) THEN
-             TIME1 = CSI2HOUR(HM1)
-             TIME2 = CSI2HOUR(HM2)
-             SAMPF = (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
-         ELSE
-             TIME1 = CSI2HOUR(HM1)
-             TIME2 = CSI2HOUR(HM2)
-             SAMPF = (DOY2-DOY1)*3600*24+
-     +         (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
-         ENDIF
-         DOYD = FDOY - DOY1
-         HOURD = CSI2HOUR(REAL(FHOURMIN)) - CSI2HOUR(HM1)
-         SECD = 0 - SEC1
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2, SEC2)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+
+         DOYD = FDOY - DOY2
+         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
+         SECD = 0 - SEC2
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-         ATTEMPTS = ATTEMPTS + 1
-         CURCH = TIMED/SAMPF
+         CURCH = INT(TIMED*SAMPF)
+
+	 IF (CURCH .EQ. 0) THEN
+	    IND = IND2
+	    RETURN
+	 ELSE IF (TIMED .GT. 0) THEN 
+             DOYD = DOY3 - DOY2
+             HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM2)
+             SECD = SEC3 - SEC2
+             TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+	     IF (ABS(TIMED) .GT. 1e-6) 
+     +           SAMPF = (IND3-IND2)/ABS(TIMED)
+	     IND1 = IND2
+	     HM1 = HM2
+	     SEC1 = SEC2
+	     DOY1 = DOY2
+	 ELSE IF  (TIMED .LT. 0) THEN
+             DOYD = DOY2 - DOY1
+             HOURD = CSI2HOUR(HM2) - CSI2HOUR(HM1)
+             SECD = SEC2 - SEC1
+             TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+	     IF (ABS(TIMED) .GT. 1e-6) 
+     +           SAMPF = (IND2-IND1)/ABS(TIMED)
+	     IND3 = IND2
+	     HM3 = HM2
+	     SEC3 = SEC2
+	     DOY3 = DOY2
+	ENDIF
+C
+C Get time difference between start of interval and requested point
+        DOYD = FDOY - DOY1
+        HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+        SECD = 0 - SEC1
+        TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+        IND2 = IND1 + INT(TIMED*SAMPF)
+        IF (IND2 .GT. MAXIND) THEN
+	   IND = -1
+	   RETURN
+	ENDIF
+
+        CURCH = INT(TIMED*SAMPF)
+
+        ATTEMPTS = ATTEMPTS + 1
 C
 C A fix to get the right sample (needed in some cases)
-         IF ((SECD .LT. 0) .AND. 
-     +       ((INT(FHOURMIN) - INT(HM1)) .EQ. 1)) THEN
-            CURCH = CURCH + 1
-	 ENDIF
+c        IF ((SECD .LT. 0) .AND. 
+c    +       ((INT(FHOURMIN) - INT(HM1)) .EQ. 1)) THEN
+c           CURCH = CURCH + 1
+c ENDIF
       ENDDO
       IF (ATTEMPTS .EQ. 20) THEN
-         WRITE(*,*) 'ERROR: Gave up on searching time in file'
          IND = -1
       ENDIF
+
+      IND = IND2
       END
       
       SUBROUTINE ECReadNCDF(InName,StartTime,StopTime,
@@ -1092,8 +1137,10 @@ C
           RETURN
       ENDIF
       NSAMPLE = STOPIND - STARTIND 
+      write(*,*) 'num samples = ', NSAMPLE
       IF ((STOPIND - STARTIND) .GT. MMMAX) THEN
          WRITE(*,5500) MMMAX, NSAMPLE
+	 STOP
       ENDIF
 C
 C Read all data from file
@@ -1712,8 +1759,12 @@ C
       ENDDO
 
       DO j=1,N
-	IF (Mok(j).GT.0) Mean(j) = Mean(j)/DBLE(Mok(j))
-	Mean(j) = Mean(j) + RawMean(j)
+	IF (Mok(j).GT.0) THEN 
+	  Mean(j) = Mean(j)/DBLE(Mok(j))
+	  Mean(j) = Mean(j) + RawMean(j)
+	ELSE
+	  Mean(j) = DUMMY
+	ENDIF
       ENDDO
 C
 C Find (co-)variances and from them the tolerances of the mean
@@ -1751,7 +1802,12 @@ C
 
       DO j=1,N
 	DO k=j,N
-	  IF (Cok(j,k).GT.0) Cov(j,k) = Cov(j,k)/DBLE(Cok(j,k))
+	  IF (Cok(j,k).GT.0) THEN
+	     Cov(j,k) = Cov(j,k)/DBLE(Cok(j,k))
+	  ELSE
+	     Cov(j,k) = DUMMY
+	     Cov(k,j) = DUMMY
+	  ENDIF
 	ENDDO
       ENDDO
 
@@ -1766,7 +1822,11 @@ C
      &    DBLE(NMin(j,j) + NPlus(j,j))**2.D0
 	MIndep(j) = ANINT(DBLE(NChange(j,j))/PSwap) - 1
 	MIndep(j) = MAX(MIndep(j),1)
-	TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
+	IF (Cok(j,j) .GT. 0) THEN
+	   TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
+	ELSE
+	   TolMean(j) = DUMMY
+	ENDIF
       ENDDO
 C
 C Find tolerances for (co-)variances
@@ -1793,18 +1853,23 @@ C
 C Calculate the standard deviation of the instantaneous contributions
 C to the covariances.
 C
-	  IF (Cok(j,k).GT.0) TolCov(j,k)=TolCov(j,k)/DBLE(Cok(j,k))
+	  IF (Cok(j,k).GT.0) THEN
+	     TolCov(j,k)=TolCov(j,k)/DBLE(Cok(j,k))
 C
 C Here we estimate the number of independent contributions to the
 C covariance by counting the least number of independent contributions
 C to either of the factors.
 C
-	  CIndep(j,k) = MIN(MIndep(j),MIndep(k))
-	  TolCov(j,k) = TolCov(j,k)/DBLE(CIndep(j,k))
+	     CIndep(j,k) = MIN(MIndep(j),MIndep(k))
+	     TolCov(j,k) = TolCov(j,k)/DBLE(CIndep(j,k))
 C
 C Tolerance is defined as 2*sigma, where sigma is standard deviation
 C
-	  TolCov(j,k) = 2.D0*(TolCov(j,k))**0.5
+	     TolCov(j,k) = 2.D0*(TolCov(j,k))**0.5
+	  ELSE
+	     TolCov(j,k) = DUMMY
+	     CIndep(j,k) = DUMMY
+	  ENDIF
 	ENDDO
       ENDDO
 
