@@ -251,4 +251,6 @@ Revision 2.4.4: January 14, 2003
           - 12 extra columns have been added to the output of ec_ncdf (why not!), giving the mean 
             velocity components and the components of the stress tensor (it's becoming time
             for output-on-demand).
+          - added some checks to EC_G_Reset (related to CO2)
+	  - removed leading spaces in writing hear to flux file in ec_ncdf
 

@@ -529,16 +529,16 @@ C
           CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TCouple,SpecHum,
      &      R,dR,Freq,CIndep,CTCopq,dCTCopq)
         ELSE
-           CTSon2 = -9999.D0
-          dCTSon2 = -9999.D0
-           CTCop2 = -9999.D0
-          dCTCop2 = -9999.D0
-           Cq2    = -9999.D0
-          dCq2    = -9999.D0
-           CTSonq = -9999.D0
-          dCTSonq = -9999.D0
-           CTCopq = -9999.D0
-          dCTCopq = -9999.D0
+           CTSon2 = DUMMY
+          dCTSon2 = DUMMY
+           CTCop2 = DUMMY
+          dCTCop2 = DUMMY
+           Cq2    = DUMMY
+          dCq2    = DUMMY
+           CTSonq = DUMMY
+          dCTSonq = DUMMY
+           CTCopq = DUMMY
+          dCTCopq = DUMMY
         ENDIF
 C
 C

@@ -880,7 +880,9 @@ C     ***
 	  ENDDO
       ENDIF
       IF (.NOT. HAVE_Uncal(Humidity)) THEN
-	  DO I=1,NNMax
+          Mean(SpecHum) = DUMMY
+          TolMean(SpecHum) = DUMMY
+      	  DO I=1,NNMax
 	    DO J=Humidity, SpecHum
 	      Cov(J,I) = DUMMY
 	      Cov(I,J) = DUMMY
@@ -889,6 +891,21 @@ C     ***
 	    ENDDO
 	  ENDDO
       ENDIF
+      IF (.NOT. HAVE_Uncal(CO2)) THEN
+        Mean(SpecCO2) = DUMMY
+        TolMean(SpecCO2) = DUMMY
+        Mean(CO2) = DUMMY
+        TolMean(CO2) = DUMMY
+        DO I=1,NNMax
+	    DO J=CO2, SpecCO2
+	      Cov(J,I) = DUMMY
+	      Cov(I,J) = DUMMY
+	      TolCov(J,I) = DUMMY
+	      TolCov(I,J) = DUMMY
+	    ENDDO
+	  ENDDO
+      ENDIF
+ 
       END
 
 
