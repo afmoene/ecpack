@@ -60,7 +60,8 @@ C...........................................................................
      &  CorMean(NNMax),
      &  Gain(NNNMax),Offset(NNNMax),
      &  Alpha, Beta, Gamma, WBias,
-     &  UMean(3, MaxPF), Apf(3,3), ExpVar(NMaxExp)
+     &  UMean(3, MaxPF), Apf(3,3), ExpVar(NMaxExp),
+     &  CorrPar(NMaxCorrPar)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
       CHARACTER*255 SonName,CoupName,HygName, CO2Name, DUMSTRING
       CHARACTER*255 NCvarname(NNNMax)
@@ -97,7 +98,10 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
      &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
-     &             Outputs)
+     &             Outputs, DoCorr, CorrPar, ExpVar,
+     &             DoStruct, DoPrint,
+     &             PCorr, PRaw, PCal, PIndep)
+
 C
 C Assume first we have no uncalibrated samples at all
 C
@@ -128,12 +132,6 @@ C
 C Number of quantities involved in this experiment
 C
       N = 3  ! Number of calibrated quantities you will follow
-C
-C Read parameters from file with name ParmName
-C
-      CALL EC_F_Params(ParmName, ExpVar,
-     &  DoCorr, PCorr,
-     &  DoStruct, DoPrint, PRaw,PCal,PIndep)
 C
 C Read calibration data from files :
 C

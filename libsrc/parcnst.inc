@@ -52,11 +52,12 @@ C
 C Constants used for maximum array dimensions
 C
       INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder, NMaxPhys, 
-     &        NMaxCorr, NMaxExp
+     &        NMaxExp, MaxBlock
 
       PARAMETER(MMMax = 100000) ! Maximum number of samples allowed
       PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]
       PARAMETER(NMaxOrder =  6) ! Maximum order of calibration polynomial
+      PARAMETER(MaxBLock  = 1024) ! Maximum number of blocks in block detrending 
 C
 C These constants are used to indicate *un*calibrated quantities
 C If you add a variable here, increase NNNMax as well!
@@ -232,10 +233,12 @@ C
 C
 C Constants used to indicate corrections
 C
+      INTEGER NMaxCorr
       INTEGER QCDetrend, QCTilt, QCYaw, QCPitch, QCRoll,
      &        QCPF, QCSonic, QCO2,QCFreq,
-     &        QCWebb, QCMean, QCPlanF
-      PARAMETER(NMaxCorr   = 11)
+     &        QCWebb, QCMean, QCPlanF, QCBlock
+
+      PARAMETER(NMaxCorr   = 12)
       
       PARAMETER(QCDetrend  = 1)
       PARAMETER(QCTilt     = 2) 
@@ -248,6 +251,36 @@ C
       PARAMETER(QCFreq     = 9)
       PARAMETER(QCWebb     = 10)
       PARAMETER(QCMean     = 11)
+      PARAMETER(QCBlock    = 12)
+
+      CHARACTER*8 CorrName(NMaxCorr) 
+      DATA CorrName
+     &                  /'detrend ',
+     &                   'tilt    ',
+     &                   'yaw     ',
+     &                   'pitch   ',
+     &                   'roll    ',
+     &                   'planfit ',
+     &                   'sontemp ',
+     &                   'oxygen  ',
+     &                   'freqresp',
+     &                   'webb    ',
+     &                   'slowmean',
+     &                   'blockav '/
+
+C
+C Parameters that have to with corrections
+C
+      INTEGER NMaxCorrPar
+      INTEGER QCPBlock
+
+      PARAMETER(NMaxCorrPar = 1)
+      
+      PARAMETER(QCPBlock  = 1)
+
+      CHARACTER*8 CorrParName(NMaxCorrPar) 
+      DATA CorrParName
+     &                  /'Nblock  '/
 
 C
 C Constants used to indicate output

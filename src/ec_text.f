@@ -232,6 +232,121 @@ C...........................................................................
          STOP
       ENDIF
       END
+
+C...........................................................................
+C Routine   : EC_T_GCorrPar
+C Purpose   : To set parameter for a correction
+C Interface : STRING      intent(IN)      string to be parsed
+C             Pars        intent(INOUT)   array of flags to be set
+C Author    : Arnold Moene
+C Date      : March 17, 2005
+C...........................................................................
+      SUBROUTINE EC_T_GCorrPar(String, Pars)
+      IMPLICIT NONE
+      include 'parcnst.inc'
+      
+      CHARACTER*(*) STRING
+      CHARACTER*100 DUMSTRING, TOKLINE, VALLINE
+      LOGICAL       OneFound
+      REAL*8        Pars(NMaxCorrPar)
+      INTEGER       I, KINDEX, IERR
+      
+      INTEGER EC_T_STRLEN
+      LOGICAL EC_T_EQSTRING
+      EXTERNAL EC_T_STRLEN, EC_T_EQSTRING
+      
+
+      CALL EC_T_STRIPSTR(STRING)
+      CALL EC_T_UPCASE(STRING)
+      OneFound = .FALSE.
+      DO I=1,NMaxCorrPar
+	 DUMSTRING = CorrParName(I)
+	 CALL EC_T_STRIPSTR(DUMSTRING)
+         CALL EC_T_UPCASE(DUMSTRING)
+C        Find the :  sign
+         KINDEX = INDEX(STRING, ':')
+         IF (KINDEX .EQ. 0) THEN
+            WRITE(*,*) 'ERROR no : sign found in ', STRING
+            STOP
+         ENDIF
+c Split into token and value 
+         WRITE(TOKLINE,*) STRING(:KINDEX-1)
+         WRITE(VALLINE,*) STRING(KINDEX+1:)
+         CALL EC_T_STRIPSTR(TOKLINE)
+         IF (EC_T_EQSTRING(TOKLINE, DUMSTRING)) THEN
+	   OneFound = .TRUE.
+           READ(VALLINE,*, IOSTAT=IERR) Pars(I)
+           IF (IERR .NE. 0) THEN
+              WRITE(*,*) 'ERROR while getting value for ', 
+     *                    TOKLINE
+              STOP
+           ENDIF
+         ENDIF
+      ENDDO
+            
+      IF (.NOT. OneFound) THEN
+         WRITE(*,*) 'Cannot find correction parameter ', STRING
+         STOP
+      ENDIF
+      END
+C...........................................................................
+C Routine   : EC_T_GCorr
+C Purpose   : To set flags for a correction
+C Interface : STRING      intent(IN)      string to be parsed
+C             Flags       intent(INOUT)   array of flags to be set
+C Author    : Arnold Moene
+C Date      : March 17, 2005
+C...........................................................................
+      SUBROUTINE EC_T_GCorr(String, Flags)
+      IMPLICIT NONE
+      include 'parcnst.inc'
+      
+      CHARACTER*(*) STRING
+      CHARACTER*100 DUMSTRING, TOKLINE, VALLINE
+      LOGICAL       OneFound, Flags(NMaxCorr)
+      INTEGER       I, KINDEX
+      
+      INTEGER EC_T_STRLEN
+      LOGICAL EC_T_EQSTRING
+      EXTERNAL EC_T_STRLEN, EC_T_EQSTRING
+      
+
+      CALL EC_T_STRIPSTR(STRING)
+      CALL EC_T_UPCASE(STRING)
+      OneFound = .FALSE.
+      DO I=1,NMaxCorr
+	 DUMSTRING = CorrName(I)
+	 CALL EC_T_STRIPSTR(DUMSTRING)
+         CALL EC_T_UPCASE(DUMSTRING)
+C        Find the :  sign
+         KINDEX = INDEX(STRING, ':')
+         IF (KINDEX .EQ. 0) THEN
+            WRITE(*,*) 'ERROR no : sign found in ', STRING
+            STOP
+         ENDIF
+c Split into token and value 
+         WRITE(TOKLINE,*) STRING(:KINDEX-1)
+         WRITE(VALLINE,*) STRING(KINDEX+1:)
+         CALL EC_T_STRIPSTR(TOKLINE)
+         IF (EC_T_EQSTRING(TOKLINE, DUMSTRING)) THEN
+	   OneFound = .TRUE.
+           IF (INDEX(VALLINE, 'ON') .GT. 0) THEN
+	     Flags(I) = .TRUE.
+           ELSE IF (INDEX(VALLINE, 'OFF') .GT. 0)  THEN
+             Flags(I) = .FALSE.
+           ELSE
+              WRITE(*,*) 'ERROR unknown switch given for ', 
+     *                    TOKLINE, ': ', VALLINE
+              STOP
+           ENDIF
+         ENDIF
+      ENDDO
+            
+      IF (.NOT. OneFound) THEN
+         WRITE(*,*) 'Cannot find correction ', STRING
+         STOP
+      ENDIF
+      END
       
 C...........................................................................
 C Routine   : EC_T_GOut2

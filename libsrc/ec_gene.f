@@ -46,7 +46,7 @@ C ########################################################################
      &	Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
      &	Calibr,
      &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &  DoCorr, PCorr, ExpVar, DirYaw, DirPitch, DirRoll,
+     &  DoCorr, PCorr, CorrPar, ExpVar, DirYaw, DirPitch, DirRoll,
      &  Apf, SonFactr, O2Factor, FrCor,
      &	Mean,TolMean,Cov,TolCov,
      &  QPhys, dQPhys,
@@ -60,7 +60,7 @@ C        RawSampl,MaxChan,Channels,NMax,N,MMax,M, PCal,PIndep,
 C        Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
 C        Calibr,
 C        Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-C        DoCorr, PCorr, ExpVar,
+C        DoCorr, PCorr, CorrPar, ExpVar,
 C        DirYaw, DirPitch, DirRoll,
 C        Apf, SonFactr, O2Factor, FrCor,
 C        Mean,TolMean,Cov,TolCov,
@@ -101,6 +101,8 @@ C     DoCorr    : [LOGICAL](NMaxCorr)
 C                 which corrections to do?
 C     PCorr     : [LOGICAL](NMaxCorr)
 C                 intermediate results of which corrections?
+C     Corrpar   : [REAL*8](NMaxCorrPar)
+C                 array with correction settings
 C     ExpVar    : [REAL*8](NMaxExp)
 C                 array with experimental settings
 C     Psychro   : [REAL*8]
@@ -195,6 +197,7 @@ C                           and replace by QPhys
 C                           Put all correction info into DoCorr and PCorr, ExpVar
 C     REvision: 29-01-2003: added have_cal to interface to
 C                           have it available in ec_ncdf
+C     Revision: 17-03-2005: added CorrPar to pass correction parameters
 C     $Name$
 C     $Id$
 C USES
@@ -209,6 +212,7 @@ C     EC_G_Show
 C     EC_M_Averag
 C     EC_M_MinMax
 C     EC_M_Detren
+C     EC_M_BlockDet
 C     EC_Ph_Q
 C     EC_Ph_Flux
 C     parcnst.inc
@@ -224,7 +228,8 @@ C     ***
      &	AnyTilt,BadTc,
      &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  DumCorr(NMaxCorr), PDumCorr(NMaxCorr)
-      REAL*8 RawSampl(MaxChan,MMax), ExpVar(NMaxExp)
+      REAL*8 RawSampl(MaxChan,MMax), ExpVar(NMaxExp),
+     &       CorrPar(NMaxCorrPar)
       REAL*8 P,Psychro,Sample(NMax,MMax),
      &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),FrCor(NMax,NMax),
@@ -236,6 +241,7 @@ C     ***
       REAL*8 MINS(NNMax), MAXS(NNMAX), WebVel
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3), Apf(3,3), 
      &        DumOut(3) 
+      INTEGER NBlock
       LOGICAL HAVE_CAL(NMax)
       LOGICAL HAVE_UNCAL(NMax)
 C
@@ -409,11 +415,46 @@ C
 
 C
 C
-C Subtract a linear trend from all quantities
+C Subtract a linear trend from all quantities 
+C and / or 
+C do block detrending 
 C
 C
-      IF (DoCorr(QCDetrend)) THEN
-	CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,RC)
+      IF (DoCorr(QCDetrend) .OR. DoCorr(QCBlock)) THEN
+        IF (DoCorr(QCDetrend)) THEN
+	   CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,RC)
+        ENDIF
+        IF (DoCorr(QCBlock)) THEN
+           NBlock = INT(CorrPar(QCPBlock))
+	   CALL EC_M_BlockDet(Sample,NMax,N,MMAx,M,Mean,NBlock, Flag)
+        ENDIF
+C
+C
+C Estimate mean values, covariances and tolerances of both
+C for the detrended dataset
+C
+C
+	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &	                 Mean,TolMean,Cov,TolCov,
+     &                   MIndep,CIndep,Mok,Cok)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
+        IF (.NOT. Have_cal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+        ENDIF
+        CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+
+	IF (DoPrint.AND.PCorr(QCDetrend)) THEN
+	  CALL EC_G_ShwHead(OutF, 'After detrending : ')
+          CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+          CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
+	  IF (PIndep) THEN
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
+	  ENDIF
+	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+
 C
 C
 C Estimate mean values, covariances and tolerances of both
@@ -441,6 +482,7 @@ C
 	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
+
 C
 C Get the mean W before we do tilt correction
 C

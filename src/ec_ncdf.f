@@ -90,7 +90,7 @@ C...........................................................................
      &  Gain(NNNMax),Offset(NNNMax),
      &  Apf(3,3), Alpha, Beta, Gamma, WBias,
      &  CosGamma, SinGamma, Yaw(3,3), InvYaw(3,3),
-     &  ExpVar(NMaxExp),
+     &  ExpVar(NMaxExp), CorrPar(NMaxCorrPar),
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq,
@@ -156,7 +156,10 @@ C Get configuration (file names etc.)
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
      &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
-     &             Outputs)
+     &             Outputs, DoCorr, ExpVar, CorrPar,
+     &             DoStruct, DoPrint,
+     &             PCorr, PRaw, PCal, PIndep)
+
 C
 C Assume first we have no uncalibrated samples at all
 C
@@ -221,12 +224,6 @@ C
 C Number of quantities involved in this experiment
 C
       N = NNMax  ! Number of calibrated quantities you will follow
-C
-C Read parameters from file with name ParmName
-C
-      CALL EC_F_Params(ParmName, ExpVar,
-     &  DoCorr, PCorr,
-     &  DoStruct, DoPrint, PRaw,PCal,PIndep)
 C
 C Read calibration data from files :
 C
@@ -426,7 +423,7 @@ C
      &    PCal,PIndep, Psychro,CalSonic,CalTherm,CalHyg,
      &    CalCO2, P, Calibrat,
      &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &    DoCorr, PCorr, ExpVar,
+     &    DoCorr, PCorr, ExpVar, CorrPar,
      &    DirYaw,
      &    DirPitch,
      &    DirRoll,

@@ -310,6 +310,118 @@ C
       END
 
 
+      SUBROUTINE EC_M_BlockAv(x,NMax,N,MMax,M,Flag, NBlock, Mean)
+C     ****f* ec_math.f/EC_M_Averag
+C NAME
+C     EC_M_BlockAv
+C SYNOPSIS
+C     CALL EC_M_BlockAv(x,NMax,N,MMax,M,Flag, NBlock, Mean)
+C FUNCTION
+C     From the given set of calibrated samples, calculate blovk means the averages,
+C INPUTS
+C     x      : [REAL*8(NMax,MMax)]
+C              Array with calibrated samples.
+C	       First index counts quantities; second counter
+C	       counts samples. Only the first N quantities
+C	       and the first M samples are used.
+C     NMax   : [INTEGER]
+C              maximum number of quantities
+C     N      : [INTEGER]
+C              actual number of quantities
+C     MMax   : [INTEGER]
+C              maximum number of samples
+C     M      : [INTEGER]
+C              actual number of samples
+C     Flag   : [LOGICAL(NMax, MMax)]
+C	       If flag(j,i) is true, then quantity j in sample
+C              i is not ok.
+C     NBlock : [INTEGER]
+C              number of blocks
+C OUTPUTS
+C     Mean   : [REAL*8(NMax)]
+C	       The average value array x. Only samples with Flag = 0 
+C              are used.
+C AUTHOR
+C     Arnold Moene and Arjan van Dijk
+C HISTORY
+C     Based on EC_M_Averag
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+
+      INTEGER NMax,N,MMax,M,i,j,k, NperBlock, Mok(NNMax, MaxBlock),
+     &        NBlock, istart, istop
+      LOGICAL Flag(NMax,MMax)
+      REAL*8 x(NMax,MMax),RawMean(NNMax, MaxBlock),Mean(NNMax, MaxBlock)
+C
+C Initialise the arrays
+C
+      DO k=1, MaxBlock
+         DO i=1,NMax
+	    RawMean(i,k) = 0.D0
+	    Mean(i,k) = 0.D0
+            Mok(i,k) = 0
+	 ENDDO
+      ENDDO
+C
+C Find a rough estimate for the mean
+C
+      NperBlock = INT((1.0D0*M)/NBlock)
+      DO k=1,NBlock
+        istart = (k-1)*NperBlock + 1
+        istop = k*NperBlock
+        DO i=istart,istop
+	  DO j=1,N
+	    IF (.NOT.Flag(j,i)) THEN
+	      Mok(j,k) = Mok(j,k) + 1
+	      RawMean(j,k) = RawMean(j,k) + x(j,i)
+	    ENDIF
+	  ENDDO
+        ENDDO
+        DO j=1,N
+	  IF (Mok(j,k).GT.0) RawMean(j,k) = RawMean(j,k)/DBLE(Mok(j,k))
+        ENDDO
+      ENDDO
+
+C
+C Find final estimates for mean
+C
+      DO k=1,NBlock
+        istart = (k-1)*NperBlock + 1
+        istop = k*NperBlock
+        DO i=istart,istop
+	  DO j=1,N
+	    IF (.NOT.Flag(j,i)) THEN
+	      Mean(j,k) = Mean(j,k) + (x(j,i) - RawMean(j,k))
+	    ENDIF
+	  ENDDO
+        ENDDO
+      ENDDO
+
+      DO k=1,NBlock
+        istart = (k-1)*NperBlock + 1
+        istop = k*NperBlock
+        DO i=istart,istop
+	  DO j=1,N
+	    IF (Mok(j,k).GT.0) THEN
+	      Mean(j,k) = Mean(j,k)/DBLE(Mok(j,k))
+	      Mean(j,k) = Mean(j,k) + RawMean(j,k)
+	    ENDIF
+	  ENDDO
+        ENDDO
+      ENDDO
+
+      RETURN
+      END
+
+
+
+
+
 
 
 
@@ -584,6 +696,79 @@ C     ***
 
       RETURN
       END
+
+
+      SUBROUTINE EC_M_BlockDet(x,NMax,N,MMAx,M, Mean, NBlock, Flag)
+C     ****f* ec_math.f/EC_M_BlockDet
+C NAME
+C     EC_M_Detren
+C SYNOPSIS
+C     CALL EC_M_BlockDet(x,NMax,N,MMAx,M, Mean, NBlock, Flag)
+C FUNCTION
+C     Construct a block average-detrended dataset from a given dataset
+C INPUTS
+C     x      : [REAL*8(NMax,MMax)] (in/out)
+C              array with samples: x(i,j) = quantity i in sample j
+C              only the first N quantities and the first M samples
+C              are used. On output: detrended series
+C     NMax   : [INTEGER]
+C              maximum number of quantities in x
+C     N      : [INTEGER]
+C              actual number of quantities in x
+C     MMax   : [INTEGER]
+C              maximum number of samples in x
+C     M      : [INTEGER]
+C              actual number of samples in x
+C     Mean   : [REAL*8(NMax)]
+C              mean of all quantities
+C     NBlock : [INTEGER]
+C              number of blocks 
+C     Flag   : [LOGICAL(NMax, MMax)]
+C	       If flag(j,i) is true, then quantity j in sample
+C              i is not ok.
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$
+C     $Id$
+C Revision 28-01-2003: remove argument y, since it causes aliassing (and is not
+C                      needed).
+C USES
+C     EC_M_BlockAv
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+      INTEGER NBlock, NMax,N,i,MMax,M,j, istart, istop, NperBlock,k
+      REAL*8 x(NMax,MMax),Mean(NMax), BlockMean(NNMax,MaxBlock)
+      LOGICAL Flag(NMax,MMax)
+
+
+
+      NperBlock = INT((1.0D0*M)/NBlock)
+
+      CALL EC_M_BlockAv(x,NMax,N,MMax,M,Flag, NBlock, BlockMean)
+
+      DO k=1,NBlock
+        istart = (k-1)*NperBlock + 1
+        istop = k*NperBlock
+        DO i= istart,istop
+	  DO j= 1,N
+	    IF (j.NE.TTime) THEN
+	      x(j,i) = x(j,i) - BlockMean(j, k) + Mean(j)
+	    ENDIF
+	  ENDDO
+        ENDDO
+      ENDDO
+      DO k=1,NBlock
+        DO j=1,N
+          write(*,*) j, k, BlockMean(j,k),Mean(j)
+        ENDDO
+      ENDDO
+
+      RETURN
+      END
+
 
 
 

@@ -375,3 +375,13 @@ Revision : 2.5.13: October 12, 2004 (Arnold.Moene@wur.nl)
         evaporation takes place. Furthermore, the latent heat of fusion of ice
         should be used if ice is the source of water vapour.
       - Cp is made temperature dependent (based on observed air temperature)
+Revision : 2.5.14: March 22, 2005 (arnold.Moene@wur.nl)
+      - implemented framework to read switches for corrections, as well as
+      parameters needed in corrections from the configuration file (to phase
+      out the use of the 'spec' file).
+      - implemented detrending by block averaging (i.e. per block the mean
+      value of the signal is subtracted). Note that this is not the same as
+      block detrending in combination with adding th eovariance of the blocks!
+      - fixed bug in calculation of error in u* and Tau. If you have data from
+      a previous version of ecpack, just divide d(u*) by the square of u*, and
+      divide d(tau) by square of u*

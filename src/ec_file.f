@@ -32,7 +32,8 @@ C               FluxName, ParmName, InterName, PlfIntName,
 C               PlfName, SonName, CoupName, HygName, CO2Name,
 C               NCVarName, NCNameLen,
 C               OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
-C               Outputs)
+C               Outputs, DoCorr, CorrPars, ExpVar, DoStruct, DoPrint,
+C               PCorr, PRaw, PCal, PIndep)
 C INPUTS
 C     ConfUnit : [INTEGER]
 C               file unit
@@ -79,6 +80,30 @@ C     OutStr   : [LOGICAL](NNMax, NNMax)
 C                which structure parameters to write to output,
 C     OutPuts  : [LOGICAL](NMaxOS)
 C                further info about output
+C     DoCorr   : [LOGICAL](NMaxCorr)
+C                Which corrections to do
+C     CorrPars : [REAL*8](NMaxCorrPar)
+C                Parameters of corrections
+C     ExpVar   : [REAL*8](NMaxExp)
+C                array with Experimental settings
+C     DoStruct : [LOGICAL]
+C                compute structure parameters
+C     DoPrint  : [LOGICAL]
+C                print any output
+C     DoCorr   : [LOGICAL](NMaxCorr)
+C                Switch for corrections
+C     PCorr    : [LOGICAL](NMaxCorr)
+C                Switch for printing intermediate results after
+C                corrections
+C     PRaw     : [LOGICAL]
+C                write intermediate results with respect to
+C                raw data
+C     PCal     : [LOGICAL]
+C                write intermediate results with respect to
+C                calibrated data
+C     PIndep     : [LOGICAL]
+C                write intermediate results with respect to
+C                number of independent samples
 C FUNCTION
 C     Routine to read info with respect to input and output files
 C AUTHOR
@@ -95,6 +120,8 @@ C     EC_T_GOut1
 C     EC_T_GOut2
 C     EC_T_GPhys
 C     EC_T_GOutS
+C     EC_T_GCorr
+C     EC_T_GCorrPars
 C     parcnst.inc
 C     ***
 
@@ -104,12 +131,17 @@ C     ***
      &           PlfName, SonName, CoupName, HygName, CO2Name,
      &           NCVarName, NCNameLen,
      &           OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
-     &           Outputs)
+     &           Outputs, DoCorr, CorrPars, ExpVar, 
+     &           DoStruct, DoPrint,
+     &           PCorr, PRaw, PCal, PIndep)
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
       
       
+      LOGICAL         DoPrint,PRaw,PCal,PIndep,
+     &                 DoStruct, PCorr(NMaxCorr)
+      CHARACTER*(*) InName
       INTEGER         ConfUnit, NCNameLen, I, J
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
      &                InterName, SonName, CoupName, HygName, 
@@ -118,14 +150,18 @@ C     ***
       LOGICAL         OutMean(NNMax), OutCov(NNMax, NNMax), 
      &                OutStd(NNMax), OutNum(NNMax),  
      &                OutStr(NNMax, NNMax), 
-     &                OutPh(NMaxPhys), Outputs(NMaxOS)
+     &                OutPh(NMaxPhys), Outputs(NMaxOS),
+     &                Docorr(NMaxCorr) 
+      REAL*8          CorrPars(NMaxCorrPar), ExpVar(NMaxExp)
 
       INTEGER         IOCODE, KINDEX
       CHARACTER*255   LINE, TOKLINE, VALLINE, DUMSTRING
       INTEGER         EC_T_STRLEN
       EXTERNAL        EC_T_STRLEN
 
-
+C
+C Set defaults
+C
       DO 1000, I=1,NCNameLen
          CALL EC_T_CLEARSTR(NCVarName(I))
  1000 CONTINUE
@@ -140,8 +176,10 @@ C     ***
       CALL EC_T_CLEARSTR(CoupName)
       CALL EC_T_CLEARSTR(HygName)
       CALL EC_T_CLEARSTR(CO2Name)
-      CALL EC_T_CLEARSTR(PlfName)
-      
+      CorrPars(QCPBlock) = 1
+
+
+
       IOCODE = 0
       DO 4000, WHILE (IOCODE .EQ. 0)
 C     Read one line from configuration file
@@ -226,6 +264,14 @@ C NetCdF variable names
                NCVarName(QUTref) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'SSPEED_VAR') .GT. 0) THEN
                NCVarName(QUSSpeed) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+C Correction definitions
+            ELSE IF (INDEX(TOKLINE, 'CORRECT') .GT. 0) THEN
+               CALL EC_T_GCorr(VALLINE(:INDEX(VALLINE, CHAR(0))-2),
+     &                            DoCorr)
+C Correction parameters
+            ELSE IF (INDEX(TOKLINE, 'CORRPAR') .GT. 0) THEN
+               CALL EC_T_GCorrPar(VALLINE(:INDEX(VALLINE, CHAR(0))-2),
+     &                            CorrPars)
 C Output definitions
             ELSE IF (INDEX(TOKLINE, 'OUT_MEAN') .GT. 0) THEN
                CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
@@ -346,7 +392,18 @@ C
          OutStr(TCouple,Spechum) = .TRUE.
          OutStr(TSonic,Spechum) = .TRUE. 
       ENDIF
+
+C 
+C Now call EC_F_Params
+C
+      CALL EC_F_Params(ParmName, ExpVar,
+     &	DoCorr, PCorr,
+     &	DoStruct, DoPrint,
+     &	PRaw,PCal,PIndep)
+
       END
+
+
 
 
 
@@ -356,6 +413,7 @@ C     EC_F_Params
 C SYNOPSIS
 C     CALL EC_F_Params(InName, ExpVar,
 C             DoCorr, PCorr,
+C             DoStruct, DoPrint,
 C             PRaw,PCal,PIndep)
 C INPUTS
 C     InName   : [CHARACTER*(*)]
@@ -368,6 +426,10 @@ C                Switch for corrections
 C     PCorr    : [LOGICAL](NMaxCorr)
 C                Switch for printing intermediate results after
 C                corrections
+C     DoStruct : [LOGICAL]
+C                compute structure parameters
+C     DoPrint  : [LOGICAL]
+C                print any output
 C     PRaw     : [LOGICAL]
 C                write intermediate results with respect to
 C                raw data

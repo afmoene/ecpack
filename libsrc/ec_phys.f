@@ -225,11 +225,9 @@ C
       IF (.NOT. ((COV(W,U) .EQ. DUMMY) .AND.
      &           (COV(W,V) .EQ. DUMMY))) THEN
 	  QPhys(QPUStar) = SQRT(SQRT(Cov(W,U)**2+Cov(W,V)**2))
-
-
           dQPhys(QPUStar) = (0.25D0*(2D0*TolCov(W,U)*ABS(COV(W,U)) + 
-     &                  2D0*TolCov(W,V)*ABS(COV(W,V)))/
-     &                  QPhys(QPUStar)**2D0)*
+     &                               2D0*TolCov(W,V)*ABS(COV(W,V)))/
+     &                  QPhys(QPUStar)**4D0)*
      &                  QPhys(QPUStar)
 C
 C Friction force [N m^{-2}]
@@ -243,10 +241,8 @@ C
            RhoSon = QPhys(QPRhoSon)
            QPhys(QPTau) = RhoSon*(ABS(QPHys(QPUStar)))**2.D0
          ENDIF
-         dQPhys(QPTau) = (0.5D0*(2D0*ABS(COV(W,U))*TolCov(W,U) + 
-     &             2D0*ABS(COV(W,V))*
-     &             TolCov(W,V))/QPhys(QPUStar)**2D0)*
-     &             QPhys(QPUstar)**2
+         dQPhys(QPTau) = (2D0*dQPhys(QPUstar)/QPhys(QPUstar))*
+     &             QPhys(QPTau)
       ELSE
         QPhys(QPUstar) = DUMMY
         dQPhys(QPUstar) = DUMMY
@@ -605,7 +601,7 @@ C Estimate how many samples delay one must go to let Taylor's hypothesis
 C of frozen turbulence give the correct spatial separation R.
 C The discrete nature of sampling may call for strong rounding off of the
 C delay distance. The rounded off value for R is returned to the calling
-C rourine.
+C routine.
 C
       dR = UMean/Freq
       NSeparate = MAX(1,NINT(R/dR))

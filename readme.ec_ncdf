@@ -187,7 +187,9 @@ Out_Phys      write given physical (=derived quantity) to output file
               see below)
 Out_Struct    write (cross-) structure paramter of two calibrated signal 
               to output file (e.g. Out_Struct='TSon,w', for a list of variable names,
-              see below)
+              see below). Note that for the moment if you request structure paramters through
+              Out-Struct, you still have to specify DoStruct = .T. in the processing paramters file
+              (see below).
 Output        other output settings:
               'new': use new output file format (i.e. with self-defined columns
               'old': use old output file format (pre-defined columns; 'new' and 
@@ -205,6 +207,32 @@ Output        other output settings:
               'version': write version number of software to output file
               'noversion': write no version number to output file
                      ('version' and 'noversion' are mutually exclusive; 'version' is default) 
+correct       switch for corrections. These switches have the same functionality as the booleans read from  
+              the parameter file called ParmName. In the end this structure will replace the use of the parameter file
+              (since that is not flexible enough), but currently the parameter file is still needed.
+              The structure of the rigth hand side of the switch is:
+              'NAME : ONOFF', where NAME is the name of the correction and ONOFF is either on or off
+              Valid names for the corrections are:
+              'detrend' : Correct data for linear trend
+              'tilt'    : Perform true tilt-correction with known angles
+              'yaw'     : Turn system such that Mean(V) --> 0
+              'pitch'   : Turn system such that Mean(W) --> 0
+              'roll'    : Turn System such that Cov(W,V) --> 0
+              'planfit' : Do planar fit untilting (requires that untilting angles have been produced before with planang)
+              'sontemp' : Correct sonic temperature for humidity
+              'oxygen'  : Correct hygrometer for oxygen-sensitivity
+              'freqresp': Correct for poor frequency response
+              'webb'    : Calculate mean velocity according to Webb
+              'slowmean': Replace mean quantities by better estimates (currently only humidity)
+              'blockav' : detrend by block averaging, rather than linear detrending
+corrpar       switch to pass parameters needed in corrections. Structure of right hand side is:
+              'NAME : VALUE', where NAME is the name of the parameter and VALUE is its value
+              Valid names at this moment are:
+              'Nblock' : number of blocks into which the averaging interval should be divided when
+                         doing block averaging 
+              
+
+
         
 Variable names to be used for Out_Mean, Out_Cov, Out_Std, Out_Struct (defined in
 parcnst.inc, not case-sensitive):
