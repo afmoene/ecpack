@@ -90,3 +90,7 @@ Revision 1.21: June 25, 2001
 Reivision 1.22: August 2, 2001
           - Yaw and Pitch changed in numbers of variables of calibration
 	    constants (QQYaw and QQPitch) in parcnst.inc.
+          - Changed rotation of samples in calibration routine (rotated
+	    over 180 degrees less)
+          - inverted V-velovities in calibration routine (this is at least 
+	    valid -apparently- for the CSAT3).

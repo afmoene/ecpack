@@ -609,8 +609,17 @@ C
 C Rotate velocity according to angle of setup's north relative real north
 C
            Hook = PI*CalSonic(QQYaw)/180.D0
-           Sample(U) =  COS(Hook)*UDum + SIN(Hook)*VDum
-           Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
+C Sonic takes flow that blows into the sonic as positive. To get
+C the wind speed with wind to north as positive substract 180 degrees:
+           IF (CalSonic(QQYaw) .GT. 180) THEN
+               Hook = PI*(CalSonic(QQYaw)-180)/180.D0
+	   ELSE
+               Hook = PI*(CalSonic(QQYaw)+180)/180.D0
+           ENDIF
+	       
+C Apparently V is defined other way around
+           Sample(U) =  COS(Hook)*UDum + SIN(Hook)*(-VDum)
+           Sample(V) = -SIN(Hook)*UDum + COS(Hook)*(-VDum)
 
            Sample(TSonic) = RawSampl(ColTSonic) + Kelvin
 C
