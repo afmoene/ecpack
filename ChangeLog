@@ -275,30 +275,39 @@ Revision 2.4.5:  January 29, 2003
 	  - fixed error in EC_Ph_Flux in computation of Ustar (bug present
 	    since 2.4.4)
 Revision 2.5: January 30, 2003 (Arnold.Moene@wur.nl)
-          - removed Doy, HourMin and Sec as calibrated quantities (all
+      - removed Doy, HourMin and Sec as calibrated quantities (all
 	    their info is in TTime)
-          - code cleaning
+      - code cleaning
 	  - now flexible output is possible: in the main configuration
 	    file one can define which variables you want to see
 	    in the output file (see readme.ec_ncdf for details).
 Revision 2.5.1: February 3, 2003 (Arnold.Moene@wur.nl)
-          - added option (on by default) to write version number of
+      - added option (on by default) to write version number of
 	    program and data of processing to flux output file of ec_ncdf
 	    (output='version' or output='noversion' in configuration file).
 	    Makes debugging easier if someone has a problem, but
 	    doesn't know with what version the results were produced.
 Revision 2.5.2: March 11, 2003 (Arnold.Moene@wur.nl)
-          - fixed error in wind direction of 180 degrees: now should work 
-	    with planar fit and classic axis rotation: a change in ec_Ph_flux 
+      - fixed error in wind direction of 180 degrees: now should work
+	    with planar fit and classic axis rotation: a change in ec_Ph_flux
 	    and in ec_g_main.
 Revision 2.5.3: June 3, 2003 (Arnold.Moene@wur.nl)
-          - fixed wind direction again
+      - fixed wind direction again
 Revision 2.5.4: August 20, 2003 (Arnold.Moene@wur.nl)
-          - now reset contents of calibration info to DUMMY (in planang and ec_ncdf)
-		  - New routine in ec_phys to calculate Obukhov length (for use in freq. response correction)
-		  - Now use new routine for Obukhov length  in freq. response correction in ec_corr
-		  - fixed bug in writing of flux file: in new format intervals with zero samples
-		    repeated data from last interval with more than zero samples. Now handled correctly.
+      - now reset contents of calibration info to DUMMY (in planang and ec_ncdf)
+	  - New routine in ec_phys to calculate Obukhov length (for use in freq. response correction)
+	  - Now use new routine for Obukhov length  in freq. response correction in ec_corr
+	  - fixed bug in writing of flux file: in new format intervals with zero samples
+         repeated data from last interval with more than zero samples. Now handled correctly.
+Revision 2.5.5: August 28, 2003 (Arnold.Moene@wur.nl)
+      - fixed incorrect (or incomplete) computation of sensor separation in EC_C_F01 (the
+        frequency response correction routines). Before the fix, only the horizontal separation
+        in X was taken into account (in fact for all except the thermocouple only the
+        actual X-location of the sensor, not the distance from the sonic focal point).
+        Y and Z separation was not taken into account at all. For now it is assumed that
+        the direction of the separation is not relevant in the separation-correction
+        (i.e. neither the orientation with respect to the vertical, nor the orientation
+        relative to the mean wind dieection is taken into account).
 
 
 

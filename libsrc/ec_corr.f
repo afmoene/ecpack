@@ -257,7 +257,9 @@ C     ***
      &  TRANCO21, TRANWCO21,
      &	XI,ZETA,CW,CU,WT,UW,TT,UU,WW,F,NS,C,NSTA,NEND,N,LF,X,ZL,
      &	INTTS(NNMax,NNMAX),G(NNMAX,NNMAX),
-     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),Ustar, Tstar, Qstar
+     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),Ustar, Tstar, Qstar,
+     &  SEP
+
 
       REAL*8 EC_Ph_Obukhov
       EXTERNAL EC_Ph_Obukhov
@@ -359,7 +361,10 @@ C
 C-- W-T lateral separation transfer function, eq. 11 -------------
 C
           TRANWT1=1.0D0
-          X=N/Mean(U)*(CalTherm(QQX)-CalSonic(QQX))
+          SEP = SQRT((CalTherm(QQX)-CalSonic(QQX))**2 +
+     &               (CalTherm(QQY)-CalSonic(QQY))**2 +
+     &               (CalTherm(QQZ)-CalSonic(QQZ))**2)
+          X=N/Mean(U)*SEP
           IF (X.GT.0.01D0) TRANWT1=EXP(-9.9D0*X**1.5D0)
 C
 C-- SOLENT SONIC TEMPERATURE !!
@@ -426,7 +431,10 @@ C
 C-- W-Q lateral separation transfer function, eq. 11 -------------
 C
           TRANWQ1=1.0D0
-          X=N/Mean(U)*CalHyg(QQX)
+          SEP = SQRT((CalHyg(QQX)-CalSonic(QQX))**2 +
+     &               (CalHyg(QQY)-CalSonic(QQY))**2 +
+     &               (CalHyg(QQZ)-CalSonic(QQZ))**2)
+          X=N/Mean(U)*SEP
           IF (X.GT.0.01D0) TRANWQ1=EXP(-9.9D0*X**1.5D0)
 C
 C-- CO2 sensor !!
@@ -434,7 +442,7 @@ C-- CO2 sensor frequency response gain, eq. 2 ------------
 C
           GAINCO21=1.0D0	       !CO2 sensor gain neglectible
 C
-C-- lymann-alpha spatial averaging transfer function, eq.7 ------------
+C-- CO2 sensor spatial averaging transfer function, eq.7 ------------
 C
           TRANCO21=1.0D0
           X=2.D0*PI*N/Mean(U)*CalCO2(QQPath)
@@ -442,10 +450,13 @@ C
 	     TRANCO21=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
           ENDIF
 C
-C-- W-Q lateral separation transfer function, eq. 11 -------------
+C-- W-CO2 lateral separation transfer function, eq. 11 -------------
 C
           TRANWCO21=1.0D0
-          X=N/Mean(U)*CalCO2(QQX)
+          SEP = SQRT((CalCO2(QQX)-CalSonic(QQX))**2 +
+     &               (CalCO2(QQY)-CalSonic(QQY))**2 +
+     &               (CalCO2(QQZ)-CalSonic(QQZ))**2)
+          X=N/Mean(U)*SEP
           IF (X.GT.0.01D0) TRANWCO21=EXP(-9.9D0*X**1.5D0)
 C
 C-- Composite transfer functions, eq. 28 -------------------------
