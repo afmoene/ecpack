@@ -172,43 +172,43 @@ C
      &  '#samples ',
      &  '  #U     #V     #W  #TSon  #TCop  #RhoV     #q  #time   ',
      &  'Dir d(dir)   ',
-     &  'Mean(U)        dMean(U)        ',
-     &  'Mean(TSon)     dMean(TSon)     ',
-     &  'Mean(TCop)     dMean(TCop)     ',
-     &  'Mean(q)        dMean(q)        ',
-     &  'sigma(TSon)    dsigma(TSon)    ',
-     &  'sigma(TCop)    dsigma(TCop)    ',
-     &  'sigma(q)       dsigma(q)       ',
-     &  'sigma(u)       dsigma(u)       ',
-     &  'sigma(v)       dsigma(v)       ',
-     &  'sigma(w)       dsigma(w)       ',
-     &  'cov(TSon,q)    dcov(TSon,q)    ',
-     &  'cov(TCop,q)    dcov(TCop,q)    ',
-     &  'cov(TSon,U)    dcov(TSon,U)    ',
-     &  'cov(TCop,U)    dcov(TCop,U)    ',
-     &  'cov(q,U)       dcov(q,U)       ',
-     &  'H(Sonic)       Tol(HSonic)     ',
-     &  'H(TCouple)     Tol(HTCouple    ',
-     &  'LvECov         dLvECov         ',
-     &  'LvEWebb        dLvEWebb        ',
-     &  'LvE            dLvE            ',
-     &  'UStar          dUStar          ',
-     &  'Tau            dTau            ',
-     &  'R(delay)       dR              ',
-     &  'CTSon2         dCTSon2         ',
-     &  'CTCop2         dCTCop2         ',
-     &  'Cq2            dCq2            ',
-     &  'CTSonq         dCTSonq         ',
-     &  'CTCopq         dCTCopq         ',
-     &  'MeanW          dMeanW          ',
-     &  '#CO2          ',
-     &  'MeanCO2        dMeanCO2        ',
-     &  'MeanspecCO2    dMeanspecCO2    ',
-     &  'stdCO2         dstdCO2         ',
-     &  'stdspecCO2     dstdspecCO2     ',
-     &  'FCO2Cov        dFCO2Cov        ',
-     &  'FCO2Webb       dFCO2Webb       ',
-     &  'FCO2           dFCO2           '
+     &  'Mean(U)        dMean(U)         ',
+     &  'Mean(TSon)     dMean(TSon)      ',
+     &  'Mean(TCop)     dMean(TCop)      ',
+     &  'Mean(q)        dMean(q)         ',
+     &  'sigma(TSon)    dsigma(TSon)     ',
+     &  'sigma(TCop)    dsigma(TCop)     ',
+     &  'sigma(q)       dsigma(q)        ',
+     &  'sigma(u)       dsigma(u)        ',
+     &  'sigma(v)       dsigma(v)        ',
+     &  'sigma(w)       dsigma(w)        ',
+     &  'cov(TSon,q)    dcov(TSon,q)     ',
+     &  'cov(TCop,q)    dcov(TCop,q)     ',
+     &  'cov(TSon,U)    dcov(TSon,U)     ',
+     &  'cov(TCop,U)    dcov(TCop,U)     ',
+     &  'cov(q,U)       dcov(q,U)        ',
+     &  'H(Sonic)       Tol(HSonic)      ',
+     &  'H(TCouple)     Tol(HTCouple     ',
+     &  'LvECov         dLvECov          ',
+     &  'LvEWebb        dLvEWebb         ',
+     &  'LvE            dLvE             ',
+     &  'UStar          dUStar           ',
+     &  'Tau            dTau             ',
+     &  'R(delay)       dR               ',
+     &  'CTSon2         dCTSon2          ',
+     &  'CTCop2         dCTCop2          ',
+     &  'Cq2            dCq2             ',
+     &  'CTSonq         dCTSonq          ',
+     &  'CTCopq         dCTCopq          ',
+     &  'MeanW          dMeanW           ',
+     &  '#CO2           ',
+     &  'MeanCO2        dMeanCO2         ',
+     &  'MeanspecCO2    dMeanspecCO2     ',
+     &  'stdCO2         dstdCO2          ',
+     &  'stdspecCO2     dstdspecCO2      ',
+     &  'FCO2Cov        dFCO2Cov         ',
+     &  'FCO2Webb       dFCO2Webb        ',
+     &  'FCO2           dFCO2            '
      &  )
 C
 C Number of quantities involved in this experiment
@@ -233,7 +233,7 @@ C
       ENDDO
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
            CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
-           IF ((CalSonic(QQType) .NE. ApGillSonic) .AND.
+           IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR61)) THEN
@@ -588,9 +588,9 @@ C
      &    SumFCO2, dSumFCO2
 
 
- 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),29(2(G14.5:,1X)),
-     &        I14,  1X,
-     &        7(2(G14.5:,1X)), 3X)
+ 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),29(2(G15.5:,1X)),
+     &        I13,  1X,
+     &        7(2(G15.5:,1X)), 3X)
       ELSE
         WRITE(FluxFile,55)
      &    (NINT(StartTime(i)),i=1,3),

@@ -125,11 +125,11 @@ C
 C Constants to characterize types of measurement apparatus, all starting
 C with ''Ap''
 C
-      INTEGER ApGillSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro,
+      INTEGER ApCSATSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro,
      &        ApSon3Dcal, ApMierijLyma, ApLiCor7500, ApKaijoTR90,
      &        ApKaijoTR61
 
-      PARAMETER(ApGillSonic   = 1)
+      PARAMETER(ApCSATSonic   = 1)
       PARAMETER(ApTCouple     = 2)
       PARAMETER(ApCampKrypton = 3)
       PARAMETER(ApPt100       = 4)
