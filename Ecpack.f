@@ -1,4 +1,3 @@
-C $Id$
 C###########################################################################
 C
 C
@@ -76,527 +75,30 @@ C - Separation of calibration routine from library
 C - Detection of different trends and subsequent handling
 C - Better documentation of all input/output variables and functionality
 C   of subroutines
-C - Flow distortion correction
-C - Better standardisation of different types of functions
 C
 C
 C###########################################################################
 
-      SUBROUTINE ECMain(OutF,DoPrint,
-     &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
-     &	Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
-     &	Calibr,
-     &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &	QName,UName,
-     &	DoDetren,PDetrend,
-     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	DoYaw,PYaw,DirYaw,
-     &	DoPitch,PPitch,PitchLim,DirPitch,
-     &	DoRoll,PRoll,RollLim,DirRoll,
-     &	DoSonic,PSonic,SonFactr,
-     &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,FrCor,
-     &	DoWebb,PWebb,
-     &	Mean,TolMean,Cov,TolCov,
-     &	HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau,
-     &  MEANW, TOLMEANW, HAVE_UNCAL)
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECMain
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
+C General routines
 C
-C Purpose : Integrated routine which:
-C  - Calibrates raw samples
-C  - Estimates mean values and covariances with respective tolerances
-C  - Corrects the resulting mean values and covariances for all
-C    effects selected by the user
-C  - Estimates, from the final mean values and covariances, the surface-
-C    fluxes with tolerances.
-C
-C Revision: 03-04-2001: get mean W and its tolerance before tilt
-C                       correction; export via interface (AM)
-C Revision: 28-05-2001: added passing of info on whether uncalibrated
-C                       data are available (AM)
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 
-      INCLUDE 'physcnst.for'
-      INCLUDE 'calcomm.inc'
-
-      INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
-     &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
-     & WhichTemp
-      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
-     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
-     &	DoSonic,DoTilt,PTilt,DoPrint,Flag(NMAx,MMax),DoDetren,
-     &	PDetrend,AnyTilt,DumYaw,DumPitch,DumRoll,DumTilt,BadTc
-      REAL*8 RawSampl(MaxChan,MMax)
-      REAL*8 P,Psychro,Sample(NMax,MMax),
-     &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
-     &	PitchLim,RollLim,DirYaw,RC(NMax),O2Factor(NMax),
-     &	Freq,DirPitch,DirRoll,
-     &	SonFactr(NMax),CorMean(NNMax),PreYaw,PrePitch,PreRoll,
-     &	HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
-      REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
-      REAL*8 ECQ
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-      LOGICAL HAVE_CAL(NMax)
-      LOGICAL HAVE_UNCAL(NMax)
-C
-C Check whether we have the needed calibration info
-C
-      DO I=1,NMax
-         HAVE_CAL(i) = .FALSE.
-      ENDDO
-      IF (HAVE_SONCAL) THEN
-         HAVE_CAL(U) = .TRUE.
-         HAVE_CAL(V) = .TRUE.
-         HAVE_CAL(W) = .TRUE.
-         HAVE_CAL(TSonic) = .TRUE.
-	 WhichTemp = TSonic
-      ENDIF
-      IF (HAVE_HYGCAL) THEN
-         HAVE_CAL(Humidity) = .TRUE.
-         HAVE_CAL(SpecHum) = .TRUE.
-      ENDIF
-      IF (HAVE_TCCAL) THEN
-         HAVE_CAL(TCouple) = .TRUE.
-	 WhichTemp = TCouple
-      ENDIF
-
-C
-C Check whether we have data needed for corrections
-C
-      IF ((DoSonic) .AND. .NOT. (HAVE_CAL(SpecHum))) THEN
-         WRITE(*,*) 'WARNING: Do not have a hygrometer: ',
-     &                 'can not do ',
-     &                 'humidity correction on sonic temperature'
-         DoSonic = .FALSE.
-      ENDIF
-C
-C Names of quantities and units
-C
-      QName(U	    ) = '     U'
-      QName(V	    ) = '     V'
-      QName(W	    ) = '     W'
-      QName(TSonic  ) = 'T(son)'
-      QName(TCouple ) = 'T(cpl)'
-      QName(Humidity) = '  RhoV'
-      QName(SpecHum ) = '     q'
-      QName(TTime   ) = '  Time'
-
-      UName(U	    ) = '[m/s]'
-      UName(V	    ) = '[m/s]'
-      UName(W	    ) = '[m/s]'
-      UName(TSonic  ) = '[K]'
-      UName(TCouple ) = '[K]'
-      UName(Humidity) = '[kg m^-3]'
-      UName(SpecHum ) = '[kg/kg]'
-      UName(TTime   ) = '[s]'
-C
-C
-C Calibrate the raw samples for the first time ignoring drift in apparatus.
-C
-C
-      DO i=1,N
-       	CorMean(i) = 0.D0
-      ENDDO
-
-      NTcOut = 0
-      BadTc = (.FALSE.)
-      Have_Uncal(TTime) = .TRUE.
-      IF (Have_Uncal(Humidity)) Have_Uncal(SpecHum) = .TRUE.
-
-      DO i=1,M
-         CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
-     &    Have_Uncal)
-        IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
-      ENDDO
-      BadTc = (NTcOut.GE.(M/2))
-      IF (BadTc) THEN
-        DO i=1,M
-          CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
-     &      Have_Uncal)
-        ENDDO
-      ENDIF
-C
-C
-C Calibrate the raw samples for the second time, now correcting mean
-C quantities of drift-sensitive apparatus using slow signals.
-C
-C
-      IF (DoCrMean) THEN
-C
-C Find the shift/drift in humidity of the krypton hygrometer
-C
-	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-        IF (.NOT. Have_Uncal(Humidity)) THEN
-	   Mean(Humidity) = Psychro
-	   MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
-	ENDIF
-        CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-	IF (DoPrint) THEN
-	   WRITE(OUTF,*) 'Min/max of samples'
-	   DO I=1,N
-	      WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ', 
-     &                   Maxs(I)
-	   ENDDO
-	ENDIF
-
-	CorMean(Humidity) = Psychro - Mean(Humidity)
-	IF (DoPrint.AND.PCal) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Added to humidity : ',
-     &	  (Psychro - Mean(Humidity)),' [kg m^{-3}]'
-	  WRITE(OutF,*)
-        ENDIF
-
-	DO i=1,M
-	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	    CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
-     &      Have_Uncal)
-	ENDDO
-      ENDIF
-
-      IF (DoPrint.AND.PCal) THEN
-	DO i=1,M
-	  DO j=1,N
-	    IF (Flag(j,i) .AND. HAVE_CAL(j) .AND. HAVE_UNCAL(J))
-     &       WRITE(OutF,*) 'Error in sample ',i,' = ',
-     &	      QName(j),' = ',Sample(j,i)
-	  ENDDO
-	ENDDO
-      ENDIF
-
-C
-C
-C Estimate mean values, covariances and tolerances of both
-C
-C
-      CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-      IF (.NOT. Have_Uncal(Humidity)) THEN
-        Mean(Humidity) = Psychro
-        MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
-      ENDIF
-      CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-      IF (DoPrint) THEN
-	   WRITE(OUTF,*) 'Min/max of samples'
-           DO I=1,N
-              WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ', 
-     &                   Maxs(I)
-           ENDDO
-      ENDIF
-
-C
-C Print number of independent contributions
-C
-      IF (DoPrint.AND.PIndep) THEN
-	CALL ECShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
-      ENDIF
-C
-C Print averages of raw, calibrated data
-C
-      IF (DoPrint.AND.PCal) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'For raw calibrated data : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
-C
-C
-C Subtract a linear trend from all quantities
-C
-C
-      IF (DoDetren) THEN
-
-	CALL ECDetren(Sample,NMax,N,MMAx,M,Mean,Cov,Sample,RC)
-C
-C
-C Estimate mean values, covariances and tolerances of both
-C for the detrended dataset
-C
-C
-	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-        IF (.NOT. Have_Uncal(Humidity)) THEN
-          Mean(Humidity) = Psychro
-          MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
-        ENDIF
-        CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-
-	IF (DoPrint.AND.PDetrend) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After detrending : '
-	  WRITE(OutF,*)
-
-	  WRITE(OUTF,*) 'Min/max of samples'
-          DO I=1,N
-             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ', 
-     &                Maxs(I)
-          ENDDO
-	  IF (PIndep) THEN
-	    CALL ECShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
-	  ENDIF
-
-	  CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
-      ENDIF
-C
-C Get the mean W before we do tilt correction
-C
-      MEANW = MEAN(W)
-      TOLMEANW = TolMean(W)
-C
-C Correct mean values and covariances for all thinkable effects
-C
-      CALL ECCorrec(OutF,
-     &	DoPrint,
-     &	Mean,NMax,N,TolMean,
-     &	Cov,TolCov,
-     &	QName,UName,
-     &  BadTc,
-     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	DoYaw,PYaw,DirYaw,
-     &	DoPitch,PPitch,PitchLim,DirPitch,
-     &	DoRoll,PRoll,RollLim,DirRoll,
-     &	DoSonic,PSonic,SonFactr,
-     &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
-     &	DoWebb,PWebb,P,Have_Uncal)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-C
-C If any transformation of coordinates was required (one of the options
-C DoTilt, DoYaw, DoPitch or DoRoll was selected), then the numbers
-C of independent samples of the respective quantities has to be
-C re-estimated. It is not possible to "tilt the error-bars" on basis of
-C the quantities which have been calculated until here.
-C Therefore we return to the calibrated time series and
-C make the transformations BEFORE averaging. Then averaging and corrections
-C are repeated all over again.
-C
-      AnyTilt = ((DoTilt.OR.DoYaw).OR.(DoPitch.OR.DoRoll))
-
-      IF (AnyTilt) THEN
-
-        DO i=1,3
-          DO j=1,3
-            DumCov(i,j) = 0.D0
-          ENDDO
-        ENDDO
-C
-C Tilt ALL samples
-C
-        DO i=1,M
-          Speed(1) = Sample(U,i)
-          Speed(2) = Sample(V,i)
-          Speed(3) = Sample(W,i)
-
-          IF (DoTilt) THEN
-            CALL ECKYaw(Speed,3,3,DumCov,PreYaw)
-            CALL ECKPitch(  Speed,3,3,DumCov,PrePitch  )
-            CALL ECKRoll( Speed,3,3,DumCov,PreRoll )
-          ENDIF
-
-          IF (DoYaw) CALL ECKYaw(Speed,3,3,DumCov,DirYaw)
-          IF (DoPitch  ) CALL ECKPitch(  Speed,3,3,DumCov,DirPitch  )
-          IF (DoRoll ) CALL ECKRoll( Speed,3,3,DumCov,DirRoll )
-
-          Sample(U,i) = Speed(1)
-          Sample(V,i) = Speed(2)
-          Sample(W,i) = Speed(3)
-
-        ENDDO
-C
-C Reestablish the averages and covariances in the correct frame of reference.
-C
-	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-        IF (.NOT. Have_Uncal(Humidity)) THEN
-          Mean(Humidity) = Psychro
-          MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
-        ENDIF
-
-	IF (DoPrint) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After untilting raw data : '
-	  WRITE(OutF,*)
-
-	  IF (PIndep) THEN
-	    CALL ECShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
-	  ENDIF
-
-	  CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
-
-        DumTilt  = (.FALSE.)
-        DumYaw = (.FALSE.)
-        DumPitch   = (.FALSE.)
-        DumRoll  = (.FALSE.)
-C
-C Perform all necessary corrections on the mean values and (co-)variances.
-C
-        CALL ECCorrec(OutF,
-     &	  DoPrint,
-     &	  Mean,NMax,N,TolMean,
-     &	  Cov,TolCov,
-     &	  QName,UName,
-     &    BadTc,
-     &	  DumTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	  DumYaw,PYaw,DirYaw,
-     &	  DumPitch,PPitch,PitchLim,DirPitch,
-     &	  DumRoll,PRoll,RollLim,DirRoll,
-     &	  DoSonic,PSonic,SonFactr,
-     &	  DoO2,PO2,O2Factor,
-     &	  DoFreq,PFreq,LLimit,ULimit,Freq,
-     &    CalSonic,CalTherm,CalHyg,FrCor,
-     &	  DoWebb,PWebb,P, Have_Uncal)
-        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-      ENDIF
-C
-C
-C Calculate fluxes from processed mean values and covariances.
-C
-C
-      CALL ECFlux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
-     &	HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau)
-
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF ((.NOT. HAVE_Uncal(U)) .OR. 
-     +    (.NOT. HAVE_Uncal(V)) .OR.
-     +    (.NOT. HAVE_Uncal(W))) THEN
-         Ustar = DUMMY
-         dUstar = DUMMY
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TSonic)) THEN
-	  HSonic = DUMMY
-	  dHSonic = DUMMY
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TCouple)) THEN
-	  HTc = DUMMY
-	  dHTc = DUMMY
-      ENDIF
-      IF ((.NOT. HAVE_Uncal(TSonic)) .AND. 
-     +    (.NOT. HAVE_Uncal(Tcouple))) THEN
-        LvEWebb  = DUMMY
-        dLvEWebb  = DUMMY
-      ENDIF
-      IF (.NOT. HAVE_Uncal(Humidity)) THEN
-	  Lve = DUMMY
-	  dLvE = DUMMY
-	  LveWebb = DUMMY
-	  dLvEWebb = DUMMY
-      ENDIF
-
-      RETURN
-      END
-
-C.........................................................................
-C Routine to reset means and covariances
-C.........................................................................
-      SUBROUTINE RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-      INCLUDE 'parcnst.inc'
-
-      LOGICAL Have_Uncal(NNMax)
-      REAL*8  Mean(NNmax), TolMean(NNMax), Cov(NNMax, NNMax),
-     +        TolCov(NNMax, NNMax)
-      INTEGER I,J
-
-      IF ((.NOT. HAVE_Uncal(U)) .OR. 
-     +    (.NOT. HAVE_Uncal(V)) .OR.
-     +    (.NOT. HAVE_Uncal(W))) THEN
-         DO I=U,W
-	    MEAN(I) = DUMMY
-	    TolMean(I) = DUMMY
-	    DO J=1,NNMax
-	        COV(I,J) = DUMMY
-		TolCOV(I,J) = DUMMY
-	        COV(J,I) = DUMMY
-		TolCOV(J,I) = DUMMY
-	    ENDDO
-	 ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TSonic)) THEN
-          Mean(TSonic) = DUMMY
-          TolMean(TSonic) = DUMMY
-	  DO I=1,NNMax
-	     Cov(Tsonic,I) = DUMMY
-	     Cov(I,Tsonic) = DUMMY
-	     TolCov(Tsonic,I) = DUMMY
-	     TolCov(I,Tsonic) = DUMMY
-	  ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TCouple)) THEN
-          Mean(TCouple) = DUMMY
-          TolMean(TCouple) = DUMMY
-	  DO I=1,NNMax
-	     Cov(TCouple,I) = DUMMY
-	     Cov(I,TCouple) = DUMMY
-	     TolCov(TCouple,I) = DUMMY
-	     TolCov(I,TCouple) = DUMMY
-	  ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(Humidity)) THEN
-	  DO I=1,NNMax
-	    DO J=Humidity, SpecHum
-	      Cov(J,I) = DUMMY
-	      Cov(I,J) = DUMMY
-	      TolCov(J,I) = DUMMY
-	      TolCov(I,J) = DUMMY
-	    ENDDO
-	  ENDDO
-      ENDIF
-      END
-
-      SUBROUTINE ECParams(InName,
+      SUBROUTINE EC_F_Params(InName,
      &	Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
      &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoYaw,DoPitch,
      &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
      &	PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
      &	PRoll,PSonic,PO2,PFreq,PWebb, StructSep)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECParams
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
 C
 C Purpose : Read settings for this particular session from file
 C
@@ -626,8 +128,10 @@ C
       READ(TempFile,*) PrePitch	  ! Fixed pitch angle for known tilt-correction
       READ(TempFile,*) PreRoll	  ! Fixed roll angle for known tilt-correction
       READ(TempFile,*)
-      READ(TempFile,*) LLimit	  ! Smallest acceptable frequency-response correction factor
-      READ(TempFile,*) ULimit	  ! Largest acceptable frequency-response correction factor
+      READ(TempFile,*) LLimit	  ! Smallest acceptable frequency-response
+correction factor
+      READ(TempFile,*) ULimit	  ! Largest acceptable frequency-response
+correction factor
       READ(TempFile,*)
       READ(TempFile,*) DoCrMean   ! Replace mean quantities by better estimates
       READ(TempFile,*) DoDetren   ! Correct data for linear trend
@@ -656,7 +160,68 @@ C
       READ(TempFile,*) PFreq	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PWebb	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) StructSep! Separation (meter) for which to calculate structure parameter
-      
+
+
+      CLOSE(TempFile)
+
+      RETURN
+      END
+
+
+
+
+C
+C ########################################################################
+C
+C This routine reads specifications of a calibrated apparatus into an
+C array. At the moment BOTH calibration constants AND position of
+C the apparatus in the setup are read from the same file. (It may be useful
+C to split this in a future version of this library into two files, such
+C that setup-dependent constants don't require modification of the
+C calibration file.)
+C
+C ########################################################################
+C
+
+
+
+
+
+      SUBROUTINE EC_F_ReadAp(InName,CalSpec)
+C
+C Read specifications of an apparatus from file
+C
+      INCLUDE 'physcnst.for'
+
+      CHARACTER*(*) InName
+      REAL*8 CalSpec(NQQ)
+      INTEGER i, IOCODE
+      INTEGER STRLEN
+      EXTERNAL STRLEN
+
+      OPEN(TempFile,FILE=InName,STATUS='OLD', IOSTAT=IOCODE)
+      IF (IOCODE .NE. 0) THEN
+         WRITE(*,5100) InName(:STRLEN(InName))
+         STOP
+      ENDIF
+ 5100 FORMAT ('ERROR: can not open calibration file ', (A))
+
+C First get the type of apparatus
+      READ(TempFile,*) CalSpec(1)
+
+C Now read the correct number of specs
+      DO i=2,ApNQQ(CalSpec(1))
+       	READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
+         IF (IOCODE .NE. 0) THEN
+            WRITE(*,*) 'ERROR in reading of configuration file'
+            STOP
+         ENDIF
+      ENDDO
+ 9000 CONTINUE
+      IF ((I-1) .NE. ApNQQ(CalSpec(1))) THEN
+         WRITE(*,*) 'ERROR: did not find correct number of specs in ',
+     &               InName(:STRLEN(InName))
+      ENDIF
 
       CLOSE(TempFile)
 
@@ -667,204 +232,8 @@ C
 
 
 
-      SUBROUTINE ECCorrec(OutF,
-     &	DoPrint,
-     &	Mean,NMax,N,TolMean,
-     &	Cov,TolCov,
-     &	QName,UName,
-     &  BadTc,
-     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	DoYaw,PYaw,DirYaw,
-     &	DoPitch,PPitch,PitchLim,DirPitch,
-     &	DoRoll,PRoll,RollLim,DirRoll,
-     &	DoSonic,PSonic,SonFactr,
-     &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
-     &	DoWebb,PWebb,P, Have_Uncal)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECCorrec
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose : Integrated correction routine applying ALL (user-selected)
-C	    corrections in this library on mean values and covariances.
-C	    All intermediate results can be output to a file.
-C	    Moreover they are returned to the calling routine in
-C	    respective variables.
-C
-C Revision 28-05-2001: added info on whether uncalibrated data are
-C                      available for a given variable (mainly important
-C                      for sonic and/or Couple temperature since that
-C                      is used for various corrections)
-      INCLUDE 'physcnst.for'
 
-      INTEGER N,NInt,NMAx,OutF, WhichTemp, I, J
-      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,
-     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
-     &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
-     &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
-     &  Have_Uncal(NMax)
-      REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
-     &	PitchLim,RollLim,DirYaw,O2Factor(NMax),
-     &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
-     &	SonFactr(NMax),PreYaw,PrePitch,PreRoll
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-C
-C
-C Only print intermediate results if desired
-C
-C
-      QTilt  = (PTilt  .AND. DoPrint)
-      QYaw = (PYaw .AND. DoPrint)
-      QPitch   = (PPitch   .AND. DoPrint)
-      QRoll  = (PRoll  .AND. DoPrint)
-      QSonic = (PSonic .AND. DoPrint)
-      QO2    = (PO2    .AND. DoPrint)
-      QFreq  = (PFreq  .AND. DoPrint)
-      QWebb  = (PWebb  .AND. DoPrint)
-C
-C
-C Perform a tilt-correction of the whole system using KNOWN (!!!!!!) angles.
-C Used to compensate for KNOWN miss-alignment!!!!!
-C The classic "tilt-corrections", which turn Mean(V), Mean(W) and Cov(W,V)
-C to zero, to are carried out later!!!!!!
-C If no fixed tilt-angles are known, this subroutine may be skipped.
-C
-C
-      IF (DoTilt) CALL ECPTilt(QTilt,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,PreYaw,PrePitch,PreRoll, Have_Uncal)
-C
-C
-C Perform classic yaw-correction : Mean(V) --> 0
-C
-C
-      IF (DoYaw) CALL ECPYaw(QYaw,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,DirYaw, Have_Uncal)
-C
-C
-C Perform classic pitch-correction : Mean(W) --> 0
-C
-C
-      IF (DoPitch) CALL ECPPitch(QPitch,OutF,Mean,TolMean,NMax,
-     &	N,Cov,TolCov,PitchLim,QName,UName,DirPitch, Have_Uncal)
-C
-C
-C Perform classic roll-correction : Cov(W,V) --> 0
-C
-C
-      IF (DoRoll) CALL ECPRoll(QRoll,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,RollLim,QName,UName,DirRoll, Have_Uncal)
-C
-C Reset the coveriances for which no data available
-C
-      DO I=1,NMax
-          DO J=1,NMax
-	     IF ((.NOT. HAVE_UNCAL(I)) .OR.
-     +           (.NOT. HAVE_UNCAL(J))) THEN
-                COV(I,J) = DUMMY
-	     ENDIF
-	  ENDDO
-      ENDDO
-     
-C
-C
-C
-C Correct sonic temperature and all covariances with sonic temperature
-C for humidity. This is half the Schotanus-correction. Side-wind
-C correction is done at calibration time directly after reading raw data.
-C
-C Now we need to know if and which temperature we have. Default to
-C Sonic temperature
-C
-      IF (HAVE_UNCAL(TSonic)) THEN
-         WhichTemp = Tsonic
-      ELSE IF (Have_UNCAL(TCouple)) THEN
-         WhichTemp = TCouple
-      ELSE
-         WhichTemp = -1
-      ENDIF
-
-      IF (DoSonic) CALL ECPSchot(QSonic,OutF,Mean,TolMean,
-     &	   NMax,N,Cov,TolCov,QName,UName,SonFactr, Have_Uncal)
-C
-C
-C Perform correction for oxygen-sensitivity of hygrometer
-C
-C
-      IF (DoO2) THEN
-        IF (WhichTemp .GT. 0) THEN
-            CALL ECPO2(QO2,OutF,Mean,TolMean,NMax,N,
-     &	        Cov,TolCov,QName,UName,P,O2Factor,WhichTemp,
-     &          CalHyg(QQType), Have_Uncal)
-        ELSE
-	    WRITE(*,*) 'ERROR: can not perform O2 correction without ',
-     &                 'a temperature'
-        ENDIF
-      ENDIF
-C
-C
-C Perform correction for poor frequency response and large paths
-C
-C
-
-C
-C Constants for integration routine in correction frequency response
-C
-      NSTA   = -5.D0	 ! [?] start frequency numerical integration
-      NEND   = 0.69897D0 ! [?] end frequency numerical integration (LOG(5))
-      NINT   = 19	 ! [1] number of intervals
-      TAUV   = 0.D0	 ! [?] Low pass filter time constant
-      TauD   = 0.D0	 ! [?] interval length for running mean
-
-      IF (DoFreq) THEN
-        IF (WhichTemp .GT. 0) THEN
-          CALL ECPFreq(QFreq,OutF,Mean,TolMean,
-     &    NMax,N,Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,
-     &    NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp,
-     &    Have_Uncal)
-        ELSE
-	    WRITE(*,*) 'ERROR: can not perform freq. response correction',
-     &                 ' without a temperature'
-	ENDIF
-      ENDIF
-C
-C
-C Calculate mean vertical velocity according to Webb
-C
-C
-      IF (DoWebb) THEN
-         IF (WhichTemp .GT. 0) THEN
-	    CALL ECPWebb(QWebb,OutF,Mean,TolMean,
-     &	        NMax,N,Cov,TolCov,P,QName,UName, WhichTemp, Have_Uncal)
-         ELSE
-	    WRITE(*,*) 'ERROR: can not perform Webb correction',
-     &                 ' without a temperature'
-	 ENDIF
-      ENDIF
-
-      RETURN
-      END
-
-
-
-
-
-      SUBROUTINE ECReadDt(InName,Delay,Gain,Offset,x,NMax,N,MMax,M)
+      SUBROUTINE EC_F_ReadDt(InName,Delay,Gain,Offset,x,NMax,N,MMax,M)
 C
 C Read raw data from file
 C
@@ -913,7 +282,7 @@ C
 
 
 
-      SUBROUTINE ECReadWou(InName,Delay,Gain,Offset,x,NMax,N,MMax,M)
+      SUBROUTINE EC_F_ReadWou(InName,Delay,Gain,Offset,x,NMax,N,MMax,M)
 C
 C Read raw data from file
 C
@@ -988,29 +357,29 @@ C
 
 
 C...........................................................................
-C FUNCTION:  CSI2HOUR
+C FUNCTION:  EC_NCDF_CSI2HOUR
 C PURPOSE:   To convert Campbell hour/min to decimal hours
 C INTERFACE: HOURMIN    IN     Campbell hour/minutes (REAL)
 C            return value      decimal hours (REAL)
 C AUTHOR:    Arnold Moene
 C DATE:      May 28, 2001
 C...........................................................................
-      REAL*8 FUNCTION CSI2HOUR(HOURMIN)
+      REAL*8 FUNCTION EC_NCDF_CSI2HOUR(HOURMIN)
 
       REAL*8 HOURMIN
       INTEGER HOUR, MIN
 
       HOUR = INT(HOURMIN/100.0D0)
       MIN = INT(HOURMIN-HOUR*100D0)
-      
-      CSI2HOUR = DBLE(HOUR + MIN/60.0D0)
+
+      EC_NCDF_CSI2HOUR = DBLE(HOUR + MIN/60.0D0)
       END
-      
+
 C...........................................................................
-C SUBROUTINE:  FINDTIME
+C SUBROUTINE:  EC_NCDF_FINDTIME
 C PURPOSE   :  To find the index in a NetCDF File for a given DOY and time
 C...........................................................................
-      SUBROUTINE FINDTIME(FDOY, FHOURMIN, NCID,
+      SUBROUTINE EC_NCDF_FINDTIME(FDOY, FHOURMIN, NCID,
      +                    NCdoyID, NChmID, NCsecID,IND)
       INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, NCsecID, IND,
      +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
@@ -1020,7 +389,7 @@ C...........................................................................
      +     DOYD, HOURD, SECD, TIMED
       LOGICAL OK
 
-      REAL*8 CSI2HOUR
+      REAL*8 EC_NCDF_CSI2HOUR
 
       STATUS = NF_INQ_VARDIMID(NCID,NCsecID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
@@ -1032,7 +401,7 @@ C...........................................................................
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
 	   IF (((DOY1 .GT. 0) .AND. (DOY1 .LE. 366) .AND.
-     +          (HM1 .GE. 0) .AND. (HM1 .LE. 2400)) .OR. 
+     +          (HM1 .GE. 0) .AND. (HM1 .LE. 2400)) .OR.
      +         (IND1 .EQ. MAXIND)) THEN
 	      OK = .TRUE.
 	   ELSE
@@ -1040,11 +409,11 @@ C...........................................................................
 	   ENDIF
          ENDDO
          OK = .FALSE.
-         DO WHILE (.NOT. OK) 
+         DO WHILE (.NOT. OK)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
 	   IF (((DOY3 .GT. 0) .AND. (DOY3 .LE. 366) .AND.
-     +          (HM3 .GE. 0) .AND. (HM3 .LE. 2400)) .OR. 
+     +          (HM3 .GE. 0) .AND. (HM3 .LE. 2400)) .OR.
      +         (IND3 .EQ. 1)) THEN
 	      OK = .TRUE.
 	   ELSE
@@ -1060,13 +429,13 @@ C...........................................................................
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
 C Get mean sample rate
          DOYD = DOY3 - DOY1
-         HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM1)
+         HOURD = EC_NCDF_CSI2HOUR(HM3) - EC_NCDF_CSI2HOUR(HM1)
          SECD = SEC3 - SEC1
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
          SAMPF = MAXIND/ABS(TIMED)
 C Check whether point is before start or beyond end of file
          DOYD = FDOY - DOY1
-         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM1)
          SECD = 0 - SEC1
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
          IF (TIMED .LT. 0) THEN
@@ -1074,7 +443,7 @@ C Check whether point is before start or beyond end of file
 	    FHOURMIN = HM1
          ENDIF
          DOYD = DOY3 - FDOY
-         HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
+         HOURD = EC_NCDF_CSI2HOUR(HM3) - EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
          SECD = SEC3 - 0
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
          IF (TIMED .LT. 0) THEN
@@ -1084,7 +453,7 @@ C Check whether point is before start or beyond end of file
 
 C Get time difference between start and requested point
          DOYD = FDOY - DOY1
-         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM1)
          SECD = 0 - SEC1
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
          ATTEMPTS = 0
@@ -1107,14 +476,14 @@ C Determine time difference between current sample and required time
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2+1, HM4)
 C Get local sample rate
             DOYD = DOY4 - DOY2
-            HOURD = CSI2HOUR(HM4) - CSI2HOUR(HM2)
+            HOURD = EC_NCDF_CSI2HOUR(HM4) - EC_NCDF_CSI2HOUR(HM2)
             SECD = SEC4 - SEC2
             TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
 	    SAMPF = 1D0/TIMED
 
 C Get distance between current point and requested point
             DOYD = FDOY - DOY2
-            HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
+            HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM2)
             SECD = 0D0 - SEC2
             TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
             CURCH = ANINT(TIMED*SAMPF)
@@ -1123,7 +492,7 @@ C We're there
 	       IND = IND2
 	       RETURN
 C Shift forward, but not beyond end of file
-	    ELSE IF (TIMED .GT. 0) THEN 
+	    ELSE IF (TIMED .GT. 0) THEN
 	        IF (IND2 .EQ. MAXIND) THEN
 	           IND = IND2
 	   	   RETURN
@@ -1162,11 +531,11 @@ C Get time difference between start of interval and requested point
       IND = IND2
       END
 C...........................................................................
-C SUBROUTINE:  FINDNOSEC
-C PURPOSE   :  To find the index in a NetCDF File for a given DOY and 
+C SUBROUTINE:  EC_NCDF_FINDNOSEC
+C PURPOSE   :  To find the index in a NetCDF File for a given DOY and
 C               time without having seconds
 C...........................................................................
-      SUBROUTINE FINDNOSEC(FDOY, FHOURMIN, NCID,
+      SUBROUTINE EC_NCDF_FINDNOSEC(FDOY, FHOURMIN, NCID,
      +                    NCdoyID, NChmID, IND)
       INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, IND,
      +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
@@ -1174,7 +543,7 @@ C...........................................................................
       REAL*8 DOY1, DOY2, DOY3, HM1, HM2, HM3,
      +     SAMPF, TIME1, TIME2, TIME3, HM4, DOY4,
      +     DOYD, HOURD, TIMED
-      REAL*8 CSI2HOUR
+      REAL*8 EC_NCDF_CSI2HOUR
       LOGICAL OK
 
       STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
@@ -1186,7 +555,7 @@ C...........................................................................
          DO WHILE (.NOT. OK)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
-	   IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR. 
+	   IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR.
      +         (IND1 .EQ. MAXIND)) THEN
 	      OK = .TRUE.
 	   ELSE
@@ -1194,10 +563,10 @@ C...........................................................................
 	   ENDIF
          ENDDO
          OK = .FALSE.
-         DO WHILE (.NOT. OK) 
+         DO WHILE (.NOT. OK)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
-	   IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR. 
+	   IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR.
      +         (IND3 .EQ. 1)) THEN
 	      OK = .TRUE.
 	   ELSE
@@ -1214,14 +583,14 @@ C...........................................................................
 
 C Check whether point is before start or beyond end of file
          DOYD = FDOY - DOY1
-         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0 
+         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM1)
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0
          IF (TIMED .LT. 0) THEN
             FDOY = DOY1
 	    FHOURMIN = HM1
          ENDIF
          DOYD = DOY3 - FDOY
-         HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
+         HOURD = EC_NCDF_CSI2HOUR(HM3) - EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
          TIMED = 3600.0*24*DOYD + HOURD*3600.0
          IF (TIMED .LT. 0) THEN
             FDOY = DOY3
@@ -1235,8 +604,8 @@ C Check whether point is before start or beyond end of file
 C Determine time difference between current sample and required time
             PREVCH = CURCH
             DOYD = FDOY - DOY2
-            HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
-            TIMED = 3600.0*24*DOYD + HOURD*3600.0 
+            HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM2)
+            TIMED = 3600.0*24*DOYD + HOURD*3600.0
             IF (ANINT(TIMED) .LT. 0) THEN
 	       CURCH = IND3 - IND2
                IND3 = IND2
@@ -1283,8 +652,8 @@ C Determine time difference between current sample and required time
       IF (ABS(TIMED) .GT. 1.5/60D0) IND2 = -1
       IND = IND2
       END
-      
-      SUBROUTINE ECReadNCDF(InName,StartTime,StopTime,
+
+      SUBROUTINE EC_F_ReadNCDF(InName,StartTime,StopTime,
      &  Delay,Gain,Offset,x,NMax,N,MMax,M, NCVarName,
      &  Have_Uncal)
 C
@@ -1410,23 +779,23 @@ C
       DOYStart = ANINT(StartTime(1))
       DOYStop = ANINT(StopTime(1))
       IF (NCVarID(Sec) .GT. 0) THEN
-         CALL FINDTIME(DoyStart, HMSTART, NCID, NCVarID(Doy),
+         CALL EC_NCDF_FINDTIME(DoyStart, HMSTART, NCID, NCVarID(Doy),
      +                 NCVarID(HourMin),
      +                 NCVarID(Sec),
      +                 STARTIND)
-         CALL FINDTIME(DoyStop, HMSTOP, NCID, NCVarID(Doy),
+         CALL EC_NCDF_FINDTIME(DoyStop, HMSTOP, NCID, NCVarID(Doy),
      +                 NCVarID(HourMin),
      +                 NCVarID(Sec),
      +                 STOPIND)
       ELSE
-         CALL FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
+         CALL EC_NCDF_FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
      +                 NCVarID(HourMin),
      +                 STARTIND)
-         CALL FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(Doy),
+         CALL EC_NCDF_FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(Doy),
      +                 NCVarID(HourMin),
      +                 STOPIND)
       ENDIF
-      NSAMPLE = STOPIND - STARTIND 
+      NSAMPLE = STOPIND - STARTIND
       IF ((STARTIND .EQ. -1) .OR. (STOPIND .EQ. -1))  NSAMPLE = 0
       IF ((NSAMPLE .EQ. 0) .OR.
      +    (STOPIND .LT. STARTIND)) THEN
@@ -1472,7 +841,7 @@ C
                  X(I,J) = X(I,J) * NC_SCALE(I)
               ENDDO
            ENDIF
-           
+
            IF (HAS_OFFSET(I)) THEN
               DO J=1,NSAMPLE
                  X(I,J) = X(I,J) +  NC_OFFSET(I)
@@ -1486,8 +855,8 @@ C
            ENDDO
         ENDIF
       ENDDO
-     
-      
+
+
  5500 FORMAT('WARNING: stopped reading data because compiled ',
      &              ' size of storage (',I6,') is unsufficient ',
      &              ' for requested data (',I6,')')
@@ -1506,23 +875,6 @@ C
 
       SUBROUTINE EC_NCDF_HANDLE_ERR(STATUS)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: EC_NCDF_HANDLE_ERR
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C To display error message of NETCDF-functions and stop program
 C
       IMPLICIT NONE
@@ -1539,192 +891,62 @@ C
 
 
 
+C.........................................................................
+C Routine to reset means and covariances
+C.........................................................................
+      SUBROUTINE EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      INCLUDE 'parcnst.inc'
 
-C
-C ########################################################################
-C
-C Small routine to estimate surface fluxes (with their tolerances!) from
-C processed mean values, covariances and tolerances.
-C
-C ########################################################################
-C
+      LOGICAL Have_Uncal(NNMax)
+      REAL*8  Mean(NNmax), TolMean(NNMax), Cov(NNMax, NNMax),
+     +        TolCov(NNMax, NNMax)
+      INTEGER I,J
 
-
-
-
-
-      SUBROUTINE ECFlux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
-     &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECFlux
-C Version of subroutine : 1.03
-C Date			: 21 October 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Construct estimates for surface fluxes from mean values and covariances
-C
-      INCLUDE 'physcnst.for'
-
-      LOGICAL BadTc
-      INTEGER NMax
-      REAL*8 ECRhoWet,Mean(NMax),Cov(NMax,NMax),HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
-     &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar
-C
-C Sensible heat flux [W m^{-2}]
-C
-      RhoSon = ECRhoWet(Mean(Humidity),Mean(TSonic),p)
-      HSonic = Cp*RhoSon*Cov(W,TSonic)
-      dHSonic = Cp*RhoSon*TolCov(W,TSonic)
-
-      IF (.NOT.BadTc) THEN
-        RhoTc = ECRhoWet(Mean(Humidity),Mean(TCouple),p)
-        HTc = Cp*RhoTc*Cov(W,TCouple)
-        dHTc = Cp*RhoTc*TolCov(W,TCouple)
-      ELSE
-        HTc = -9999.D0
-        dHTc = -9999.D0
+      IF ((.NOT. HAVE_Uncal(U)) .OR.
+     +    (.NOT. HAVE_Uncal(V)) .OR.
+     +    (.NOT. HAVE_Uncal(W))) THEN
+         DO I=U,W
+	    MEAN(I) = DUMMY
+	    TolMean(I) = DUMMY
+	    DO J=1,NNMax
+	        COV(I,J) = DUMMY
+		TolCOV(I,J) = DUMMY
+	        COV(J,I) = DUMMY
+		TolCOV(J,I) = DUMMY
+	    ENDDO
+	 ENDDO
       ENDIF
-C
-C Latent heat flux [W m^{-2}]
-C
-      LvE = Lv*Cov(W,Humidity)
-      dLvE = Lv*TolCov(W,Humidity)
-      LvEWebb = Lv*Mean(W)*Mean(Humidity)
-C
-C These few statements are eliminated to make sure that the
-C error in the mean velocity is NOT YET taken into the error
-C of the sensible heat. By uncommenting the following four commented
-C statements, this is restored.
-C
-C      IF (ABS(Mean(W)).GT.1.D-10) THEN    ! statement 1
-C	Frac1 = ABS(TolMean(W)/Mean(W))    ! statement 2
-C      ELSE                                ! statement 3
-	Frac1 = 0.D0
-C      ENDIF                               ! statement 4
-
-      Frac2 = ABS(TolMean(Humidity)/Mean(Humidity))
-
-      dLvEWebb = LvEWebb*(Frac1**2.D0+Frac2**2.D0)**0.5D0
-C
-C Friction velocity
-C
-      IF (Cov(W,U).GT.0.D0) THEN
-	Sgn = -1.D0
-	UStar = -SQRT(Cov(W,U))
-      ELSE
-	Sgn = 1.D0
-	UStar = SQRT(-Cov(W,U))
+      IF (.NOT. HAVE_Uncal(TSonic)) THEN
+          Mean(TSonic) = DUMMY
+          TolMean(TSonic) = DUMMY
+	  DO I=1,NNMax
+	     Cov(Tsonic,I) = DUMMY
+	     Cov(I,Tsonic) = DUMMY
+	     TolCov(Tsonic,I) = DUMMY
+	     TolCov(I,Tsonic) = DUMMY
+	  ENDDO
       ENDIF
-
-      dUStar = 0.5*ABS(TolCov(W,U)/Cov(W,U))*UStar
-C
-C Friction force [N m^{-2}]
-C
-      IF (.NOT.BadTc) THEN
-        Tau = Sgn*0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
-      ELSE
-        Tau = Sgn*(RhoSon)*(ABS(UStar))**2.D0
+      IF (.NOT. HAVE_Uncal(TCouple)) THEN
+          Mean(TCouple) = DUMMY
+          TolMean(TCouple) = DUMMY
+	  DO I=1,NNMax
+	     Cov(TCouple,I) = DUMMY
+	     Cov(I,TCouple) = DUMMY
+	     TolCov(TCouple,I) = DUMMY
+	     TolCov(I,TCouple) = DUMMY
+	  ENDDO
       ENDIF
-      dTau = ABS(TolCov(W,U)/Cov(W,U))*Tau
-
-      RETURN
+      IF (.NOT. HAVE_Uncal(Humidity)) THEN
+	  DO I=1,NNMax
+	    DO J=Humidity, SpecHum
+	      Cov(J,I) = DUMMY
+	      Cov(I,J) = DUMMY
+	      TolCov(J,I) = DUMMY
+	      TolCov(I,J) = DUMMY
+	    ENDDO
+	  ENDDO
+      ENDIF
       END
-
-
-
-
-
-C
-C ########################################################################
-C
-C This routine reads specifications of a calibrated apparatus into an
-C array. At the moment BOTH calibration constants AND position of
-C the apparatus in the setup are read from the same file. (It may be useful
-C to split this in a future version of this library into two files, such
-C that setup-dependent constants don't require modification of the
-C calibration file.)
-C
-C ########################################################################
-C
-
-
-
-
-
-      SUBROUTINE ECReadAp(InName,CalSpec)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECReadAp
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Read specifications of an apparatus from file
-C
-      INCLUDE 'physcnst.for'
-
-      CHARACTER*(*) InName
-      REAL*8 CalSpec(NQQ)
-      INTEGER i, IOCODE
-      INTEGER STRLEN
-      EXTERNAL STRLEN
-
-      OPEN(TempFile,FILE=InName,STATUS='OLD', IOSTAT=IOCODE)
-      IF (IOCODE .NE. 0) THEN
-         WRITE(*,5100) InName(:STRLEN(InName))
-         STOP
-      ENDIF
- 5100 FORMAT ('ERROR: can not open calibration file ', (A))
-
-C First get the type of apparatus
-      READ(TempFile,*) CalSpec(1)
-
-C Now read the correct number of specs
-      DO i=2,ApNQQ(CalSpec(1))
-       	READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
-         IF (IOCODE .NE. 0) THEN
-            WRITE(*,*) 'ERROR in reading of configuration file'
-            STOP
-         ENDIF
-      ENDDO
- 9000 CONTINUE
-      IF ((I-1) .NE. ApNQQ(CalSpec(1))) THEN
-         WRITE(*,*) 'ERROR: did not find correct number of specs in ',
-     &               InName(:STRLEN(InName))
-      ENDIF
-      
-      CLOSE(TempFile)
-
-      RETURN
-      END
-
-
-
 
 
 C
@@ -1740,26 +962,9 @@ C
 
 
 
-      SUBROUTINE ECShow(OutF,QName,UName,Mean,TolMean,Cov,
+      SUBROUTINE EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,
      &	TolCov,NMax,N)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECShow
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Prints mean values and (co-)variances plus respective tolerances
 C
       INCLUDE 'physcnst.for'
@@ -1803,7 +1008,7 @@ C
       DO i=1,N
 	DO j=1,N
 	  IF ((ABS(Cov(i,i)*Cov(j,j)).GT.Epsilon) .AND.
-     +        (ABS(Cov(i,i)-DUMMY) .GT. Epsilon) .AND. 
+     +        (ABS(Cov(i,i)-DUMMY) .GT. Epsilon) .AND.
      +        (ABS(Cov(j,j)-DUMMY) .GT. Epsilon) .AND.
      +        (ABS(Cov(i,j)-DUMMY) .GT. Epsilon)) THEN
 	    Dum(j) = Cov(i,j)/SQRT(Cov(i,i)*Cov(j,j))
@@ -1826,26 +1031,9 @@ C
 
 
 
-      SUBROUTINE ECShwInd(OutF,QName,MIndep,
+      SUBROUTINE EC_G_ShwInd(OutF,QName,MIndep,
      &	CIndep,NMax,N,M,Freq)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECShwInd
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Prints number of independent observations
 C
       INCLUDE 'physcnst.for'
@@ -1901,25 +1089,8 @@ C
 
 
 
-      SUBROUTINE ECShwFrq(OutF,QName,FrCor,NMax,N)
+      SUBROUTINE EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECShwFrq
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Prints correction factors associated with frequency response
 C
       INCLUDE 'physcnst.for'
@@ -1947,526 +1118,878 @@ C
 
 
 
-
+C...........................................................................
+C Function  : EC_C_SCal
+C Purpose   : to calibrate a sonic signal according to wind tunnel
+C             calibration (for th moment this works for apparatus 6,
+C             i.e. a wind tunnel calibrated sonic)
+C Interface : Cal     IN        array of length NQQ with calibation info
+C             UDum    IN/OUT    one horizontal component (on exit: calibrated)
+C             VDum    IN/OUT    another horizontal component (on exit:
+calibrated)
+C             WDum    IN/OUT    vertical component (on exit: calibrated)
+C             UERROR  IN/OUT    error flag for U (.TRUE. if wrong data)
+C             VERROR  IN/OUT    error flag for V (.TRUE. if wrong data)
+C             WERROR  IN/OUT    error flag for W (.TRUE. if wrong data)
+C Author    : Arnold Moene
+C Date      : September 26, 2000
+C Remarks   : The method is based on a wind tunnel calibration of the sonic
+C             The real velocity components can be derived from the
+C             measured components and the real azimuth and elevation angle.
+C             But the latter are not known and have to be determined
+C             iteratively from the measured components. The relationship
+C             between the real components and the measured components is:
 C
-C ########################################################################
+C               Ureal =  Umeas/(UC1*(1 - 0.5*
+C                                    ((Azi + (Elev/0.5236)*UC2)*
+C                                     (1 - UC3*Abs(Elev/0.5236)))**2 ))
+C               Vreal =  Vmeas*(1 - VC1*Abs(Elev/0.5236))
+C               Wreal =  Wmeas/(WC1*(1 - 0.5*(Azi*WC2)**2))
 C
-C The following (large) routine is the main body of the data-reduction.
-C From large time-series we extract mean quantities and co-variances.
-C For both mean values and for covariances the tolerances are estimated.
+C             and
+C               Azi = arctan(V/U)
+C               Elev = arctan(W/sqrt(U**2 + V**2))
 C
-C ########################################################################
-C
-
-
-
-      SUBROUTINE ECMinMax(x,NMax,N,MMax, M,Flag,Mins, Maxs)
+C             where UC1, UC2, UC3, VC1, WC1, WC2 are fitting coefficients.
+C             An azimuth angle of zero is supposed to refer to a wind
+C             direction from the most optimal direction (i.e. the 'open'
+C             side of a sonic). Samples with an absolute azimuth angle of
+C             more than 40 degrees are rejected.
+C...........................................................................
+      SUBROUTINE EC_C_Scal(Cal, UDum, VDum, WDum,
+     &                  UError, VError, WError)
 
       INCLUDE 'parcnst.inc'
 
-      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax)
-      LOGICAL Flag(NMax,MMax)
-      INTEGER I,J, N, M, NSAMP
+      REAL*8   Cal(NQQ), UDum, VDum, WDum
+      LOGICAL  UError, VError, WError
 
-      DO I=1,N
-         Mins(I) = 1e10
-	 Maxs(I) = -1e10
-      ENDDO
+      REAL*8   UCorr, VCorr, WCorr, AziNew, AziOld, ElevNew, ElevOld,
+     &         UC1, UC2, UC3, VC1, WC1, WC2
+      INTEGER  I, NITER, ITMAX
 
-      DO I=1,N
-         NSAMP = 0
-         DO J=1,M
-	    IF (.NOT. FLAG(I,J)) THEN
-	      NSAMP = NSAMP + 1
-	      Mins(I) = MIN(Mins(I), x(I,J))
-	      Maxs(I) = MAX(Maxs(I), x(I,J))
-	    ENDIF
-	 ENDDO
-	 IF (NSAMP .EQ. 0) THEN
-            Mins(I) = DUMMY
-            Maxs(I) = DUMMY
-	 ENDIF
-      ENDDO
+
+      UC1 = Cal(QQExt6)
+      UC2 = Cal(QQExt7)
+      UC3 = Cal(QQExt8)
+      VC1 = Cal(QQExt9)
+      WC1 = Cal(QQExt10)
+      WC2 = Cal(QQExt11)
+
+      ITMAX = 20
+      NITER = 0
+      AziOld = 9999D0
+      ElevOld = 9999D0
+      AziNew = ATAN(VDum/UDum)
+      ElevNew = ATAN(WDum/SQRT(UDum**2 + VDum**2))
+
+      UCorr = UDum
+      VCorr = VDum
+      WCorr = WDum
+
+      IF (ABS(AziNew) .LE. 0.698) THEN
+         DO WHILE (((ABS(AziNew-AziOld) .GT. 1./60) .OR.
+     &              (ABS(ElevNew-ElevOld) .GT. 1./60)) .AND.
+     &           (NITER .LT. ITMAX))
+            UCorr =  UDum/(UC1*(1 - 0.5*
+     &              ((AziNew + (ElevNew/0.5236D0)*UC2)*
+     &              (1 - UC3*Abs(ElevNew/0.5236D0))
+     &              )**2        )
+     &                     )
+            VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
+            WCorr =  WDum/(WC1*(1 - 0.5*(ElevNew*WC2)**2))
+
+            AziOld = AziNew
+            ElevOld = ElevNew
+
+            AziNew = ATAN(Vcorr/UCorr)
+            ElevNew = ATAN(Wcorr/SQRT(UCorr**2 + VCorr**2))
+
+            NITER = NITER + 1
+         ENDDO
+      ENDIF
+
+      IF ((NITER .EQ. ITMAX) .OR. (ABS(AziNew) .GT. 0.698)) THEN
+         UError = .TRUE.
+         VError = .TRUE.
+         WError = .TRUE.
+      ELSE
+         UDum = UCorr
+         VDum = VCorr
+         WDum = WCorr
+      ENDIF
+
       END
 
 
-      SUBROUTINE ECAverag(x,NMax,N,MMax,M,Flag,
-     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECAverag
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
+C Main routine that calls calibrations, all corrections and estimates fluxes
 C
-C Purpose :
-C From the given set of calibrated samples, calculate the averages,
-C variances, covariances and their tolerances.
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+
+
+
+
+
+      SUBROUTINE EC_Main(OutF,DoPrint,
+     &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
+     &	Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
+     &	Calibr,
+     &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
+     &	QName,UName,
+     &	DoDetren,PDetrend,
+     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	DoYaw,PYaw,DirYaw,
+     &	DoPitch,PPitch,PitchLim,DirPitch,
+     &	DoRoll,PRoll,RollLim,DirRoll,
+     &	DoSonic,PSonic,SonFactr,
+     &	DoO2,PO2,O2Factor,
+     &	DoFreq,PFreq,LLimit,ULimit,FrCor,
+     &	DoWebb,PWebb,
+     &	Mean,TolMean,Cov,TolCov,
+     &	HSonic,dHSonic,HTc,dHTc,
+     &	LvE,dLvE,LvEWebb,dLvEWebb,
+     &	UStar,dUStar,Tau,dTau,
+     &  MEANW, TOLMEANW, HAVE_UNCAL)
 C
-C input : x : array with physical dimensions (NMax,MMax)
-C	      First index counts quantities; second counter
-C	      counts samples. Only the first N quantities
-C	      and the first M samples are used.
-C	  flag : LOGICAL array with physical dimensions NMAx by MMAx,
-C	      out of which only N by M are used. If flag(j,i) is true, then
-C	      quantity j in sample i is not ok.
+C Purpose : Integrated routine which:
+C  - Calibrates raw samples
+C  - Estimates mean values and covariances with respective tolerances
+C  - Corrects the resulting mean values and covariances for all
+C    effects selected by the user
+C  - Estimates, from the final mean values and covariances, the surface-
+C    fluxes with tolerances.
 C
-C output : Mean : array with physical dimension NMax out of
-C		   which only N are used. Mean contains the average value
-C		   of array x. Only samples with Flag = 0 are used.
-C	   TolMean : tolerance of Mean, defined as
-C		       2 * sigma / sqrt(NIndep)
-C		   where sigma is the standarddeviation of the quantities
-C		   and where the number of independent samples is estimated
-C		   as twice the number of sign-changes of the fluctuations
-C		   of the respective quantities around their means.
-C	   Cov : REAL*8 (NMax,NMax) : covariances
-C	   TolCov : tolerances of Cov, estimated as tolerances of mean.
-C	   MIndep : INTEGER(NMAx) : Number of independent samples
-C		   in time series from which means are calculated
-C	   CIndep : INTEGER(NMAx,NMAx) : Number of independent samples
-C		   in time series from which covariances are calculated
-C
+C Revision: 03-04-2001: get mean W and its tolerance before tilt
+C                       correction; export via interface (AM)
+C Revision: 28-05-2001: added passing of info on whether uncalibrated
+C                       data are available (AM)
+
       INCLUDE 'physcnst.for'
+      INCLUDE 'calcomm.inc'
 
-      INTEGER NMax,N,MMax,M,i,j,k,NChange(NNMax,NNMax),
-     &	MIndep(NMax),CIndep(NMax,NMax),NMin(NNMax,NNMax),
-     &  Mok(NMax),Cok(NMax,NMax),NPlus(NNMax,NNMax)
-      LOGICAL Flag(NMax,MMax)
-      REAL*8 x(NMax,MMax),RawMean(NNMax),Mean(NMax),TolMean(NMax),
-     &	Cov(NMax,NMax),TolCov(NMax,NMax),xPrime(NNMax),
-     &	PrevPrime(NNMax),dTolCov(NNMax,NNMax),PSwap
+      INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
+     &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
+     & WhichTemp
+      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
+     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
+     &	DoSonic,DoTilt,PTilt,DoPrint,Flag(NMAx,MMax),DoDetren,
+     &	PDetrend,AnyTilt,DumYaw,DumPitch,DumRoll,DumTilt,BadTc
+      REAL*8 RawSampl(MaxChan,MMax)
+      REAL*8 P,Psychro,Sample(NMax,MMax),
+     &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
+     &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
+     &	PitchLim,RollLim,DirYaw,RC(NMax),O2Factor(NMax),
+     &	Freq,DirPitch,DirRoll,
+     &	SonFactr(NMax),CorMean(NNMax),PreYaw,PrePitch,PreRoll,
+     &	HSonic,dHSonic,HTc,dHTc,
+     &	LvE,dLvE,LvEWebb,dLvEWebb,
+     &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
+      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
+      REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
+      REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3)
+      CHARACTER*6 QName(NMax)
+      CHARACTER*9 UName(NMax)
+      LOGICAL HAVE_CAL(NMax)
+      LOGICAL HAVE_UNCAL(NMax)
 C
-C Initialise the arrays
+C Check whether we have the needed calibration info
 C
-      DO i=1,NMax
-	RawMean(i) = 0.D0
-	Mean(i) = 0.D0
-	TolMean(i) = 0.D0
-	Mok(i) = 0
-	DO j=1,NMax
-	  Cov(i,j) = 0.D0
-	  TolCov(i,j) = 0.D0
-	  Cok(i,j) = 0
-	ENDDO
+      DO I=1,NMax
+         HAVE_CAL(i) = .FALSE.
       ENDDO
+      IF (HAVE_SONCAL) THEN
+         HAVE_CAL(U) = .TRUE.
+         HAVE_CAL(V) = .TRUE.
+         HAVE_CAL(W) = .TRUE.
+         HAVE_CAL(TSonic) = .TRUE.
+	 WhichTemp = TSonic
+      ENDIF
+      IF (HAVE_HYGCAL) THEN
+         HAVE_CAL(Humidity) = .TRUE.
+         HAVE_CAL(SpecHum) = .TRUE.
+      ENDIF
+      IF (HAVE_TCCAL) THEN
+         HAVE_CAL(TCouple) = .TRUE.
+	 WhichTemp = TCouple
+      ENDIF
+
 C
-C Find a rough estimate for the mean
+C Check whether we have data needed for corrections
 C
+      IF ((DoSonic) .AND. .NOT. (HAVE_CAL(SpecHum))) THEN
+         WRITE(*,*) 'WARNING: Do not have a hygrometer: ',
+     &                 'can not do ',
+     &                 'humidity correction on sonic temperature'
+         DoSonic = .FALSE.
+      ENDIF
+C
+C Names of quantities and units
+C
+      QName(U	    ) = '     U'
+      QName(V	    ) = '     V'
+      QName(W	    ) = '     W'
+      QName(TSonic  ) = 'T(son)'
+      QName(TCouple ) = 'T(cpl)'
+      QName(Humidity) = '  RhoV'
+      QName(SpecHum ) = '     q'
+      QName(TTime   ) = '  Time'
+
+      UName(U	    ) = '[m/s]'
+      UName(V	    ) = '[m/s]'
+      UName(W	    ) = '[m/s]'
+      UName(TSonic  ) = '[K]'
+      UName(TCouple ) = '[K]'
+      UName(Humidity) = '[kg m^-3]'
+      UName(SpecHum ) = '[kg/kg]'
+      UName(TTime   ) = '[s]'
+C
+C
+C Calibrate the raw samples for the first time ignoring drift in apparatus.
+C
+C
+      DO i=1,N
+       	CorMean(i) = 0.D0
+      ENDDO
+
+      NTcOut = 0
+      BadTc = (.FALSE.)
+      Have_Uncal(TTime) = .TRUE.
+      IF (Have_Uncal(Humidity)) Have_Uncal(SpecHum) = .TRUE.
+
       DO i=1,M
-	DO j=1,N
-	  IF (.NOT.Flag(j,i)) THEN
-	    Mok(j) = Mok(j) + 1
-	    RawMean(j) = RawMean(j) + x(j,i)
-	  ENDIF
-	ENDDO
+         CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+     &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
+     &    Have_Uncal)
+        IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
       ENDDO
-
-      DO j=1,N
-	IF (Mok(j).GT.0) RawMean(j) = RawMean(j)/DBLE(Mok(j))
-      ENDDO
+      BadTc = (NTcOut.GE.(M/2))
+      IF (BadTc) THEN
+        DO i=1,M
+          CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+     &      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
+     &      Have_Uncal)
+        ENDDO
+      ENDIF
 C
-C Find final estimates for mean
 C
-      DO i=1,M
-	DO j=1,N
-	  IF (.NOT.Flag(j,i)) THEN
-	    Mean(j) = Mean(j) + (x(j,i) - RawMean(j))
-	  ENDIF
-	ENDDO
-      ENDDO
-
-      DO j=1,N
-	IF (Mok(j).GT.0) THEN 
-	  Mean(j) = Mean(j)/DBLE(Mok(j))
-	  Mean(j) = Mean(j) + RawMean(j)
+C Calibrate the raw samples for the second time, now correcting mean
+C quantities of drift-sensitive apparatus using slow signals.
+C
+C
+      IF (DoCrMean) THEN
+C
+C Find the shift/drift in humidity of the krypton hygrometer
+C
+	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Uncal(Humidity)) THEN
+	   Mean(Humidity) = Psychro
+	   MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
 	ENDIF
-      ENDDO
-C
-C Find (co-)variances and from them the tolerances of the mean
-C
-      DO j=1,N
-	NChange(j,j) = 0
-        NMin(j,j) = 0
-        NPlus(j,j) = 0
-      ENDDO
-
-      DO i=1,M
-	DO j=1,N
-	  IF (.NOT.Flag(j,i)) THEN
-	    xPrime(j) = x(j,i) - Mean(j)
-            IF (xPrime(j).LT.0.D0) NMin(j,j) = NMin(j,j)+1
-            IF (xPrime(j).GT.0.D0) NPlus(j,j) = NPlus(j,j)+1
-	    IF (i.GT.1) THEN
-	      IF (PrevPrime(j)*xPrime(j).LE.0.D0)
-     &		NChange(j,j) = NChange(j,j) + 1
-	    ENDIF
-	    PrevPrime(j) = xPrime(j)
-	  ENDIF
-	ENDDO
-
-
-	DO j=1,N
-	  DO k=j,N
-	    IF (.NOT.(Flag(j,i).OR.Flag(k,i))) THEN
-	      Cok(j,k) = Cok(j,k) + 1
-	      Cov(j,k) = Cov(j,k) + xPrime(j)*xPrime(k)
-	    ENDIF
-	  ENDDO
-	ENDDO
-      ENDDO
-
-      DO j=1,N
-	DO k=j,N
-	  IF (Cok(j,k).GT.0) THEN
-	     Cov(j,k) = Cov(j,k)/DBLE(Cok(j,k))
-	  ENDIF
-	ENDDO
-      ENDDO
-
-      DO j=1,N
-	DO k=1,N
-	  IF (k.LT.j) Cov(j,k) = Cov(k,j)
-	ENDDO
-      ENDDO
-
-      DO j=1,N
-        PSwap = 2.D0*DBLE(NMin(j,j))*DBLE(NPlus(j,j))/
-     &    DBLE(NMin(j,j) + NPlus(j,j))**2.D0
-	MIndep(j) = ANINT(DBLE(NChange(j,j))/PSwap) - 1
-	MIndep(j) = MAX(MIndep(j),1)
-	IF (Cok(j,j) .GT. 0) THEN
-	   TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
+        CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+	IF (DoPrint) THEN
+	   WRITE(OUTF,*) 'Min/max of samples'
+	   DO I=1,N
+	      WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
+     &                   Maxs(I)
+	   ENDDO
 	ENDIF
-      ENDDO
-C
-C Find tolerances for (co-)variances
-C
-      DO i=1,M
-        DO j=1,N
-	  IF (.NOT.Flag(j,i)) THEN
-	    xPrime(j) = x(j,i) - Mean(j)
-	  ENDIF
-	ENDDO
-	DO j=1,N
-	  DO k=j,N
-	    IF (.NOT.(Flag(j,i).OR.Flag(k,i))) THEN
-	      dTolCov(j,k)=xPrime(j)*xPrime(k)-Cov(j,k)
-	      TolCov(j,k)=TolCov(j,k)+(dTolCov(j,k))**2
-	    ENDIF
-	  ENDDO
-	ENDDO
-      ENDDO
 
-      DO j=1,N
-	DO k=j,N
-C
-C Calculate the standard deviation of the instantaneous contributions
-C to the covariances.
-C
-	  IF (Cok(j,k).GT.0) THEN
-	     TolCov(j,k)=TolCov(j,k)/DBLE(Cok(j,k))
-C
-C Here we estimate the number of independent contributions to the
-C covariance by counting the least number of independent contributions
-C to either of the factors.
-C
-	     CIndep(j,k) = MIN(MIndep(j),MIndep(k))
-	     TolCov(j,k) = TolCov(j,k)/DBLE(CIndep(j,k))
-C
-C Tolerance is defined as 2*sigma, where sigma is standard deviation
-C
-	     TolCov(j,k) = 2.D0*(TolCov(j,k))**0.5
-	  ENDIF
-	ENDDO
-      ENDDO
+	CorMean(Humidity) = Psychro - Mean(Humidity)
+	IF (DoPrint.AND.PCal) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'Added to humidity : ',
+     &	  (Psychro - Mean(Humidity)),' [kg m^{-3}]'
+	  WRITE(OutF,*)
+        ENDIF
 
-      DO j=1,N
-	DO k=1,(j-1)
-	  TolCov(j,k) = TolCov(k,j)
-	  CIndep(j,k) = CIndep(k,j)
-	ENDDO
-      ENDDO
-
-      RETURN
-      END
-
-
-
-
-
-C
-C ########################################################################
-C
-C This routine constructs a trend-corrected time-series from a given
-C time-series: The model is an additive model. The straight line from
-C least squares regression (linear trend) is subtracted from the dataset.
-C
-C ########################################################################
-C
-
-
-
-
-
-      SUBROUTINE ECDetren(x,NMax,N,MMAx,M,Mean,Cov,y,RC)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECDetren
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Construct a linearly detrended dataset from a given dataset
-C
-C input : x : REAL*8(NMax,MMax) : x(i,j) = quantity i in sample j
-C		only the first N quantities and the first M samples
-C		are used.
-C	  Cov : REAL*8 (NMax,NMAx) : covariances of quantities.
-C		used to find trend.
-C output : y : REAL*8(NMAx,MMax) : detrended timeseries.
-C	   RC : REAL*8(NMAx) : Directional coefficients of linear
-C		regression trend-lines.
-C
-      INCLUDE 'physcnst.for'
-
-      INTEGER NMax,N,i,MMax,M,j
-      REAL*8 x(NMax,MMax),Mean(NMax),Cov(NMax,NMax),RC(NMax),
-     &	y(NMax,MMax),Trend
-
-      DO j = 1,N
-	RC(j) = Cov(TTime,j)/Cov(TTime,TTime)
-      ENDDO
-
-      DO i= 1,M
-	DO j= 1,N
-	  IF (j.NE.TTime) THEN
-	    Trend = RC(j)*(x(TTime,i)-Mean(TTime))
-	    y(j,i) = x(j,i) - Trend
-	  ENDIF
-	ENDDO
-      ENDDO
-
-      RETURN
-      END
-
-
-
-
-
-C
-C ########################################################################
-C
-C A routine to calculate the value of certain simple basefunctions
-C
-C ########################################################################
-C
-
-
-
-
-
-      REAL*8 FUNCTION ECBaseF(x,FType,Order,C)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECBaseF
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose : Calculate simple functions. Currently implemented:
-C  - Ordinary polynomials
-C  - Polynomials in the natural logarithm of x
-C
-      INCLUDE 'physcnst.for'
-
-      INTEGER FType,Order,i
-      REAL*8 x,C(0:Order),Dum,LogX
-
-      Dum = 0.D0
-      IF (FType.EQ.NormPoly) THEN
-	DO i=0,Order
-	  Dum = Dum + C(i)*x**i
-	ENDDO
-      ELSE IF (FType.EQ.LogPoly) THEN
-	LogX = LOG(x)
-	DO i=0,Order
-	  Dum = Dum + C(i)*LogX**i
+	DO i=1,M
+	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+     &	    CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
+     &      Have_Uncal)
 	ENDDO
       ENDIF
 
-      ECBaseF = Dum
+      IF (DoPrint.AND.PCal) THEN
+	DO i=1,M
+	  DO j=1,N
+	    IF (Flag(j,i) .AND. HAVE_CAL(j) .AND. HAVE_UNCAL(J))
+     &       WRITE(OutF,*) 'Error in sample ',i,' = ',
+     &	      QName(j),' = ',Sample(j,i)
+	  ENDDO
+	ENDDO
+      ENDIF
+
+C
+C
+C Estimate mean values, covariances and tolerances of both
+C
+C
+      CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      IF (.NOT. Have_Uncal(Humidity)) THEN
+        Mean(Humidity) = Psychro
+        MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+      ENDIF
+      CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+      IF (DoPrint) THEN
+	   WRITE(OUTF,*) 'Min/max of samples'
+           DO I=1,N
+              WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
+     &                   Maxs(I)
+           ENDDO
+      ENDIF
+
+C
+C Print number of independent contributions
+C
+      IF (DoPrint.AND.PIndep) THEN
+	CALL EC_G_ShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+      ENDIF
+C
+C Print averages of raw, calibrated data
+C
+      IF (DoPrint.AND.PCal) THEN
+	WRITE(OutF,*)
+	WRITE(OutF,*) 'For raw calibrated data : '
+	WRITE(OutF,*)
+	CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+      ENDIF
+C
+C
+C Subtract a linear trend from all quantities
+C
+C
+      IF (DoDetren) THEN
+
+	CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,Sample,RC)
+C
+C
+C Estimate mean values, covariances and tolerances of both
+C for the detrended dataset
+C
+C
+	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Uncal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+        ENDIF
+        CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+
+	IF (DoPrint.AND.PDetrend) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After detrending : '
+	  WRITE(OutF,*)
+
+	  WRITE(OUTF,*) 'Min/max of samples'
+          DO I=1,N
+             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
+     &                Maxs(I)
+          ENDDO
+	  IF (PIndep) THEN
+	    CALL EC_G_ShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+	  ENDIF
+
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+      ENDIF
+C
+C Get the mean W before we do tilt correction
+C
+      MEANW = MEAN(W)
+      TOLMEANW = TolMean(W)
+C
+C Correct mean values and covariances for all thinkable effects
+C
+      CALL EC_C_Main(OutF,
+     &	DoPrint,
+     &	Mean,NMax,N,TolMean,
+     &	Cov,TolCov,
+     &	QName,UName,
+     &  BadTc,
+     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	DoYaw,PYaw,DirYaw,
+     &	DoPitch,PPitch,PitchLim,DirPitch,
+     &	DoRoll,PRoll,RollLim,DirRoll,
+     &	DoSonic,PSonic,SonFactr,
+     &	DoO2,PO2,O2Factor,
+     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
+     &	DoWebb,PWebb,P,Have_Uncal)
+      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+C
+C If any transformation of coordinates was required (one of the options
+C DoTilt, DoYaw, DoPitch or DoRoll was selected), then the numbers
+C of independent samples of the respective quantities has to be
+C re-estimated. It is not possible to "tilt the error-bars" on basis of
+C the quantities which have been calculated until here.
+C Therefore we return to the calibrated time series and
+C make the transformations BEFORE averaging. Then averaging and corrections
+C are repeated all over again.
+C
+      AnyTilt = ((DoTilt.OR.DoYaw).OR.(DoPitch.OR.DoRoll))
+
+      IF (AnyTilt) THEN
+
+        DO i=1,3
+          DO j=1,3
+            DumCov(i,j) = 0.D0
+          ENDDO
+        ENDDO
+C
+C Tilt ALL samples
+C
+        DO i=1,M
+          Speed(1) = Sample(U,i)
+          Speed(2) = Sample(V,i)
+          Speed(3) = Sample(W,i)
+
+          IF (DoTilt) THEN
+            CALL EC_C_T06(PreYaw,Yaw)
+            CALL EC_C_T05(Speed,3,3,DumCov,Yaw)
+            CALL EC_C_T08(PrePitch,Pitch)
+            CALL EC_C_T05(Speed,3,3,DumCov,Pitch)
+            CALL EC_C_T10(PreRoll,Roll)
+            CALL EC_C_T05(Speed,3,3,DumCov,Roll)
+          ENDIF
+
+          IF (DoYaw) THEN
+            CALL EC_C_T06(DirYaw,Yaw)
+            CALL EC_C_T05(Speed,3,3,DumCov,Yaw)
+	  ENDIF
+          IF (DoPitch) THEN
+            CALL EC_C_T08(DirPitch,Pitch)
+            CALL EC_C_T05(Speed,3,3,DumCov,Pitch)
+	  ENDIF
+          IF (DoRoll) THEN
+            CALL EC_C_T10(DirRoll,Roll)
+            CALL EC_C_T05(Speed,3,3,DumCov,Roll)
+	  ENDIF
+
+          Sample(U,i) = Speed(1)
+          Sample(V,i) = Speed(2)
+          Sample(W,i) = Speed(3)
+
+        ENDDO
+C
+C Reestablish the averages and covariances in the correct frame of reference.
+C
+	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Uncal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+        ENDIF
+
+	IF (DoPrint) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After untilting raw data : '
+	  WRITE(OutF,*)
+
+	  IF (PIndep) THEN
+	    CALL EC_G_ShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+	  ENDIF
+
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+
+        DumTilt  = (.FALSE.)
+        DumYaw = (.FALSE.)
+        DumPitch   = (.FALSE.)
+        DumRoll  = (.FALSE.)
+C
+C Perform all necessary corrections on the mean values and (co-)variances.
+C
+        CALL EC_C_Main(OutF,
+     &	  DoPrint,
+     &	  Mean,NMax,N,TolMean,
+     &	  Cov,TolCov,
+     &	  QName,UName,
+     &    BadTc,
+     &	  DumTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	  DumYaw,PYaw,DirYaw,
+     &	  DumPitch,PPitch,PitchLim,DirPitch,
+     &	  DumRoll,PRoll,RollLim,DirRoll,
+     &	  DoSonic,PSonic,SonFactr,
+     &	  DoO2,PO2,O2Factor,
+     &	  DoFreq,PFreq,LLimit,ULimit,Freq,
+     &    CalSonic,CalTherm,CalHyg,FrCor,
+     &	  DoWebb,PWebb,P, Have_Uncal)
+        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      ENDIF
+C
+C
+C Calculate fluxes from processed mean values and covariances.
+C
+C
+      CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
+     &	HSonic,dHSonic,HTc,dHTc,
+     &	LvE,dLvE,LvEWebb,dLvEWebb,
+     &	UStar,dUStar,Tau,dTau)
+
+      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+      IF ((.NOT. HAVE_Uncal(U)) .OR.
+     +    (.NOT. HAVE_Uncal(V)) .OR.
+     +    (.NOT. HAVE_Uncal(W))) THEN
+         Ustar = DUMMY
+         dUstar = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(TSonic)) THEN
+	  HSonic = DUMMY
+	  dHSonic = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(TCouple)) THEN
+	  HTc = DUMMY
+	  dHTc = DUMMY
+      ENDIF
+      IF ((.NOT. HAVE_Uncal(TSonic)) .AND.
+     +    (.NOT. HAVE_Uncal(Tcouple))) THEN
+        LvEWebb  = DUMMY
+        dLvEWebb  = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(Humidity)) THEN
+	  Lve = DUMMY
+	  dLvE = DUMMY
+	  LveWebb = DUMMY
+	  dLvEWebb = DUMMY
+      ENDIF
 
       RETURN
       END
 
 
 
-
-
-C
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 C ########################################################################
 C
-C The following set of (small) routines use the ideal gas law to
-C calculate densities and humidities for wet air.
+C Correction routines
 C
 C ########################################################################
-C
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 
 
 
 
 
-      REAL*8 FUNCTION ECRhoDry(RhoV,T,P)
+
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECRhoDry
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
+C General correction routine that calls all individual corrections
 C
-C Purpose :
-C Calculate the density of dry air component in wet air
+      SUBROUTINE EC_C_Main(OutF,
+     &	DoPrint,
+     &	Mean,NMax,N,TolMean,
+     &	Cov,TolCov,
+     &	QName,UName,
+     &  BadTc,
+     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	DoYaw,PYaw,DirYaw,
+     &	DoPitch,PPitch,PitchLim,DirPitch,
+     &	DoRoll,PRoll,RollLim,DirRoll,
+     &	DoSonic,PSonic,SonFactr,
+     &	DoO2,PO2,O2Factor,
+     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
+     &	DoWebb,PWebb,P, Have_Uncal)
 C
-C input : RhoV : Density of water vapour [kg m^{-3}]
-C	  T    : Temperature		 [K]
-C	  P    : Pressure		 [Pa]
+C Purpose : Integrated correction routine applying ALL (user-selected)
+C	    corrections in this library on mean values and covariances.
+C	    All intermediate results can be output to a file.
+C	    Moreover they are returned to the calling routine in
+C	    respective variables.
 C
-C output : RhoDry : Density of dry air component [kg m^{-3}]
-C
-C Via Dalton's law : Pressure is sum of partial pressures :
-C	      P = RhoV*Rv*T + RhoD*Rd*T
-C
+C Revision 28-05-2001: added info on whether uncalibrated data are
+C                      available for a given variable (mainly important
+C                      for sonic and/or Couple temperature since that
+C                      is used for various corrections)
       INCLUDE 'physcnst.for'
 
-      REAL*8 RhoV,T,P
+      INTEGER N,NInt,NMAx,OutF, WhichTemp, I, J
+      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,
+     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
+     &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
+     &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
+     &  Have_Uncal(NMax), QSchot
+      REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
+     &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
+     &	PitchLim,RollLim,DirYaw,O2Factor(NMax),
+     &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
+     &	SonFactr(NMax),PreYaw,PrePitch,PreRoll,TSonFact,
+     &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs
+      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
+      CHARACTER*6 QName(NMax)
+      CHARACTER*9 UName(NMax)
+C
+C
+C Only print intermediate results if desired
+C
+C
+      QTilt  = (PTilt  .AND. DoPrint)
+      QYaw = (PYaw .AND. DoPrint)
+      QPitch   = (PPitch   .AND. DoPrint)
+      QRoll  = (PRoll  .AND. DoPrint)
+      QSonic = (PSonic .AND. DoPrint)
+      QO2    = (PO2    .AND. DoPrint)
+      QFreq  = (PFreq  .AND. DoPrint)
+      QWebb  = (PWebb  .AND. DoPrint)
+C A Hack: Just set Qschot off
+      QSchot = .FALSE.
+C
+C
+C Perform a tilt-correction of the whole system using KNOWN (!!!!!!) angles.
+C Used to compensate for KNOWN miss-alignment!!!!!
+C The classic "tilt-corrections", which turn Mean(V), Mean(W) and Cov(W,V)
+C to zero, to are carried out later!!!!!!
+C If no fixed tilt-angles are known, this subroutine may be skipped.
+C
+C
+      IF (DoTilt) THEN
+	CALL EC_C_T06(PreYaw,Yaw)
+	CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
+	CALL EC_C_T08(PrePitch,Pitch)
+	CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
+	CALL EC_C_T10(PreRoll,Roll)
+	CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
+	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
-      ECRhoDry = P/(Rd*T) - RhoV*Rv/Rd	  ! [kg m^{-3}]
+	IF (QTilt) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'Averages of data after fixed ',
+     &	  'tilt-correction: '
+	  WRITE(OutF,*)
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+      ENDIF
+C
+C
+C Perform classic yaw-correction : Mean(V) --> 0
+C
+C
+      IF (DoYaw) THEN
+	CALL EC_C_T07(Mean(U),Mean(V),DirYaw)
+	CALL EC_C_T06(DirYaw,Yaw)
+	CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
+
+	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	IF (QYaw) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'Yaw angle = ',DirYaw,' degrees'
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After yaw-correction (Mean(V) -> 0) : '
+	  WRITE(OutF,*)
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+      ENDIF
+C
+C
+C Perform classic pitch-correction : Mean(W) --> 0
+C
+C
+      IF (DoPitch) THEN
+	CALL EC_C_T09(Mean(U),Mean(W),DirPitch)
+	IF (ABS(DirPitch).LE.PitchLim) THEN
+          CALL EC_C_T08(DirPitch,Pitch)
+          CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
+	ENDIF
+	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	IF (QPitch) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'Pitch angle = ',DirPitch,' degrees'
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After pitch-correction (Mean(W) -> 0) : '
+	  WRITE(OutF,*)
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+      ENDIF
+C
+C
+C Perform classic roll-correction : Cov(W,V) --> 0
+C
+C
+      IF (DoRoll) THEN
+	CALL EC_C_T11(Cov(V,V),Cov(V,W),Cov(W,W),DirRoll)
+	IF (ABS(DirRoll) .LE. RollLim) THEN
+          CALL EC_C_T10(DirRoll,Roll)
+          CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
+	ENDIF
+	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	IF (QRoll) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'Roll angle = ',DirRoll,' degrees'
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After roll-correction (Cov(V,W) -> 0) : '
+	  WRITE(OutF,*)
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+      ENDIF
+C
+C Reset the coveriances for which no data available
+C
+      DO I=1,NMax
+          DO J=1,NMax
+	     IF ((.NOT. HAVE_UNCAL(I)) .OR.
+     +           (.NOT. HAVE_UNCAL(J))) THEN
+                COV(I,J) = DUMMY
+	     ENDIF
+	  ENDDO
+      ENDDO
+
+C
+C
+C
+C Correct sonic temperature and all covariances with sonic temperature
+C for humidity. This is half the Schotanus-correction. Side-wind
+C correction is done at calibration time directly after reading raw data.
+C
+C Now we need to know if and which temperature we have. Default to
+C Sonic temperature
+C
+      IF (HAVE_UNCAL(TSonic)) THEN
+         WhichTemp = Tsonic
+      ELSE IF (Have_UNCAL(TCouple)) THEN
+         WhichTemp = TCouple
+      ELSE
+         WhichTemp = -1
+      ENDIF
+
+      IF (DoSonic) THEN
+        CALL EC_C_Schot1(Mean(SpecHum),Mean(TSonic),NMax,N,Cov,
+     &    SonFactr,TSonFact)
+        CALL EC_C_Schot2(SonFactr,TSonFact,Mean(TSonic),NMax,N,Cov)
+	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	IF (QSchot) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'Correction factors for H2O-sensitivity of ',
+     &	  'sonic'
+	  DO i=1,N
+	    WRITE(OutF,45) QName(i),SonFactr(i)
+	  ENDDO
+   45	FORMAT('For (',a6,',T(son)) : ',F10.5)
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After H2O-correction for sonic : '
+	  WRITE(OutF,*)
+	  CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+      ENDIF
+C
+C
+C Perform correction for oxygen-sensitivity of hygrometer
+C
+C
+      IF (DoO2) THEN
+        IF (WhichTemp .GT. 0) THEN
+          CALL EC_C_Oxygen1(Mean(WhichTemp),NMax,N,Cov,P,CalHyg(QQType),
+     &      WhichTemp,O2Factor)
+          CALL EC_C_Oxygen2(O2Factor,NMax,N,Cov)
+	  CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	  IF (QO2) THEN
+	    WRITE(OutF,*)
+	    WRITE(OutF,*) 'Correction factors for O2-sensitivity of ',
+     &        'hygrometer'
+	    DO i=1,N
+	      WRITE(OutF,46) QName(i),O2Factor(i)
+	    ENDDO
+ 46         FORMAT('For (',a6,',RhoV or q) : ',F10.5)
+	    WRITE(OutF,*)
+	    WRITE(OutF,*) 'After oxygen-correction for hygrometer : '
+	    WRITE(OutF,*)
+	    CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  ENDIF
+        ELSE
+	    WRITE(*,*) 'ERROR: can not perform O2 correction without ',
+     &                 'a temperature'
+        ENDIF
+      ENDIF
+C
+C
+C Perform correction for poor frequency response and large paths
+C
+C
+
+C
+C Constants for integration routine in correction frequency response
+C
+      NSTA   = -5.D0	 ! [?] start frequency numerical integration
+      NEND   = 0.69897D0 ! [?] end frequency numerical integration (LOG(5))
+      NINT   = 19	 ! [1] number of intervals
+      TAUV   = 0.D0	 ! [?] Low pass filter time constant
+      TauD   = 0.D0	 ! [?] interval length for running mean
+
+      IF (DoFreq) THEN
+        IF (WhichTemp .GT. 0) THEN
+	  CALL EC_C_F01(Mean,Cov,NMax,N,WhichTemp,
+     &         NSta,NEnd,NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor)
+	  CALL EC_C_F02(FrCor,NMax,N,LLimit,ULimit,Cov,TolCov)
+	  CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	  IF (QFreq) THEN
+	    CALL EC_G_ShwFrq(OutF,QName,FrCor,NMax,N)
+	    WRITE(OutF,*)
+	    WRITE(OutF,*) 'After frequency-correction : '
+	    WRITE(OutF,*) 'Factors accepted between ',LLimit,
+     &	                  ' and ',ULimit
+	    WRITE(OutF,*)
+	    CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	  ENDIF
+
+        ELSE
+	    WRITE(*,*) 'ERROR: can not perform freq. response correction',
+     &                 ' without a temperature'
+	ENDIF
+      ENDIF
+C
+C
+C Calculate mean vertical velocity according to Webb
+C
+C
+      IF (DoWebb) THEN
+         IF (WhichTemp .GT. 0) THEN
+	   CALL EC_C_Webb(Mean,NMax,Cov,P, WhichTemp)
+	   CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+	   IF (QWebb) THEN
+	     WRITE(OutF,*)
+	     WRITE(OutF,*) 'Webb-velocity (vertical) = ',Mean(W),' m/s'
+	     WRITE(OutF,*)
+	     WRITE(OutF,*) 'After addition of Webb-term : '
+	     WRITE(OutF,*)
+	     CALL EC_G_Show(OutF,QName,UName,Mean,TolMean,Cov,TolCov,
+     &              NMax,N)
+	   ENDIF
+         ELSE
+	    WRITE(*,*) 'ERROR: can not perform Webb correction',
+     &                 ' without a temperature'
+	 ENDIF
+      ENDIF
 
       RETURN
       END
 
-
-
-
-
-      REAL*8 FUNCTION ECRhoWet(RhoV,T,P)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECRhoWet
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Calculate the density of wet air
-C
-C input : RhoV : Density of water vapour [kg m^{-3}]
-C	  T    : Temperature		 [K]
-C	  P    : Pressure		 [Pa]
-C
-C output : RhoWet : Density of wet air [kg m^{-3}]
-C
-      INCLUDE 'physcnst.for'
-
-      REAL*8 RhoV,T,P,ECRhoDry
-
-      ECRhoWet = ECRhoDry(RhoV,T,P) + RhoV ! [kg m^{-3}]
-
-      RETURN
-      END
-
-
-
-
-
-      REAL*8 FUNCTION ECQ(RhoV,T,P)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECQ
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Calculate the specific humidity of wet air
-C
-C input : RhoV : Density of water vapour [kg m^{-3}]
-C	  T    : Temperature		 [K]
-C	  P    : Pressure		 [Pa]
-C
-C output : ECQ : specific humidity	 [kg kg^{-1}]
-C
-      INCLUDE 'physcnst.for'
-
-      REAL*8 RhoV,T,P,ECRhoWet,RhoWet
-
-      RhoWet = ECRhoWet(RhoV,T,P)
-      ECQ = RhoV/RhoWet 		 ! [kg/kg]
-
-      RETURN
-      END
 
 
 C
@@ -2479,7 +2002,7 @@ C
 
 
 
-      SUBROUTINE PlanarFit(TrustWilczak,SingleRun,uMean,NRuns,Apf,
+      SUBROUTINE EC_C_T01(TrustWilczak,SingleRun,uMean,NRuns,Apf,
      &  Alpha,Beta,Gamma,WBias)
 
 C
@@ -2532,7 +2055,7 @@ C
 C
 C Call to slave-routine for details
 C
-      CALL PFit(TrustWilczak,SingleRun,uSum,UUSum,Apf,
+      CALL EC_C_T02(TrustWilczak,SingleRun,uSum,UUSum,Apf,
      &  Alpha,Beta,Gamma,WBias)
 
 
@@ -2543,9 +2066,8 @@ C
 
 
 
-      SUBROUTINE PFit(TrustWilczak,SingleRun,uSum,UUSum,Apf,
+      SUBROUTINE EC_C_T02(TrustWilczak,SingleRun,uSum,UUSum,Apf,
      &  Alpha,Beta,Gamma,WBias)
-
 C
 C Supportive routine for planar fit method for tilt-correction
 C
@@ -2575,7 +2097,7 @@ C
 C
 C Invert this matrix
 C
-          CALL ECInvM(S,Sinv)
+          CALL EC_M_InvM(S,Sinv)
 C
 C Make RHS of relation W.48
 C
@@ -2585,7 +2107,7 @@ C
 C
 C Calculate coefficients b0, b1 and b2 in relation W.48
 C
-          CALL ECMapVec(SInv,x,b(0))
+          CALL EC_M_MapVec(SInv,x,b(0))
 C
 C Find the bias in the vertical velocity via relation W.39
 C
@@ -2601,7 +2123,7 @@ C
 C
 C Invert this matrix
 C
-          CALL ECInvM2(SS2,SS2inv)
+          CALL EC_M_InvM2(SS2,SS2inv)
 C
 C Make RHS of relation W.48 for this submatrix
 C
@@ -2610,7 +2132,7 @@ C
 C
 C Calculate coefficients b1 and b2 in relation W.48
 C
-          CALL ECMap2Vec(SS2Inv,x,b(1))
+          CALL EC_M_Map2Vec(SS2Inv,x,b(1))
 C
 C Assume that the calibration of the sonic is ok and has no bias in w
 C
@@ -2697,7 +2219,7 @@ C
 C Additional yaw-correction to align the first coordinate axis with
 C the mean velocity over all runs according to relation W.45
 C
-      CALL ECMapVec(Apf,USum,USum)
+      CALL EC_M_MapVec(Apf,USum,USum)
 
       UHor = ((USum(1))**2+(USum(2))**2)**0.5
       SinGamma = USum(2)/UHor
@@ -2716,419 +2238,9 @@ C
       Yaw(3,2) = 0.D0
       Yaw(3,3) = 1.D0
 
-      CALL ECMMul(Yaw,Apf,Apf)
+      CALL EC_M_MMul(Yaw,Apf,Apf)
 
       END
-
-
-C
-C ########################################################################
-C
-C This is a bundle of simple mathematics routines
-C
-C ########################################################################
-C
-
-
-
-
-
-      SUBROUTINE mulvec(x,y)
-      REAL*8 x(3),y
-      INTEGER I
-      DO I=1,3
-         x(I) = x(I)*y
-      END DO
-      RETURN
-      END
-
-
-
-
-      SUBROUTINE DSWAP(x,y)
-C     Interchanges x and y
-      REAL*8 x,y,dum
-      dum = x
-      x = y
-      y = dum
-      RETURN
-      END
-
-      SUBROUTINE ISWAP(x,y)
-C     Interchanges x and y
-      INTEGER x,y,dum
-      dum = x
-      x = y
-      y = dum
-      RETURN
-      END
-
-      SUBROUTINE sortdecr(x,permutation)
-C     Sorts the elements of vector x in decreasing order;
-C     permutation needed is returned as well
-      REAL*8 x(3)
-      INTEGER permutation(3),I,J
-      permutation(1) = 1
-      permutation(2) = 2
-      permutation(3) = 3
-      DO I = 1,2
-         DO J = (I+1),3
-            IF (x(J).GT.x(I)) THEN
-               CALL DSWAP(x(I),x(J))
-               CALL ISWAP(permutation(I),permutation(J))
-            END IF
-         END DO
-      END DO
-      RETURN
-      END
-
-      SUBROUTINE sortuse(x,permutation)
-C     Reorders the elements of x according to permutation
-      REAL*8 x(3),dum(3)
-      INTEGER permutation(3),I
-      DO I=1,3
-         dum(I) = x(I)
-      END DO
-      DO I=1,3
-         x(I) = dum(permutation(I))
-      END DO
-      RETURN
-      END
-
-      SUBROUTINE unsort(x,permutation)
-C     Unsorts the elements of x originally sorted using permutation
-      REAL*8 x(3),dum(3)
-      INTEGER permutation(3),I
-      DO I=1,3
-         dum(I) = x(I)
-      END DO
-      DO I=1,3
-         x(permutation(I)) = dum(I)
-      END DO
-      RETURN
-      END
-
-      SUBROUTINE ell1Q(phi,alpha,ff,ee)
-C     Calculates the elliptic integrals F(Phi\Alpha) and
-C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
-C     as described in Abramowitz and Stegun, 17.6 (Numbers in
-C     text refer to equations in A&S). Only ok for first quadrant
-      REAL*8 phi,alpha,ff,ee,a,b,aprev,bprev,edum,eedum
-     &   ,c(0:9),psi(0:9),PI,epsilon
-      INTEGER It
-      PARAMETER (epsilon = 1.D-15)
-      PI = 2.D0*DASIN(1.D0)
-      It = 0
-C     A&S: 17.6.2:
-      aprev = 1.D0
-C     A&S: 17.6.2:
-      bprev = DCOS(alpha)
-C     A&S: 17.6.2:
-      c(0) = DSIN(alpha)
-C     A&S: 17.6.8:
-      psi(0) = phi
-      edum = c(0)*c(0)
-      eedum = 0.D0
-      DO WHILE (DABS(c(It)).GT.epsilon)
-         It      = It + 1
-C        A&S: 17.6.1:
-         a       = (aprev + bprev) / 2.D0
-C        A&S: 17.6.1:
-         b       = DSQRT(aprev * bprev)
-C        A&S: 17.6.1:
-         c(It)   = (aprev - bprev) / 2.D0
-C        A&S: 17.6.8:
-         psi(It) = psi(It-1) + DATAN(TAN(psi(It-1))*bprev/aprev)
-         psi(It) = psi(It) + PI*DINT((2.D0*psi(It-1)-psi(It))/PI+.5D0)
-C        A&S: 17.6.4:
-         edum    = edum  + c(It)*c(It)*2.D0**It
-C        A&S: 17.6.10:
-         eedum   = eedum + c(It)*DSIN(psi(It))
-         aprev   = a
-         bprev   = b
-      END DO
-C     A&S: 17.6.9:
-      ff = psi(It)/(a*(2.D0**DBLE(It)))
-C     A&S: 17.6.10:
-      ee = eedum + ff*(1.D0-edum/2.D0)
-      RETURN
-      END
-
-      SUBROUTINE ellint(phi,alpha,ff,ee)
-C     Calculates the elliptic integrals F(Phi\Alpha) and
-C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
-C     as described in Abramowitz and Stegun, 17.6 (Numbers in
-C     text refer to equations in A&S). ok for all angles.
-      REAL*8 phi,alpha,ff,ee,ffcomp,eecomp,PI
-      INTEGER SignArg, Wind
-      PI = 2.D0*DASIN(1.D0)
-      Wind = IDNINT(phi/PI)
-      phi = phi - Wind*PI
-      IF (Wind .NE. 0) THEN
-        CALL ell1Q(0.5D0*PI,alpha,ffcomp,eecomp)
-      ELSE
-        ffcomp = 0.D0
-        eecomp = 0.D0
-      END IF
-      SignArg = INT(DSIGN(1.D0,phi))
-      CALL ell1Q(DABS(phi),alpha,ff,ee)
-C     A&S: 17.4.3:
-      ff = SignArg*ff + 2.D0*Wind*ffcomp
-C     A&S: 17.4.3:
-      ee = SignArg*ee + 2.D0*Wind*eecomp
-      RETURN
-      END
-
-      SUBROUTINE ABCForm(a,b,c,Root1, Root2, AllReal)
-C     Solves ax^2 + bx + c = 0
-      INTEGER Re, Im
-      PARAMETER(Re = 1, Im = 2)
-      REAL*8 a, b, c, Discrim, Root1(Re:Im), Root2(Re:Im)
-      LOGICAL AllReal
-      Root1(Re) = 0.D0
-      Root1(Im) = 0.D0
-      Root2(Re) = 0.D0
-      Root2(Im) = 0.D0
-      Discrim = b*b - 4.D0*a*c
-      AllReal = (Discrim .GE. 0.D0)
-      IF (AllReal) THEN
-        Root1(Re) = (-b + DSQRT(Discrim)) / (2.D0*a)
-        Root2(Re) = (-b - DSQRT(Discrim)) / (2.D0*a)
-      ELSE
-        Root1(Re) = -b/(2.D0*a)
-        Root2(Re) =  Root1(Re)
-        Root1(Im) =  DSQRT(-Discrim)/(2.D0*a)
-        Root2(Im) = -Root1(Im)
-      END IF
-      RETURN
-      END
-
-      SUBROUTINE Cardano(Poly, Root, AllReal)
-C Uses the Cardano solution to solve exactly: ax^3 + bx^2 + cx + d = 0
-C See e.g. Abramowitz and Stegun. Here "a" is not allowed to be zero.
-      INTEGER Re, Im
-      PARAMETER(Re = 1, Im = 2)
-      REAL*8 Poly(0:3), a(0:2), q, r, Discrim, t1, t2,
-     &  s1(Re:Im), s2(Re:Im), Root(Re:Im,3), Radius, Phi
-      LOGICAL AllReal
-      INTEGER i
-      Root(Im,1) = 0.D0
-      Root(Im,2) = 0.D0
-      Root(Im,3) = 0.D0
-      DO i = 0,2
-        a(i) = Poly(i)/Poly(3)
-      ENDDO
-      Root(Re,1) = -a(2)/3.D0
-      Root(Re,2) = Root(Re,1)
-      Root(Re,3) = Root(Re,1)
-      q = a(1)/3.D0 - (a(2)*a(2))/9.D0
-      r = (a(1)*a(2) - 3.D0*a(0))/6.D0 - a(2)*a(2)*a(2)/27.D0
-      Discrim = q*q*q + r*r
-      AllReal = (Discrim .LE. 0.D0)
-      IF (.NOT. AllReal) THEN
-        t1 = r + DSQRT(Discrim)
-        t2 = r - DSQRT(Discrim)
-        s1(Re) = DSIGN(1.D0,t1)*DABS(t1)**(1.D0/3.D0)
-        s2(Re) = DSIGN(1.D0,t2)*DABS(t2)**(1.D0/3.D0)
-        Root(Re,1) =  Root(Re,1) +  s1(Re) + s2(Re)
-        Root(Re,2) =  Root(Re,2) - (s1(Re) + s2(Re))/2.D0
-        Root(Im,2) =  (DSQRT(3.D0)/2.D0) * (s1(Re) - s2(Re))
-        Root(Re,3) =  Root(Re,2)
-        Root(Im,3) = -Root(Im,2)
-      ELSE IF ((Discrim .LT. 0.D0) .OR. (DABS(r) .GT. 1.D-15)) THEN
-        Radius = DSQRT(r*r - Discrim)
-        Phi = DACOS(r/Radius)/3.D0
-        Radius = Radius**(1.D0/3.D0)
-        s1(Re) = Radius * DCOS(Phi)
-        s1(Im) = Radius * DSIN(Phi)
-        Root(Re,1) = Root(Re,1) + 2.D0*s1(Re)
-        Root(Re,2) = Root(Re,2) - s1(Re) - DSQRT(3.D0)*s1(Im)
-        Root(Re,3) = Root(Re,3) - s1(Re) + DSQRT(3.D0)*s1(Im)
-      END IF
-      RETURN
-      END
-
-
-
-
-
-
-
-      SUBROUTINE EllCoords(x,b,y,DyDx)
-C Calculate the elliptic coordinates (Lambda, Mu, Nu) plus
-C derivatives Dy[i]/Dx[j] corresponding to the Carthesian coordinates
-C (x[1], x[2], x[3]) for an ellipsoid with semiaxes (b[1], b[2], b[3])
-C with b[1]>b[2]>b[3]. Procedure cannot handle points at coordinateplanes.
-C Outside the ellipsoid the elliptic coordinates satisfy:
-C -b[1]^2 < Nu < -b[2]^2 < Mu < -b[3]^2 < 0 < Lambda.  See e.g. :
-C "Einfuehrung in die Kurven- und Flaechentheorie auf vektorieller
-C Grundlage" by C.F. Baeschlin, Orell Fuessli Verlag, Zuerich, 1947,
-C but mind that there the elliptic coordinates differ from ours.
-       INTEGER Re,Im,Lambda,Mu,Nu
-       PARAMETER(Re=1,Im=2,Lambda=1,Mu=2,Nu=3)
-      REAL*8 x(3), b(3), y(3), DyDx(3,3),Poly(0:3),
-     &  Root(Re:Im,3),SQR
-      INTEGER i,j
-      LOGICAL AllReal
-C First check if the semiaxes are in decreasing order and if the point x
-C is not on a coordinate plane
-      IF (.NOT. ((b(1) .GE. b(2)) .AND. (b(2) .GE. b(3))))
-     &  WRITE(*,*) 'Ellipsoid not properly oriented!!!!!!'
-      IF (ABS(x(1)*x(2)*x(3)) .LT. 1.D-10*b(3))
-     &  WRITE(*,*) 'Sorry : No elliptic coordinates here!!!!'
-C Construct the coefficients of the third order equation for the elliptic
-C coordinates
-      Poly(3) = -1.D0
-      Poly(2) = SQR(x(1))+SQR(x(2))+SQR(x(3))
-     &         -SQR(b(1))-SQR(b(2))-SQR(b(3))
-      Poly(1) = SQR(x(1))*(SQR(b(2))+SQR(b(3)))-SQR(b(1)*b(2))+
-     &          SQR(x(2))*(SQR(b(1))+SQR(b(3)))-SQR(b(1)*b(3))+
-     &          SQR(x(3))*(SQR(b(1))+SQR(b(2)))-SQR(b(2)*b(3))
-      Poly(0) = SQR(x(1)*b(2)*b(3)) + SQR(x(2)*b(1)*b(3)) +
-     &          SQR(x(3)*b(1)*b(2)) - SQR(b(1)*b(2)*b(3))
-C Solve this cubic equation
-      CALL Cardano(Poly, Root, AllReal)
-      IF (.NOT.(AllReal))
-     &  WRITE(*,*) 'Error in finding elliptic coordinates!!!'
-      DO i=1,3
-        y(i) = Root(Re,i)
-      END DO
-C Put the elliptic coordinates in correct order and check if they satisfy
-C the relation given in the header
-      DO i=1,2
-        DO j=(i+1),3
-          IF (y(j) .GT. y(i)) CALL DSwap(y(i),y(j))
-        END DO
-      END DO
-      IF (.NOT.((-SQR(b(1)) .LT. y(Nu)).AND.(y(Nu) .LT. -SQR(b(2)))
-     &     .AND.(-SQR(b(2)) .LT. y(Mu)).AND.(y(Mu) .LT. -SQR(b(3)))
-     &     .AND.(0.D0 .LT. y(Lambda))))
-     &  WRITE(*,*) 'ERROR!!! in determination of elliptic coordinates'
-C Calculate the derivative Dy[i]/Dx[j] of the elliptic coordinates to the
-C Carthesian coordinates
-      DO i=1,3
-        DO j=1,3
-          DyDx(j,i) = 2.D0*x(j)*
-     &  (SQR(b(MOD(j    ,3) + 1)) + y(i)) *
-     &  (SQR(b(MOD((j+1),3) + 1)) + y(i)) /
-     &  ((y(i) - y(MOD(i,3) + 1)) * (y(i) - y(MOD((i+1),3)+1)))
-        END DO
-      END DO
-      END
-
-
-
-
-
-
-      REAL*8 FUNCTION SQR(x)
-C     Give the square of x
-      REAL*8 x
-      SQR = x*x
-      END
-
-
-
-
-
-
-
-
-
-
-      SUBROUTINE ECMMul(a,b,c)
-C     Matrix C is product of 3*3-matrices A and B
-      INTEGER I, J, K
-      REAL*8 A(3,3),B(3,3),C(3,3),Dum(3,3)
-      DO I=1,3
-	DO J=1,3
-	  Dum(i,j)=0.D0
-	  DO K=1,3
-	     Dum(I,J) = Dum(I,J) + A(I,K)*B(K,J)
-	  END DO
-	END DO
-      END DO
-      DO I=1,3
-	DO J=1,3
-	  c(I,J)=Dum(I,J)
-	END DO
-      END DO
-      RETURN
-      END
-
-
-
-
-      REAL*8 FUNCTION ECDet2(x)
-C     Give determinant of REAL*8 2*2-matrix
-      REAL*8 x(2,2)
-      ECDet2 = x(1,1)*x(2,2)-x(2,1)*x(1,2)
-      END
-
-      SUBROUTINE ECInvM2(a, aInv)
-C     Find the inverse of REAL*8 2*2 matrix "a"
-      REAL*8 a(2,2), aInv(2,2), Dum(2,2), Det, ECDet2
-      INTEGER i, j
-      Det = ECDet2(a)
-      IF (ABS(Det) .LT. 1.D-10)
-     &	WRITE(*,*) ' Sorry, cannot invert matrix!'
-      Dum(1,1) =  a(2,2)/Det
-      Dum(2,1) = -a(2,1)/Det
-      Dum(1,2) = -a(1,2)/Det
-      Dum(2,2) =  a(1,1)/Det
-      DO i = 1,2
-	DO j = 1,2
-	  aInv(j,i) = Dum(j,i)
-	END DO
-      END DO
-      RETURN
-      END
-
-
-      REAL*8 FUNCTION ECDeterm(x)
-C
-C     Give determinant of real 3*3-matrix
-C
-      REAL*8 x(3,3)
-      ECDeterm = x(1,1)*(x(2,2)*x(3,3)-x(2,3)*x(3,2))
-     &        -x(2,1)*(x(1,2)*x(3,3)-x(1,3)*x(3,2))
-     &        +x(3,1)*(x(1,2)*x(2,3)-x(1,3)*x(2,2))
-      END
-
-
-
-
-
-
-      SUBROUTINE ECInvM(a, aInv)
-C
-C     Find the inverse of real 3*3 matrix "a"
-C
-      REAL*8 a(3,3), aInv(3,3), Dum(3,3), Det, ECDeterm
-      INTEGER i, j
-      Det = ECDeterm(a)
-      IF (DABS(Det) .LT. 1.D-20)
-     &    WRITE(*,*) ' Sorry, cannot invert matrix!'
-      Dum(1,1) =  (a(2,2)*a(3,3)-a(2,3)*a(3,2))/Det
-      Dum(2,1) = -(a(2,1)*a(3,3)-a(2,3)*a(3,1))/Det
-      Dum(3,1) =  (a(2,1)*a(3,2)-a(2,2)*a(3,1))/Det
-      Dum(1,2) = -(a(1,2)*a(3,3)-a(1,3)*a(3,2))/Det
-      Dum(2,2) =  (a(1,1)*a(3,3)-a(1,3)*a(3,1))/Det
-      Dum(3,2) = -(a(1,1)*a(3,2)-a(1,2)*a(3,1))/Det
-      Dum(1,3) =  (a(1,2)*a(2,3)-a(1,3)*a(2,2))/Det
-      Dum(2,3) = -(a(1,1)*a(2,3)-a(1,3)*a(2,1))/Det
-      Dum(3,3) =  (a(1,1)*a(2,2)-a(1,2)*a(2,1))/Det
-      DO i = 1,3
-        DO j = 1,3
-          aInv(j,i) = Dum(j,i)
-        END DO
-      END DO
-      RETURN
-      END
-
-
-
-
 
 
 
@@ -3152,197 +2264,8 @@ C
 
 
 
-      SUBROUTINE ECMapVec(a,x,y)
+      SUBROUTINE EC_C_T03(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NN)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECMapVec
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
-C
-C input : a : REAL*8 (3,3) : the mapping matrix
-C	  x : REAL*8 (3)   : the vector to be mapped
-C output : y : REAL*8 (3)  : the image of the map
-c
-C Revision: June 21, 2001:
-C    - indices i and j have been interchanged. In the routines that
-C      use ECMapVec implicitly (ECKRoll, ECKYaw and ECKPitch) the
-C      mappings have been changed accordingly
-C
-      IMPLICIT NONE
-
-      REAL*8 a(3,3),x(3),y(3),Dum(3)
-      INTEGER I,J
-
-      DO I=1,3
-	Dum(I) = 0.D0
-      ENDDO
-
-      DO I=1,3
-	DO J=1,3
-	  Dum(I) = Dum(I) + a(I,J)*x(J)
-	ENDDO
-      ENDDO
-
-      DO I=1,3
-	y(I) = Dum(I)
-      ENDDO
-
-      RETURN
-      END
-
-      SUBROUTINE ECMap2Vec(a,x,y)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECMapVec
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
-C
-C input : a : REAL*8 (2,2) : the mapping matrix
-C	  x : REAL*8 (2)   : the vector to be mapped
-C output : y : REAL*8 (2)  : the image of the map
-C
-      IMPLICIT NONE
-
-      REAL*8 a(2,2),x(2),y(2),Dum(2)
-      INTEGER I,J
-
-      DO I=1,2
-	Dum(I) = 0.D0
-      ENDDO
-
-      DO I=1,2
-	DO J=1,2
-	  Dum(I) = Dum(I) + a(I,J)*x(J)
-	ENDDO
-      ENDDO
-
-      DO I=1,2
-	y(I) = Dum(I)
-      ENDDO
-
-      RETURN
-      END
-
-
-
-
-
-
-
-
-
-      SUBROUTINE ECMapMtx(a,x,y)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECMapMtx
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Calculates the image of "x" under the map "a";
-C y(ji) = a(ki)a(lj)x(lk)
-C
-C input : a : REAL*8 (3,3) : the mapping matrix
-C	  x : REAL*8 (3,3) : the tensor to be mapped
-C output : y : REAL*8 (3,3) : the image of the map
-C
-C Revision: June 21, 2001: 
-C     - indices i and j in the mapping  have
-C       been interchanged. This has also been done in the
-C       routines that used ECMapMtx (ECRotate)
-C
-      IMPLICIT NONE
-
-      REAL*8 a(3,3),x(3,3),y(3,3),Dum(3,3)
-      INTEGER I,J,K,L
-
-      DO I=1,3
-	 DO J=1,3
-	    Dum(I,J) = 0.D0
-	 ENDDO
-      ENDDO
-
-      DO I=1,3
-	 DO J=1,3
-	    DO K=1,3
-	       DO L=1,3
-		  Dum(I,J) = Dum(I,J) + a(I,K)*a(J,L)*x(K,L)
-	       ENDDO
-	    ENDDO
-	 ENDDO
-      ENDDO
-
-      DO I=1,3
-	 DO J=1,3
-	    y(I,J) = Dum(I,J)
-	 ENDDO
-      ENDDO
-
-      RETURN
-      END
-
-
-
-
-
-      SUBROUTINE ECShake(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NN)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECShake
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Help routine for routines for correction of coordinate system
 C
       INCLUDE 'physcnst.for'
@@ -3370,25 +2293,8 @@ C
 
 
 
-      SUBROUTINE ECUnShak(Speed,Stress,DumVecs,NN,Mean,NMax,N,Cov)
+      SUBROUTINE EC_C_T04(Speed,Stress,DumVecs,NN,Mean,NMax,N,Cov)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECUnShak
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Help routine for routines for correction of coordinate system
 C
       INCLUDE 'physcnst.for'
@@ -3417,25 +2323,8 @@ C
 
 
 
-      SUBROUTINE ECRotate(Mean,NMax,N,Cov,Map)
+      SUBROUTINE EC_C_T05(Mean,NMax,N,Cov,Map)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECRotate
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Routine to change coordinate system according to tensor "Map".
 C This routine is called by all tilt-correction procedures.
 C Both the mean velocity and the Reynoldsstresses and the
@@ -3448,13 +2337,13 @@ C
       REAL*8 Map(3,3),Stress(3,3),Speed(3),
      &  DumVecs(3,4:NNmax),Mean(NMax),Cov(NMax,NMax)
 
-      CALL ECShake(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NNMax)
-      CALL ECMapVec(Map,Speed,Speed)
-      CALL ECMapMtx(Map,Stress,Stress)
+      CALL EC_C_T03(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NNMax)
+      CALL EC_M_MapVec(Map,Speed,Speed)
+      CALL EC_M_MapMtx(Map,Stress,Stress)
       DO j = 4,N
-        CALL ECMapVec(Map,DumVecs(1,j),DumVecs(1,j))
+        CALL EC_M_MapVec(Map,DumVecs(1,j),DumVecs(1,j))
       ENDDO
-      CALL ECUnShak(Speed,Stress,DumVecs,NNMax,Mean,NMax,N,Cov)
+      CALL EC_C_T04(Speed,Stress,DumVecs,NNMax,Mean,NMax,N,Cov)
 
       RETURN
       END
@@ -3463,32 +2352,14 @@ C
 
 
 
-      SUBROUTINE ECKYaw(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE EC_C_T06(Direction,Yaw)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECKYaw
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Rotate coordinate system about a KNOWN yaw-angle around the vertical
+C Construct rotation matrix for coordinate system about a KNOWN yaw-angle
+C around the vertical
 C
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N
-      REAL*8 SinPhi,CosPhi,Yaw(3,3),Mean(NMax),Cov(NMax,NMax),
-     &	Direction
+      REAL*8 SinPhi,CosPhi,Yaw(3,3),Direction
 
       SinPhi = SIN(PI*Direction/180.D0)
       CosPhi = COS(PI*Direction/180.D0)
@@ -3503,8 +2374,6 @@ C
       Yaw(3,2) = 0.D0
       Yaw(3,3) = 1.D0
 
-      CALL ECRotate(Mean,NMax,N,Cov,Yaw)
-
       RETURN
       END
 
@@ -3512,40 +2381,20 @@ C
 
 
 
-      SUBROUTINE ECYaw(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE EC_C_T07(MeanU,MeanV,Direction)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECYaw
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Transform coordinate system such that v_mean = 0
+C Give yaw-angle to transform coordinate system such that v_mean = 0
 C (no mean lateral horizontal velocity component)
 C
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N
-      REAL*8 UHor,SinPhi,CosPhi,Mean(NMax),Cov(NMax,NMax),Direction
+      REAL*8 UHor,SinPhi,CosPhi,MeanU,MeanV,Direction
 
-      UHor = ((Mean(U))**2+(Mean(V))**2)**0.5
-      SinPhi = Mean(V)/UHor
-      CosPhi = Mean(U)/UHor
+      UHor = (MeanU**2+MeanV**2)**0.5
+      SinPhi = MeanV/UHor
+      CosPhi = MeanU/UHor
       Direction = 180.D0*ACOS(CosPhi)/PI
       IF (SinPhi.LT.0.D0) Direction = 360.D0-Direction
-
-      CALL ECKYaw(Mean,NMax,N,Cov,Direction)
 
       RETURN
       END
@@ -3554,32 +2403,13 @@ C
 
 
 
-      SUBROUTINE ECKPitch(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE EC_C_T08(Direction,Pitch)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECKPitch
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Rotate coordinate system about a KNOWN pitch-angle around vector (0,1,0).
+C Give matrix for rotation about a KNOWN pitch-angle around vector (0,1,0).
 C
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N
-      REAL*8 SinTheta,CosTheta,Pitch(3,3),Mean(NMax),Cov(NMax,NMax),
-     &	Direction
+      REAL*8 SinTheta,CosTheta,Pitch(3,3),Direction
 
       SinTheta = SIN(PI*Direction/180.D0)
       CosTheta = COS(PI*Direction/180.D0)
@@ -3594,48 +2424,24 @@ C
       Pitch(3,2) = 0.D0
       Pitch(3,3) = CosTheta
 
-      CALL ECRotate(Mean,NMax,N,Cov,Pitch)
-
       RETURN
       END
 
 
 
 
-
-      SUBROUTINE ECPitch(Mean,NMax,N,Cov,PitchLim,Direction)
+      SUBROUTINE EC_C_T09(MeanU,MeanW,Direction)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPitch
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Transform coordinate system such that w_mean = 0
+C Give pitch angle to transform coordinate system such that w_mean = 0
 C (no mean vertical velocity component)
 C
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N
-      REAL*8 SinTheta,Mean(NMax),Cov(NMax,NMax),Direction,UTot,PitchLim
+      REAL*8 SinTheta,MeanU,MeanW,Direction,UTot
 
-      UTot = ((Mean(U))**2+(Mean(W))**2)**0.5
-      SinTheta = Mean(W)/UTot
+      UTot = (MeanU**2+MeanW**2)**0.5
+      SinTheta = MeanW/UTot
       Direction = 180.D0*ASIN(SinTheta)/PI
-
-      IF (ABS(Direction) .LE. PitchLim)
-     &	CALL ECKPitch(Mean,NMax,N,Cov,Direction)
 
       RETURN
       END
@@ -3644,32 +2450,14 @@ C
 
 
 
-      SUBROUTINE ECKRoll(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE EC_C_T10(Direction,Roll)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECKRoll
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Rotate coordinate system about a KNOWN roll-angle around vector (1,0,0).
+C Give matrix to rotate coordinate system about a KNOWN roll-angle
+C around vector (1,0,0).
 C
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N
-      REAL*8 SinRoll,CosRoll,Roll(3,3),Mean(NMax),Cov(NMax,NMax),
-     &	Direction
+      REAL*8 SinRoll,CosRoll,Roll(3,3),Direction
 
       SinRoll = SIN(PI*Direction/180.D0)
       CosRoll = COS(PI*Direction/180.D0)
@@ -3684,8 +2472,6 @@ C
       Roll(3,2) = -SinRoll
       Roll(3,3) = CosRoll
 
-      CALL ECRotate(Mean,NMax,N,Cov,Roll)
-
       RETURN
       END
 
@@ -3693,37 +2479,18 @@ C
 
 
 
-      SUBROUTINE ECRoll(Mean,NMax,N,Cov,RollLim,Direction)
+      SUBROUTINE EC_C_T11(CovVV,CovVW,CovWW,Direction)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECRoll
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C Transform coordinate system such that Cov(V,W) = 0
+C Give roll angle to transform coordinate system such that Cov(V,W) = 0
 C (vertical velocity fluctuations are independent from horizontal
 C fluctuations)
 C
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Direction,RollLim,RollAngl,
-     &	Arg1,Arg2
+      REAL*8 CovVV,CovVW,CovWW,Direction,RollAngl,Arg1,Arg2
 
-      Arg1 = 2*Cov(V,W)
-      Arg2 = -Cov(V,V)+Cov(W,W)
+      Arg1 = 2*CovVW
+      Arg2 = -CovVV+CovWW
       IF (Arg2.LT.0.D0) THEN
         RollAngl =  0.5D0*ATAN2(Arg1,-Arg2)
       ELSE
@@ -3731,10 +2498,6 @@ C
       ENDIF
       Direction = 180.D0*RollAngl/Pi
 
-      IF (ABS(Direction) .LE. RollLim) THEN
-	CALL ECKRoll(Mean,NMax,N,Cov,Direction)
-      ENDIF
-
       RETURN
       END
 
@@ -3742,28 +2505,9 @@ C
 
 
 
-      SUBROUTINE ECFrResp(Mean,Cov,TolCov,NMax,NSize,Lower,Upper,
-     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,WXT,
-     & WhichTemp)
+      SUBROUTINE EC_C_F01(Mean,Cov,NMax,NSize,WhichTemp,
+     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,WXT)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECFrResp
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C Based on old routine by Van de Hurk, Elbers and Nieveen.
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Calculate frequency response corrections for sensor response, path
 C length averaging, sensor separation, signal processing and dampening
 C of fluctuations in a tube. Based on publications;
@@ -3778,8 +2522,47 @@ C	Leuning, R. and K.M. King (1991): 'Comparison of Eddy-Covariance
 C	Measurements of CO2 Fluxes by open- and closed-path CO2 analysers'
 C	(unpublished)
 C
+C input : DoPrint [LOGICAL] : Indicator if intermediate results must be
+C           printed to file OutF.
+C         OutF [INTEGER] : Unit number of output-file for intermediate
+C           results. OutF must be an open file.
+C         Mean [REAL*8(NMax)] : Array of mean values of the quantities in
+C           this experiment (only the first N quantities are used).
+C         TolMean [REAL*8(NMax)] : Tolerances of Mean.
+C         NMax [INTEGER] : Physical dimension of array Mean
+C         N [INTEGER] : Number of quantities actually involved in this
+C           experiment.
+C         Cov [REAL*8(NMax,NMax)] : covariances of the fluctuations.
+C         TolCov [REAL*8(NMax,NMax)] : Tolerances of covariances (2 sigma).
+C         QName [CHARACTER*9(NMax)] : Names of the quantities.
+C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
+C         LLimit [REAL*8] : Lower acceptance limit for frequency-response
+C           factors. Correction factors smaller than LLimit are set to 1.
+C         ULimit [REAL*8] : Upper acceptance limit for frequency-response
+C           factors. Correction factors larger than ULimit are set to 1.
+C         NSta [REAL*8] : Start frequency numerical integration.
+C           Popular value: -5.D0 [unit?].
+C         NEND [REAL*8] : End frequency numerical integration.
+C           Popular value: LOG(5) = 0.69897D0 [unit?].
+C         NINT [INTEGER] : Number of intervals in integration.
+C           Popular value: 19.
+C         Freq [REAL*8] : Sampling frequency [Hz].
+C         TauD [REAL*8] : Interval length for running mean.
+C           Popular value: 0.D0 [unit?].
+C         TAUV [REAL*8] : Low pass filter time constant.
+C           Popular value: 0.D0 [unit?]
+C         CalSonic [REAL*8(NQQ)] : Calibration specification array of
+C           sonic anemometer.
+C         CalTherm [REAL*8(NQQ)] : Calibration specification array of
+C           thermometer.
+C         CalHyg [REAL*8(NQQ)] : Calibration specification array of
+C           hygrometer.
+C
+C output : FrCor [REAL*8(NMax,NMax)] : Correction factors for covariances.
+C
 C Revision 28-05-2001: added info on which temperature should be used
 C                      in corrections (Sonic or thermocouple)
+C
       INCLUDE 'physcnst.for'
 
       INTEGER I1,I2,I3,I4,I,J,NINT,NMax,NSize, WhichTemp
@@ -4053,6 +2836,36 @@ C
       WXT(SpecHum,W)	   = WXT(Humidity,W)
       WXT(SpecHum,SpecHum) = WXT(Humidity,Humidity)
 
+      RETURN
+      END
+
+
+
+
+
+      SUBROUTINE EC_C_F02(WXT,NMax,NSize,Lower,Upper,Cov,TolCov)
+C
+C Apply frequency response corrections for sensor response, path
+C length averaging, sensor separation, signal processing and dampening
+C of fluctuations in a tube. Based on publications;
+C
+C	Moore, C.J. (1986): 'Frequency Response Corrections for Eddy
+C	Correlation Systems'. Boundary Layer Met. 37: 17-35.
+C
+C	Philip, J.R. (1963): 'The Damping of Fluctuating Concentration
+C	by Continuous Sampling Through a tube' Aust. J. Phys. 16: 454-463.
+C
+C	Leuning, R. and K.M. King (1991): 'Comparison of Eddy-Covariance
+C	Measurements of CO2 Fluxes by open- and closed-path CO2 analysers'
+C	(unpublished)
+C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
+      INCLUDE 'physcnst.for'
+
+      INTEGER I,J,NMax,NSize
+      REAL*8 WXT(NMax,NMax),Cov(NMax,NMax),Lower,Upper,TolCov(NMax,NMax)
+
       DO i=1,NSize
 	DO j=1,NSize
 	  IF ((WXT(i,j).GE.Lower).AND.(WXT(i,j).LE.Upper)) THEN
@@ -4074,26 +2887,9 @@ C
 
 
 
-      SUBROUTINE ECOxygen(Mean,NMax,N,Cov,P,Factor, WhichTemp, 
-     +                    HygType)
+      SUBROUTINE EC_C_Oxygen1(MeanT,NMax,N,Cov,P,HygType,WhichTemp,
+     &  Factor)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECOxygen
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Contribution of other gases especially oxygen absorb
 C some of the radiation at the wavelengths at which the
 C Krypton works.
@@ -4104,7 +2900,7 @@ C                      in corrections (Sonic or thermocouple)
 
       INTEGER NMax,N,i, WhichTemp
       REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax),OXC,P, HygType,
-     +       GenKo, GenKw
+     +       GenKo, GenKw, MeanT
 
       IF (HygType .EQ. ApCampKrypton) THEN
           GenKo = KoK
@@ -4113,12 +2909,34 @@ C                      in corrections (Sonic or thermocouple)
           GenKo = KoLa
           GenKw = KwLa
       ENDIF
-      OXC = FracO2*MO2*P*GenKo/(RGas*(Mean(WhichTemp))**2.D0*GenKw)
+      OXC = FracO2*MO2*P*GenKo/(RGas*MeanT**2.D0*GenKw)
 
       DO i = 1,N
 	Factor(i) = 1.D0 + OXC*Cov(i,WhichTemp)/Cov(i,Humidity)
 	IF ((i.EQ.Humidity).OR.(i.EQ.SpecHum))
      &	  Factor(i) = Factor(i)**2.D0
+      ENDDO
+
+      RETURN
+      END
+
+
+
+
+
+      SUBROUTINE EC_C_Oxygen2(Factor,NMax,N,Cov)
+C
+C Contribution of other gases especially oxygen absorb
+C some of the radiation at the wavelengths at which the
+C Krypton works.
+C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
+      INCLUDE 'physcnst.for'
+
+      INTEGER NMax,N,i, WhichTemp
+      REAL*8 Cov(NMax,NMax),Factor(NMax)
+      DO i = 1,N
 	Cov(i,Humidity) = Factor(i)*Cov(i,Humidity)
 	Cov(i,SpecHum ) = Factor(i)*Cov(i,SpecHum )
 	Cov(Humidity,i) = Cov(i,Humidity)
@@ -4132,25 +2950,8 @@ C                      in corrections (Sonic or thermocouple)
 
 
 
-      SUBROUTINE ECSchot(Mean,NMax,N,Cov,Factor)
+      SUBROUTINE EC_C_Schot1(MeanQ,MeanTSon,NMax,N,Cov,Factor,TSonFact)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECSchot
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Partial Schotanus et al. correction: correction for humidity
 C of sonic temperature, and of all covariances with sonic temperature.
 C Sidewind-correction has already been applied in the
@@ -4159,40 +2960,49 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N,i
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax)
+      REAL*8 MeanQ,MeanTSon,Cov(NMax,NMax),Factor(NMax),TSonFact
 
       DO i = 1,N
-	Factor(i) = 1.D0 - 0.51D0*Mean(SpecHum)
-     &	  -0.51D0*Mean(TSonic)*Cov(i,SpecHum)/Cov(i,TSonic)
+	Factor(i) = 1.D0 - 0.51D0*MeanQ
+     &	  -0.51D0*MeanTSon*Cov(i,SpecHum)/Cov(i,TSonic)
 	IF (i.EQ.TSonic) Factor(i) = Factor(i)**2.D0
-	Cov(i,TSonic) = Factor(i)*Cov(i,TSonic)
-	Cov(TSonic,i) = Cov(i,TSonic)
       ENDDO
 
-      Mean(TSonic) = Mean(TSonic)/(1.D0+0.51D0*Mean(SpecHum))
+      TSonFact = 1.D0/(1.D0+0.51D0*MeanQ)
 
       RETURN
       END
 
-      REAL*8 FUNCTION ECRawSchot(Temp, Rhov, Press)
+
+
+
+      SUBROUTINE EC_C_Schot2(Factor,TSonFact,MeanTSon,NMax,N,Cov)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECRawSchot
-C Version of subroutine : 1.0
-C Date			: July 27 2000
-C Author		: Arnold Moene
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
+C Partial Schotanus et al. correction: correction for humidity
+C of sonic temperature, and of all covariances with sonic temperature.
+C Sidewind-correction has already been applied in the
+C routine where the sonic signal is calibrated.
 C
-C Purpose :
+      INCLUDE 'physcnst.for'
+
+      INTEGER NMax,N,i
+      REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax), MeanTSon, TSonFact
+
+      DO i = 1,N
+	Cov(i,TSonic) = Factor(i)*Cov(i,TSonic)
+	Cov(TSonic,i) = Cov(i,TSonic)
+      ENDDO
+
+      MeanTSon = MeanTSon*TSonFact
+
+      RETURN
+      END
+
+
+
+
+      REAL*8 FUNCTION EC_C_Schot3(Temp, Rhov, Press)
+C
 C To do humidity part of Schotanus et al. correction on a
 C raw sample of sonic temperature, with Rhov that was not yet
 C corrected
@@ -4204,9 +3014,9 @@ C
 
       INTEGER NMax,N,i
       REAL*8   Temp, Rhov, Press, SPHUM, SPHUMNEW, NEWTEMP
-      REAL*8 ECQ,ECBaseF ! External function calls
+      REAL*8 EC_Ph_Q,EC_M_BaseF ! External function calls
 
-      SPHUM = ECQ(Temp, Rhov, Press)
+      SPHUM = EC_Ph_Q(Temp, Rhov, Press)
       SPHUMNEW = 1.0
       NEWTEMP = Temp
 C Dit convergeert dus helemaal niet !!!
@@ -4214,34 +3024,17 @@ C Dit convergeert dus helemaal niet !!!
 
          NEWTEMP = TEMP/(1+0.51*SPHUM)
          SPHUMNEW = SPHUM
-         SPHUM = ECQ(NEWTEMP, Rhov, Press)
+         SPHUM = EC_Ph_Q(NEWTEMP, Rhov, Press)
       ENDDO
-      ECRAWSCHOT = NEWTEMP
+      EC_C_Schot3 = NEWTEMP
       RETURN
       END
 
 
 
 
-      SUBROUTINE ECWebb(Mean,NMax,Cov,P, WhichTemp)
+      SUBROUTINE EC_C_Webb(Mean,NMax,Cov,P,WhichTemp)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECWebb
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Mean vertical velocity according to Webb, Pearman and Leuning
 C
 C Revision 28-05-2001: added info on which temperature should be used
@@ -4249,11 +3042,11 @@ C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       INTEGER NMax, WhichTemp
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Sigma,ECRhoDry,P
+      REAL*8 Mean(NMax),Cov(NMax,NMax),Sigma,EC_Ph_RhoDry,P
 C
 C Ratio of mean densities of water vapour and dry air
 C
-      Sigma = Mean(Humidity)/ECRhoDry(Mean(Humidity),Mean(WhichTemp),P)
+      Sigma = Mean(Humidity)/EC_Ph_RhoDry(Mean(Humidity),Mean(WhichTemp),P)
       Mean(W) = (1.D0+Mu*Sigma)*Cov(W,WhichTemp)/Mean(WhichTemp) +
      &	Mu*Sigma*Cov(W,Humidity)/Mean(Humidity)
 
@@ -4266,7 +3059,7 @@ C
 C ########################################################################
 C
 C
-C     This file provides the matrix for the correction of
+C     This set of routines provides the matrix for the correction of
 C     turbulent air flow measurements for the presence of
 C     small disturbing objects, like a box with electronic
 C     apparatus. The approach followed is described in:
@@ -4282,7 +3075,7 @@ C
 C
 C The generic call is to the following subroutine:
 C
-      SUBROUTINE DistCorMatrix(x,b,aInv)
+      SUBROUTINE EC_C_D01(x,b,aInv)
 C
 C Input: x : Position vector of the point where measurements have been taken.
 C            The ellipsoid is placed in the origin.
@@ -4304,8 +3097,8 @@ C            Sum_j aInv(i,j)*u(j)     gives the distortion-corrected
 C            image of measured velocity u.
 C
       REAL*8 x(3),b(3),a(3,3),aInv(3,3)
-      CALL distmx(x,b,a)
-      CALL ECInvM(a,aInv)
+      CALL EC_C_D02(x,b,a)
+      CALL EC_M_InvM(a,aInv)
       RETURN
       END
 C
@@ -4343,7 +3136,7 @@ C
 C        alpha and phi : G&R 3.13
          phi   = DASIN(DSQRT((b(1)**2-b(3)**2)/(b(1)**2+lambda)))
          alpha = DASIN(DSQRT((b(1)**2-b(2)**2)/(b(1)**2-b(3)**2)))
-         CALL ellint(phi,alpha,ff,ee)
+         CALL EC_M_Ellint(phi,alpha,ff,ee)
          dum1 = 2.D0/((b(1)**2-b(2)**2)*DSQRT(b(1)**2-b(3)**2))
          dum2 = 2.D0*DSQRT(b(1)**2-b(3)**2)/
      &          ((b(1)**2-b(2)**2)*(b(2)**2-b(3)**2))
@@ -4373,7 +3166,7 @@ C     From equation 8
 
 
 
-      SUBROUTINE distmx(x,b,a)
+      SUBROUTINE EC_C_D02(x,b,a)
 C     Calculates the distortion matrix according to equation 12
 C     INPUT : b = a vector containing the three semiaxes of the
 C                 ellipsoid
@@ -4387,11 +3180,11 @@ C                 undisturbed wind, "a" gives the disturbed wind
       REAL*8 x(3),b(3),a(3,3)
      &   ,alphaint(3),integral(3),ka,y(3),DyDx(3,3)
       INTEGER i,j,perm(3)
-      CALL sortdecr(b,perm)
-      CALL sortuse(x,perm)
-      CALL EllCoords(x,b,y,DyDx)
+      CALL EC_M_SortDecr(b,perm)
+      CALL EC_M_SortUse(x,perm)
+      CALL EC_M_EllCoords(x,b,y,DyDx)
       CALL specint(0.D0,b,alphaint)
-      CALL MulVec(alphaint,b(1)*b(2)*b(3))
+      CALL EC_M_MulVec(alphaint,b(1)*b(2)*b(3))
       CALL specint(y(Lambda),b,integral)
       DO i=1,3
          DO j=1,3
@@ -4402,13 +3195,26 @@ C                 undisturbed wind, "a" gives the disturbed wind
      &      + 1.D0 + b(1)*b(2)*b(3)*integral(i)/(2.D0-alphaint(i))
          END DO
       END DO
-      CALL unsort(x,perm)
-      CALL unsort(b,perm)
+      CALL EC_M_UnSort(x,perm)
+      CALL EC_M_UnSort(b,perm)
       RETURN
       END
 
 
 
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C
+C Flux/physics routines
+C
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 
 
 
@@ -4416,9 +3222,8 @@ C                 undisturbed wind, "a" gives the disturbed wind
 C
 C ########################################################################
 C
-C Here comes a set of ready-to-use routines, performing corrections
-C and printing results on demand. They are entirely based on routines
-C described earlier in this library. No important physics or models...
+C Small routine to estimate surface fluxes (with their tolerances!) from
+C processed mean values, covariances and tolerances.
 C
 C ########################################################################
 C
@@ -4427,51 +3232,112 @@ C
 
 
 
-       SUBROUTINE ECPTilt(DoPrint,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,PreYaw,PrePitch,PreRoll, Have_Uncal)
+      SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
+     &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
+     &	UStar,dUStar,Tau,dTau)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPTilt
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C All-in procedure to tilt the system using KNOWN yaw, pitch and roll angles
-C and print results
+C Construct estimates for surface fluxes from mean values and covariances
 C
       INCLUDE 'physcnst.for'
 
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),PreYaw,PrePitch,PreRoll
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
+      LOGICAL BadTc
+      INTEGER NMax
+      REAL*8 EC_Ph_RhoWet,Mean(NMax),Cov(NMax,NMax),HSonic,dHSonic,HTc,dHTc,
+     &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
+     &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar
+C
+C Sensible heat flux [W m^{-2}]
+C
+      RhoSon = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
+      HSonic = Cp*RhoSon*Cov(W,TSonic)
+      dHSonic = Cp*RhoSon*TolCov(W,TSonic)
 
-      CALL ECKYaw(Mean,NMax,N,Cov,PreYaw)
-      CALL ECKPitch(  Mean,NMax,N,Cov,PrePitch  )
-      CALL ECKRoll( Mean,NMax,N,Cov,PreRoll )
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Averages of data after fixed ',
-     &	  'tilt-correction: '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+      IF (.NOT.BadTc) THEN
+        RhoTc = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
+        HTc = Cp*RhoTc*Cov(W,TCouple)
+        dHTc = Cp*RhoTc*TolCov(W,TCouple)
+      ELSE
+        HTc = -9999.D0
+        dHTc = -9999.D0
       ENDIF
+C
+C Latent heat flux [W m^{-2}]
+C
+      LvE = Lv*Cov(W,Humidity)
+      dLvE = Lv*TolCov(W,Humidity)
+      LvEWebb = Lv*Mean(W)*Mean(Humidity)
+C
+C These few statements are eliminated to make sure that the
+C error in the mean velocity is NOT YET taken into the error
+C of the sensible heat. By uncommenting the following four commented
+C statements, this is restored.
+C
+C      IF (ABS(Mean(W)).GT.1.D-10) THEN    ! statement 1
+C	Frac1 = ABS(TolMean(W)/Mean(W))    ! statement 2
+C      ELSE                                ! statement 3
+	Frac1 = 0.D0
+C      ENDIF                               ! statement 4
+
+      Frac2 = ABS(TolMean(Humidity)/Mean(Humidity))
+
+      dLvEWebb = LvEWebb*(Frac1**2.D0+Frac2**2.D0)**0.5D0
+C
+C Friction velocity
+C
+      IF (Cov(W,U).GT.0.D0) THEN
+	Sgn = -1.D0
+	UStar = -SQRT(Cov(W,U))
+      ELSE
+	Sgn = 1.D0
+	UStar = SQRT(-Cov(W,U))
+      ENDIF
+
+      dUStar = 0.5*ABS(TolCov(W,U)/Cov(W,U))*UStar
+C
+C Friction force [N m^{-2}]
+C
+      IF (.NOT.BadTc) THEN
+        Tau = Sgn*0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
+      ELSE
+        Tau = Sgn*(RhoSon)*(ABS(UStar))**2.D0
+      ENDIF
+      dTau = ABS(TolCov(W,U)/Cov(W,U))*Tau
+
+      RETURN
+      END
+
+
+C
+C ########################################################################
+C
+C The following set of (small) routines use the ideal gas law to
+C calculate densities and humidities for wet air.
+C
+C ########################################################################
+C
+
+
+
+
+
+      REAL*8 FUNCTION EC_Ph_RhoDry(RhoV,T,P)
+C
+C Calculate the density of dry air component in wet air
+C
+C input : RhoV : Density of water vapour [kg m^{-3}]
+C	  T    : Temperature		 [K]
+C	  P    : Pressure		 [Pa]
+C
+C output : RhoDry : Density of dry air component [kg m^{-3}]
+C
+C Via Dalton's law : Pressure is sum of partial pressures :
+C	      P = RhoV*Rv*T + RhoD*Rd*T
+C
+      INCLUDE 'physcnst.for'
+
+      REAL*8 RhoV,T,P
+
+      EC_Ph_RhoDry = P/(Rd*T) - RhoV*Rv/Rd	  ! [kg m^{-3}]
 
       RETURN
       END
@@ -4480,50 +3346,21 @@ C
 
 
 
-      SUBROUTINE ECPYaw(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,Dirs, Have_Uncal)
+      REAL*8 FUNCTION EC_Ph_RhoWet(RhoV,T,P)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPYaw
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
+C Calculate the density of wet air
 C
-C Purpose :
-C All-in procedure to tilt the system such that Mean(V) --> 0
-C and print results
+C input : RhoV : Density of water vapour [kg m^{-3}]
+C	  T    : Temperature		 [K]
+C	  P    : Pressure		 [Pa]
+C
+C output : RhoWet : Density of wet air [kg m^{-3}]
 C
       INCLUDE 'physcnst.for'
 
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),Dirs
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
+      REAL*8 RhoV,T,P,EC_Ph_RhoDry
 
-      CALL ECYaw(Mean,NMax,N,Cov,Dirs)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Yaw angle = ',Dirs,' degrees'
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After yaw-correction (Mean(V) -> 0) : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
+      EC_Ph_RhoWet = EC_Ph_RhoDry(RhoV,T,P) + RhoV ! [kg m^{-3}]
 
       RETURN
       END
@@ -4532,390 +3369,25 @@ C
 
 
 
-      SUBROUTINE ECPPitch(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,PitchLim,QName,UName,Dirs, Have_Uncal)
+      REAL*8 FUNCTION EC_Ph_Q(RhoV,T,P)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPPitch
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
+C Calculate the specific humidity of wet air
 C
-C Purpose :
-C All-in procedure to tilt the system such that Mean(W) --> 0
-C and print results
+C input : RhoV : Density of water vapour [kg m^{-3}]
+C	  T    : Temperature		 [K]
+C	  P    : Pressure		 [Pa]
+C
+C output : EC_Ph_Q : specific humidity	 [kg kg^{-1}]
 C
       INCLUDE 'physcnst.for'
 
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),Dirs,PitchLim
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
+      REAL*8 RhoV,T,P,EC_Ph_RhoWet,RhoWet
 
-      CALL ECPitch(Mean,NMax,N,Cov,PitchLim,Dirs)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Pitch angle = ',Dirs,' degrees'
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After pitch-correction (Mean(W) -> 0) : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
+      RhoWet = EC_Ph_RhoWet(RhoV,T,P)
+      EC_Ph_Q = RhoV/RhoWet 		 ! [kg/kg]
 
       RETURN
       END
-
-
-
-
-
-      SUBROUTINE ECPRoll(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,RollLim,QName,UName,Dirs, Have_Uncal)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPRoll
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C All-in procedure to tilt the system such that Cov(W,V) --> 0
-C and print results
-C
-      INCLUDE 'physcnst.for'
-
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),Dirs,RollLim
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-
-      CALL ECRoll(Mean,NMax,N,Cov,RollLim,Dirs)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Roll angle = ',Dirs,' degrees'
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After roll-correction (Cov(V,W) -> 0) : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
-
-      RETURN
-      END
-
-
-
-
-
-      SUBROUTINE ECPSchot(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,SonFactr, Have_Uncal)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPSchot
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C All-in procedure to correct for water sensitivity of sonic temperature
-C and print results
-C
-      INCLUDE 'physcnst.for'
-
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N,i,j
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),SonFactr(NMax)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-
-      CALL ECSchot(Mean,NMax,N,Cov,SonFactr)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Correction factors for H2O-sensitivity of ',
-     &	  'sonic'
-	DO i=1,N
-	  WRITE(OutF,45) QName(i),SonFactr(i)
-	ENDDO
- 45	FORMAT('For (',a6,',T(son)) : ',F10.5)
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After H2O-correction for sonic : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
-
-      RETURN
-      END
-
-
-
-
-
-      SUBROUTINE ECPO2(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,P,O2Factor, WhichTemp, HygType, Have_uncal)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPO2
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C All-in procedure to correct for oxygen sensitivity of hygrometer
-C and print results
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
-      INCLUDE 'physcnst.for'
-
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N,i, WhichTemp
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),O2Factor(NMax),P, HygType
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-
-      CALL ECOxygen(Mean,NMax,N,Cov,P,O2Factor,WhichTemp,HygType)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Correction factors for O2-sensitivity of ',
-     &	  'hygrometer'
-	DO i=1,N
-	  WRITE(OutF,46) QName(i),O2Factor(i)
-	ENDDO
- 46	FORMAT('For (',a6,',RhoV or q) : ',F10.5)
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After oxygen-correction for hygrometer : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
-
-      RETURN
-      END
-
-
-
-
-      SUBROUTINE ECPFreq(DoPrint,OutF,Mean,TolMean,NMax,N,
-     &	Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,NInt,Freq,
-     &	TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp, Have_Uncal)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPFreq
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C All-in procedure to perform frequency response correction and print results
-C
-C input : DoPrint [LOGICAL] : Indicator if intermediate results must be
-C           printed to file OutF.
-C         OutF [INTEGER] : Unit number of output-file for intermediate
-C           results. OutF must be an open file.
-C         Mean [REAL*8(NMax)] : Array of mean values of the quantities in
-C           this experiment (only the first N quantities are used).
-C         TolMean [REAL*8(NMax)] : Tolerances of Mean.
-C         NMax [INTEGER] : Physical dimension of array Mean
-C         N [INTEGER] : Number of quantities actually involved in this
-C           experiment.
-C         Cov [REAL*8(NMax,NMax)] : covariances of the fluctuations.
-C         TolCov [REAL*8(NMax,NMax)] : Tolerances of covariances (2 sigma).
-C         QName [CHARACTER*9(NMax)] : Names of the quantities.
-C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
-C         LLimit [REAL*8] : Lower acceptance limit for frequency-response
-C           factors. Correction factors smaller than LLimit are set to 1.
-C         ULimit [REAL*8] : Upper acceptance limit for frequency-response
-C           factors. Correction factors larger than ULimit are set to 1.
-C         NSta [REAL*8] : Start frequency numerical integration.
-C           Popular value: -5.D0 [unit?].
-C         NEND [REAL*8] : End frequency numerical integration.
-C           Popular value: LOG(5) = 0.69897D0 [unit?].
-C         NINT [INTEGER] : Number of intervals in integration.
-C           Popular value: 19.
-C         Freq [REAL*8] : Sampling frequency [Hz].
-C         TauD [REAL*8] : Interval length for running mean.
-C           Popular value: 0.D0 [unit?].
-C         TAUV [REAL*8] : Low pass filter time constant.
-C           Popular value: 0.D0 [unit?]
-C         CalSonic [REAL*8(NQQ)] : Calibration specification array of
-C           sonic anemometer.
-C         CalTherm [REAL*8(NQQ)] : Calibration specification array of
-C           thermometer.
-C         CalHyg [REAL*8(NQQ)] : Calibration specification array of
-C           hygrometer.
-C
-C output : FrCor [REAL*8(NMax,NMax)] : Correction factors for covariances.
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
-      INCLUDE 'physcnst.for'
-
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N,NInt, WhichTemp
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),TolCov(NMax,NMax)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-      REAL*8 LLimit,ULimit,FrCor(NMax,NMax),NSTA,NEND,TAUV,TauD,Freq
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
-
-      CALL ECFrResp(Mean,Cov,TolCov,NMax,N,
-     &	LLimit,ULimit,NSta,NEnd,NInt,Freq,TauD,TauV,
-     &	CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	CALL ECShwFrq(OutF,QName,FrCor,NMax,N)
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After frequency-correction : '
-	WRITE(OutF,*) 'Factors accepted between ',LLimit,
-     &	  ' and ',ULimit
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
-
-      RETURN
-      END
-
-
-
-
-
-      SUBROUTINE ECPWebb(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,TolCov,
-     &	P,QName,UName, WhichTemp, Have_Uncal)
-C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPWebb
-C Version of subroutine : 1.02
-C Date			: 27 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C All-in procedure to calculate Webb-velocity and print results
-C
-C input : DoPrint [LOGICAL] : Indicator if intermediate results must be
-C           printed to file OutF.
-C         OutF [INTEGER] : Unit number of output-file for intermediate
-C           results. OutF must be an open file.
-C         Mean [REAL*8(NMax)] : Array of mean values of the quantities in
-C           this experiment (only the first N quantities are used).
-C         TolMean [REAL*8(NMax)] : Tolerances of Mean.
-C         NMax [INTEGER] : Physical dimension of array Mean
-C         N [INTEGER] : Number of quantities actually involved in this
-C           experiment.
-C         Cov [REAL*8(NMax,NMax)] : covariances of the fluctuations.
-C         TolCov [REAL*8(NMax,NMax)] : Tolerances of covariances (2 sigma).
-C         P [REAL*8] : Ambient air pressure in Pascal.
-C         QName [CHARACTER*9(NMax)] : Names of the quantities.
-C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
-C output : This routine sets the mean vertical velocity "Mean(w)" to the
-C         Webb-velocity.
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
-      INCLUDE 'physcnst.for'
-
-      LOGICAL DoPrint
-      LOGICAL Have_Uncal(NNMax)
-      INTEGER NMax,OutF,N, WhichTemp
-      REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),P,
-     &	TolCov(NMax,NMax)
-      CHARACTER*6 QName(NMax)
-      CHARACTER*9 UName(NMax)
-
-      CALL ECWebb(Mean,NMax,Cov,P, WhichTemp)
-      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF (DoPrint) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'Webb-velocity (vertical) = ',Mean(W),' m/s'
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'After addition of Webb-term : '
-	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,
-     &              NMax,N)
-      ENDIF
-
-      RETURN
-      END
-
-
 
 
 
@@ -4926,29 +3398,9 @@ C
 C
 
 
-
-
-
-      SUBROUTINE ECStruct(Sample,NMax,N,MMax,M,Flag,XIndex,YIndex,
+      SUBROUTINE EC_Ph_Struct(Sample,NMax,N,MMax,M,Flag,XIndex,YIndex,
      &  R,dR,Freq,CIndep,Cxy,dCxy)
 C
-C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECStruct
-C Version of subroutine : 1.02
-C Date			: 26 August 1999
-C Author		: Arjan van Dijk
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
 C Calculate structure parameters <(x(r)-x(r+R))*(y(r)-y(r+R))>/R^2/3
 C
 C input : Sample [REAL*8(NMax,MMax)] : The first N out of NMax quantities
@@ -5063,104 +3515,886 @@ C
       RETURN
       END
 
-C...........................................................................
-C Function  : ECSCal
-C Purpose   : to calibrate a sonic signal according to wind tunnel
-C             calibration (for th moment this works for apparatus 6,
-C             i.e. a wind tunnel calibrated sonic)
-C Interface : Cal     IN        array of length NQQ with calibation info
-C             UDum    IN/OUT    one horizontal component (on exit: calibrated)
-C             VDum    IN/OUT    another horizontal component (on exit: calibrated)
-C             WDum    IN/OUT    vertical component (on exit: calibrated)
-C             UERROR  IN/OUT    error flag for U (.TRUE. if wrong data)
-C             VERROR  IN/OUT    error flag for V (.TRUE. if wrong data)
-C             WERROR  IN/OUT    error flag for W (.TRUE. if wrong data)
-C Author    : Arnold Moene
-C Date      : September 26, 2000
-C Remarks   : The method is based on a wind tunnel calibration of the sonic
-C             The real velocity components can be derived from the
-C             measured components and the real azimuth and elevation angle.
-C             But the latter are not known and have to be determined
-C             iteratively from the measured components. The relationship
-C             between the real components and the measured components is:
+
+
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
 C
-C               Ureal =  Umeas/(UC1*(1 - 0.5*
-C                                    ((Azi + (Elev/0.5236)*UC2)*
-C                                     (1 - UC3*Abs(Elev/0.5236)))**2 ))
-C               Vreal =  Vmeas*(1 - VC1*Abs(Elev/0.5236))
-C               Wreal =  Wmeas/(WC1*(1 - 0.5*(Azi*WC2)**2))
+C Mathematics routines
 C
-C             and
-C               Azi = arctan(V/U)
-C               Elev = arctan(W/sqrt(U**2 + V**2))
-C
-C             where UC1, UC2, UC3, VC1, WC1, WC2 are fitting coefficients.
-C             An azimuth angle of zero is supposed to refer to a wind
-C             direction from the most optimal direction (i.e. the 'open'
-C             side of a sonic). Samples with an absolute azimuth angle of
-C             more than 40 degrees are rejected.
-C...........................................................................
-      SUBROUTINE ECScal(Cal, UDum, VDum, WDum,
-     &                  UError, VError, WError)
-     
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+C ########################################################################
+
+
+
+
+
+
+
+      SUBROUTINE EC_M_MinMax(x,NMax,N,MMax, M,Flag,Mins, Maxs)
+
       INCLUDE 'parcnst.inc'
 
-      REAL*8   Cal(NQQ), UDum, VDum, WDum
-      LOGICAL  UError, VError, WError
+      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax)
+      LOGICAL Flag(NMax,MMax)
+      INTEGER I,J, N, M, NSAMP
 
-      REAL*8   UCorr, VCorr, WCorr, AziNew, AziOld, ElevNew, ElevOld,
-     &         UC1, UC2, UC3, VC1, WC1, WC2
-      INTEGER  I, NITER, ITMAX
+      DO I=1,N
+         Mins(I) = 1e10
+	 Maxs(I) = -1e10
+      ENDDO
+
+      DO I=1,N
+         NSAMP = 0
+         DO J=1,M
+	    IF (.NOT. FLAG(I,J)) THEN
+	      NSAMP = NSAMP + 1
+	      Mins(I) = MIN(Mins(I), x(I,J))
+	      Maxs(I) = MAX(Maxs(I), x(I,J))
+	    ENDIF
+	 ENDDO
+	 IF (NSAMP .EQ. 0) THEN
+            Mins(I) = DUMMY
+            Maxs(I) = DUMMY
+	 ENDIF
+      ENDDO
+      END
 
 
-      UC1 = Cal(QQExt6)
-      UC2 = Cal(QQExt7)
-      UC3 = Cal(QQExt8)
-      VC1 = Cal(QQExt9)
-      WC1 = Cal(QQExt10)
-      WC2 = Cal(QQExt11)
 
-      ITMAX = 20
-      NITER = 0
-      AziOld = 9999D0
-      ElevOld = 9999D0
-      AziNew = ATAN(VDum/UDum)
-      ElevNew = ATAN(WDum/SQRT(UDum**2 + VDum**2))
 
-      UCorr = UDum
-      VCorr = VDum
-      WCorr = WDum
 
-      IF (ABS(AziNew) .LE. 0.698) THEN
-         DO WHILE (((ABS(AziNew-AziOld) .GT. 1./60) .OR.
-     &              (ABS(ElevNew-ElevOld) .GT. 1./60)) .AND.
-     &           (NITER .LT. ITMAX))
-            UCorr =  UDum/(UC1*(1 - 0.5*
-     &              ((AziNew + (ElevNew/0.5236D0)*UC2)*
-     &              (1 - UC3*Abs(ElevNew/0.5236D0))
-     &              )**2        )
-     &                     )
-            VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
-            WCorr =  WDum/(WC1*(1 - 0.5*(ElevNew*WC2)**2))
-   
-            AziOld = AziNew
-            ElevOld = ElevNew
-   
-            AziNew = ATAN(Vcorr/UCorr)
-            ElevNew = ATAN(Wcorr/SQRT(UCorr**2 + VCorr**2))
-   
-            NITER = NITER + 1
-         ENDDO
+
+C
+C From large time-series we extract mean quantities and co-variances.
+C For both mean values and for covariances the tolerances are estimated.
+C
+      SUBROUTINE EC_M_Averag(x,NMax,N,MMax,M,Flag,
+     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+C
+C From the given set of calibrated samples, calculate the averages,
+C variances, covariances and their tolerances.
+C
+C input : x : array with physical dimensions (NMax,MMax)
+C	      First index counts quantities; second counter
+C	      counts samples. Only the first N quantities
+C	      and the first M samples are used.
+C	  flag : LOGICAL array with physical dimensions NMAx by MMAx,
+C	      out of which only N by M are used. If flag(j,i) is true, then
+C	      quantity j in sample i is not ok.
+C
+C output : Mean : array with physical dimension NMax out of
+C		   which only N are used. Mean contains the average value
+C		   of array x. Only samples with Flag = 0 are used.
+C	   TolMean : tolerance of Mean, defined as
+C		       2 * sigma / sqrt(NIndep)
+C		   where sigma is the standarddeviation of the quantities
+C		   and where the number of independent samples is estimated
+C		   as twice the number of sign-changes of the fluctuations
+C		   of the respective quantities around their means.
+C	   Cov : REAL*8 (NMax,NMax) : covariances
+C	   TolCov : tolerances of Cov, estimated as tolerances of mean.
+C	   MIndep : INTEGER(NMAx) : Number of independent samples
+C		   in time series from which means are calculated
+C	   CIndep : INTEGER(NMAx,NMAx) : Number of independent samples
+C		   in time series from which covariances are calculated
+C
+      INCLUDE 'physcnst.for'
+
+      INTEGER NMax,N,MMax,M,i,j,k,NChange(NNMax,NNMax),
+     &	MIndep(NMax),CIndep(NMax,NMax),NMin(NNMax,NNMax),
+     &  Mok(NMax),Cok(NMax,NMax),NPlus(NNMax,NNMax)
+      LOGICAL Flag(NMax,MMax)
+      REAL*8 x(NMax,MMax),RawMean(NNMax),Mean(NMax),TolMean(NMax),
+     &	Cov(NMax,NMax),TolCov(NMax,NMax),xPrime(NNMax),
+     &	PrevPrime(NNMax),dTolCov(NNMax,NNMax),PSwap
+C
+C Initialise the arrays
+C
+      DO i=1,NMax
+	RawMean(i) = 0.D0
+	Mean(i) = 0.D0
+	TolMean(i) = 0.D0
+	Mok(i) = 0
+	DO j=1,NMax
+	  Cov(i,j) = 0.D0
+	  TolCov(i,j) = 0.D0
+	  Cok(i,j) = 0
+	ENDDO
+      ENDDO
+C
+C Find a rough estimate for the mean
+C
+      DO i=1,M
+	DO j=1,N
+	  IF (.NOT.Flag(j,i)) THEN
+	    Mok(j) = Mok(j) + 1
+	    RawMean(j) = RawMean(j) + x(j,i)
+	  ENDIF
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+	IF (Mok(j).GT.0) RawMean(j) = RawMean(j)/DBLE(Mok(j))
+      ENDDO
+C
+C Find final estimates for mean
+C
+      DO i=1,M
+	DO j=1,N
+	  IF (.NOT.Flag(j,i)) THEN
+	    Mean(j) = Mean(j) + (x(j,i) - RawMean(j))
+	  ENDIF
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+	IF (Mok(j).GT.0) THEN
+	  Mean(j) = Mean(j)/DBLE(Mok(j))
+	  Mean(j) = Mean(j) + RawMean(j)
+	ENDIF
+      ENDDO
+C
+C Find (co-)variances and from them the tolerances of the mean
+C
+      DO j=1,N
+	NChange(j,j) = 0
+        NMin(j,j) = 0
+        NPlus(j,j) = 0
+      ENDDO
+
+      DO i=1,M
+	DO j=1,N
+	  IF (.NOT.Flag(j,i)) THEN
+	    xPrime(j) = x(j,i) - Mean(j)
+            IF (xPrime(j).LT.0.D0) NMin(j,j) = NMin(j,j)+1
+            IF (xPrime(j).GT.0.D0) NPlus(j,j) = NPlus(j,j)+1
+	    IF (i.GT.1) THEN
+	      IF (PrevPrime(j)*xPrime(j).LE.0.D0)
+     &		NChange(j,j) = NChange(j,j) + 1
+	    ENDIF
+	    PrevPrime(j) = xPrime(j)
+	  ENDIF
+	ENDDO
+
+
+	DO j=1,N
+	  DO k=j,N
+	    IF (.NOT.(Flag(j,i).OR.Flag(k,i))) THEN
+	      Cok(j,k) = Cok(j,k) + 1
+	      Cov(j,k) = Cov(j,k) + xPrime(j)*xPrime(k)
+	    ENDIF
+	  ENDDO
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+	DO k=j,N
+	  IF (Cok(j,k).GT.0) THEN
+	     Cov(j,k) = Cov(j,k)/DBLE(Cok(j,k))
+	  ENDIF
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+	DO k=1,N
+	  IF (k.LT.j) Cov(j,k) = Cov(k,j)
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+        PSwap = 2.D0*DBLE(NMin(j,j))*DBLE(NPlus(j,j))/
+     &    DBLE(NMin(j,j) + NPlus(j,j))**2.D0
+	MIndep(j) = ANINT(DBLE(NChange(j,j))/PSwap) - 1
+	MIndep(j) = MAX(MIndep(j),1)
+	IF (Cok(j,j) .GT. 0) THEN
+	   TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
+	ENDIF
+      ENDDO
+C
+C Find tolerances for (co-)variances
+C
+      DO i=1,M
+        DO j=1,N
+	  IF (.NOT.Flag(j,i)) THEN
+	    xPrime(j) = x(j,i) - Mean(j)
+	  ENDIF
+	ENDDO
+	DO j=1,N
+	  DO k=j,N
+	    IF (.NOT.(Flag(j,i).OR.Flag(k,i))) THEN
+	      dTolCov(j,k)=xPrime(j)*xPrime(k)-Cov(j,k)
+	      TolCov(j,k)=TolCov(j,k)+(dTolCov(j,k))**2
+	    ENDIF
+	  ENDDO
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+	DO k=j,N
+C
+C Calculate the standard deviation of the instantaneous contributions
+C to the covariances.
+C
+	  IF (Cok(j,k).GT.0) THEN
+	     TolCov(j,k)=TolCov(j,k)/DBLE(Cok(j,k))
+C
+C Here we estimate the number of independent contributions to the
+C covariance by counting the least number of independent contributions
+C to either of the factors.
+C
+	     CIndep(j,k) = MIN(MIndep(j),MIndep(k))
+	     TolCov(j,k) = TolCov(j,k)/DBLE(CIndep(j,k))
+C
+C Tolerance is defined as 2*sigma, where sigma is standard deviation
+C
+	     TolCov(j,k) = 2.D0*(TolCov(j,k))**0.5
+	  ENDIF
+	ENDDO
+      ENDDO
+
+      DO j=1,N
+	DO k=1,(j-1)
+	  TolCov(j,k) = TolCov(k,j)
+	  CIndep(j,k) = CIndep(k,j)
+	ENDDO
+      ENDDO
+
+      RETURN
+      END
+
+
+
+
+
+C
+C ########################################################################
+C
+C This routine constructs a trend-corrected time-series from a given
+C time-series: The model is an additive model. The straight line from
+C least squares regression (linear trend) is subtracted from the dataset.
+C
+C ########################################################################
+C
+
+
+
+
+
+      SUBROUTINE EC_M_Detren(x,NMax,N,MMAx,M,Mean,Cov,y,RC)
+C
+C Construct a linearly detrended dataset from a given dataset
+C
+C input : x : REAL*8(NMax,MMax) : x(i,j) = quantity i in sample j
+C		only the first N quantities and the first M samples
+C		are used.
+C	  Cov : REAL*8 (NMax,NMAx) : covariances of quantities.
+C		used to find trend.
+C output : y : REAL*8(NMAx,MMax) : detrended timeseries.
+C	   RC : REAL*8(NMAx) : Directional coefficients of linear
+C		regression trend-lines.
+C
+      INCLUDE 'physcnst.for'
+
+      INTEGER NMax,N,i,MMax,M,j
+      REAL*8 x(NMax,MMax),Mean(NMax),Cov(NMax,NMax),RC(NMax),
+     &	y(NMax,MMax),Trend
+
+      DO j = 1,N
+	RC(j) = Cov(TTime,j)/Cov(TTime,TTime)
+      ENDDO
+
+      DO i= 1,M
+	DO j= 1,N
+	  IF (j.NE.TTime) THEN
+	    Trend = RC(j)*(x(TTime,i)-Mean(TTime))
+	    y(j,i) = x(j,i) - Trend
+	  ENDIF
+	ENDDO
+      ENDDO
+
+      RETURN
+      END
+
+
+
+
+
+C
+C ########################################################################
+C
+C A routine to calculate the value of certain simple basefunctions
+C
+C ########################################################################
+C
+
+
+
+
+
+      REAL*8 FUNCTION EC_M_BaseF(x,FType,Order,C)
+C
+C Purpose : Calculate simple functions. Currently implemented:
+C  - Ordinary polynomials
+C  - Polynomials in the natural logarithm of x
+C
+      INCLUDE 'physcnst.for'
+
+      INTEGER FType,Order,i
+      REAL*8 x,C(0:Order),Dum,LogX
+
+      Dum = 0.D0
+      IF (FType.EQ.NormPoly) THEN
+	DO i=0,Order
+	  Dum = Dum + C(i)*x**i
+	ENDDO
+      ELSE IF (FType.EQ.LogPoly) THEN
+	LogX = LOG(x)
+	DO i=0,Order
+	  Dum = Dum + C(i)*LogX**i
+	ENDDO
       ENDIF
-      
-      IF ((NITER .EQ. ITMAX) .OR. (ABS(AziNew) .GT. 0.698)) THEN
-         UError = .TRUE.
-         VError = .TRUE.
-         WError = .TRUE.
+
+      EC_M_BaseF = Dum
+
+      RETURN
+      END
+
+
+
+
+
+C
+C ########################################################################
+C
+C This is a bundle of simple mathematics routines
+C
+C ########################################################################
+C
+
+
+
+
+
+      SUBROUTINE EC_M_MulVec(x,y)
+      REAL*8 x(3),y
+      INTEGER I
+      DO I=1,3
+         x(I) = x(I)*y
+      END DO
+      RETURN
+      END
+
+
+
+
+      SUBROUTINE EC_M_DSwap(x,y)
+C     Interchanges x and y
+      REAL*8 x,y,dum
+      dum = x
+      x = y
+      y = dum
+      RETURN
+      END
+
+      SUBROUTINE EC_M_ISwap(x,y)
+C     Interchanges x and y
+      INTEGER x,y,dum
+      dum = x
+      x = y
+      y = dum
+      RETURN
+      END
+
+      SUBROUTINE EC_M_SortDecr(x,permutation)
+C     Sorts the elements of vector x in decreasing order;
+C     permutation needed is returned as well
+      REAL*8 x(3)
+      INTEGER permutation(3),I,J
+      permutation(1) = 1
+      permutation(2) = 2
+      permutation(3) = 3
+      DO I = 1,2
+         DO J = (I+1),3
+            IF (x(J).GT.x(I)) THEN
+               CALL EC_M_DSwap(x(I),x(J))
+               CALL EC_M_ISwap(permutation(I),permutation(J))
+            END IF
+         END DO
+      END DO
+      RETURN
+      END
+
+      SUBROUTINE EC_M_SortUse(x,permutation)
+C     Reorders the elements of x according to permutation
+      REAL*8 x(3),dum(3)
+      INTEGER permutation(3),I
+      DO I=1,3
+         dum(I) = x(I)
+      END DO
+      DO I=1,3
+         x(I) = dum(permutation(I))
+      END DO
+      RETURN
+      END
+
+      SUBROUTINE EC_M_UnSort(x,permutation)
+C     Unsorts the elements of x originally sorted using permutation
+      REAL*8 x(3),dum(3)
+      INTEGER permutation(3),I
+      DO I=1,3
+         dum(I) = x(I)
+      END DO
+      DO I=1,3
+         x(permutation(I)) = dum(I)
+      END DO
+      RETURN
+      END
+
+      SUBROUTINE EC_M_Ell1Q(phi,alpha,ff,ee)
+C     Calculates the elliptic integrals F(Phi\Alpha) and
+C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
+C     as described in Abramowitz and Stegun, 17.6 (Numbers in
+C     text refer to equations in A&S). Only ok for first quadrant
+      REAL*8 phi,alpha,ff,ee,a,b,aprev,bprev,edum,eedum
+     &   ,c(0:9),psi(0:9),PI,epsilon
+      INTEGER It
+      PARAMETER (epsilon = 1.D-15)
+      PI = 2.D0*DASIN(1.D0)
+      It = 0
+C     A&S: 17.6.2:
+      aprev = 1.D0
+C     A&S: 17.6.2:
+      bprev = DCOS(alpha)
+C     A&S: 17.6.2:
+      c(0) = DSIN(alpha)
+C     A&S: 17.6.8:
+      psi(0) = phi
+      edum = c(0)*c(0)
+      eedum = 0.D0
+      DO WHILE (DABS(c(It)).GT.epsilon)
+         It      = It + 1
+C        A&S: 17.6.1:
+         a       = (aprev + bprev) / 2.D0
+C        A&S: 17.6.1:
+         b       = DSQRT(aprev * bprev)
+C        A&S: 17.6.1:
+         c(It)   = (aprev - bprev) / 2.D0
+C        A&S: 17.6.8:
+         psi(It) = psi(It-1) + DATAN(TAN(psi(It-1))*bprev/aprev)
+         psi(It) = psi(It) + PI*DINT((2.D0*psi(It-1)-psi(It))/PI+.5D0)
+C        A&S: 17.6.4:
+         edum    = edum  + c(It)*c(It)*2.D0**It
+C        A&S: 17.6.10:
+         eedum   = eedum + c(It)*DSIN(psi(It))
+         aprev   = a
+         bprev   = b
+      END DO
+C     A&S: 17.6.9:
+      ff = psi(It)/(a*(2.D0**DBLE(It)))
+C     A&S: 17.6.10:
+      ee = eedum + ff*(1.D0-edum/2.D0)
+      RETURN
+      END
+
+
+
+
+
+      SUBROUTINE EC_M_Ellint(phi,alpha,ff,ee)
+C     Calculates the elliptic integrals F(Phi\Alpha) and
+C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
+C     as described in Abramowitz and Stegun, 17.6 (Numbers in
+C     text refer to equations in A&S). ok for all angles.
+      REAL*8 phi,alpha,ff,ee,ffcomp,eecomp,PI
+      INTEGER SignArg, Wind
+      PI = 2.D0*DASIN(1.D0)
+      Wind = IDNINT(phi/PI)
+      phi = phi - Wind*PI
+      IF (Wind .NE. 0) THEN
+        CALL EC_M_Ell1Q(0.5D0*PI,alpha,ffcomp,eecomp)
       ELSE
-         UDum = UCorr
-         VDum = VCorr
-         WDum = WCorr
-      ENDIF
+        ffcomp = 0.D0
+        eecomp = 0.D0
+      END IF
+      SignArg = INT(DSIGN(1.D0,phi))
+      CALL EC_M_Ell1Q(DABS(phi),alpha,ff,ee)
+C     A&S: 17.4.3:
+      ff = SignArg*ff + 2.D0*Wind*ffcomp
+C     A&S: 17.4.3:
+      ee = SignArg*ee + 2.D0*Wind*eecomp
+      RETURN
+      END
 
+      SUBROUTINE EC_M_ABCForm(a,b,c,Root1, Root2, AllReal)
+C     Solves ax^2 + bx + c = 0
+      INTEGER Re, Im
+      PARAMETER(Re = 1, Im = 2)
+      REAL*8 a, b, c, Discrim, Root1(Re:Im), Root2(Re:Im)
+      LOGICAL AllReal
+      Root1(Re) = 0.D0
+      Root1(Im) = 0.D0
+      Root2(Re) = 0.D0
+      Root2(Im) = 0.D0
+      Discrim = b*b - 4.D0*a*c
+      AllReal = (Discrim .GE. 0.D0)
+      IF (AllReal) THEN
+        Root1(Re) = (-b + DSQRT(Discrim)) / (2.D0*a)
+        Root2(Re) = (-b - DSQRT(Discrim)) / (2.D0*a)
+      ELSE
+        Root1(Re) = -b/(2.D0*a)
+        Root2(Re) =  Root1(Re)
+        Root1(Im) =  DSQRT(-Discrim)/(2.D0*a)
+        Root2(Im) = -Root1(Im)
+      END IF
+      RETURN
+      END
+
+      SUBROUTINE EC_M_Cardano(Poly, Root, AllReal)
+C Uses the Cardano solution to solve exactly: ax^3 + bx^2 + cx + d = 0
+C See e.g. Abramowitz and Stegun. Here "a" is not allowed to be zero.
+      INTEGER Re, Im
+      PARAMETER(Re = 1, Im = 2)
+      REAL*8 Poly(0:3), a(0:2), q, r, Discrim, t1, t2,
+     &  s1(Re:Im), s2(Re:Im), Root(Re:Im,3), Radius, Phi
+      LOGICAL AllReal
+      INTEGER i
+      Root(Im,1) = 0.D0
+      Root(Im,2) = 0.D0
+      Root(Im,3) = 0.D0
+      DO i = 0,2
+        a(i) = Poly(i)/Poly(3)
+      ENDDO
+      Root(Re,1) = -a(2)/3.D0
+      Root(Re,2) = Root(Re,1)
+      Root(Re,3) = Root(Re,1)
+      q = a(1)/3.D0 - (a(2)*a(2))/9.D0
+      r = (a(1)*a(2) - 3.D0*a(0))/6.D0 - a(2)*a(2)*a(2)/27.D0
+      Discrim = q*q*q + r*r
+      AllReal = (Discrim .LE. 0.D0)
+      IF (.NOT. AllReal) THEN
+        t1 = r + DSQRT(Discrim)
+        t2 = r - DSQRT(Discrim)
+        s1(Re) = DSIGN(1.D0,t1)*DABS(t1)**(1.D0/3.D0)
+        s2(Re) = DSIGN(1.D0,t2)*DABS(t2)**(1.D0/3.D0)
+        Root(Re,1) =  Root(Re,1) +  s1(Re) + s2(Re)
+        Root(Re,2) =  Root(Re,2) - (s1(Re) + s2(Re))/2.D0
+        Root(Im,2) =  (DSQRT(3.D0)/2.D0) * (s1(Re) - s2(Re))
+        Root(Re,3) =  Root(Re,2)
+        Root(Im,3) = -Root(Im,2)
+      ELSE IF ((Discrim .LT. 0.D0) .OR. (DABS(r) .GT. 1.D-15)) THEN
+        Radius = DSQRT(r*r - Discrim)
+        Phi = DACOS(r/Radius)/3.D0
+        Radius = Radius**(1.D0/3.D0)
+        s1(Re) = Radius * DCOS(Phi)
+        s1(Im) = Radius * DSIN(Phi)
+        Root(Re,1) = Root(Re,1) + 2.D0*s1(Re)
+        Root(Re,2) = Root(Re,2) - s1(Re) - DSQRT(3.D0)*s1(Im)
+        Root(Re,3) = Root(Re,3) - s1(Re) + DSQRT(3.D0)*s1(Im)
+      END IF
+      RETURN
+      END
+
+
+
+
+
+
+
+      SUBROUTINE EC_M_EllCoords(x,b,y,DyDx)
+C Calculate the elliptic coordinates (Lambda, Mu, Nu) plus
+C derivatives Dy[i]/Dx[j] corresponding to the Carthesian coordinates
+C (x[1], x[2], x[3]) for an ellipsoid with semiaxes (b[1], b[2], b[3])
+C with b[1]>b[2]>b[3]. Procedure cannot handle points at coordinateplanes.
+C Outside the ellipsoid the elliptic coordinates satisfy:
+C -b[1]^2 < Nu < -b[2]^2 < Mu < -b[3]^2 < 0 < Lambda.  See e.g. :
+C "Einfuehrung in die Kurven- und Flaechentheorie auf vektorieller
+C Grundlage" by C.F. Baeschlin, Orell Fuessli Verlag, Zuerich, 1947,
+C but mind that there the elliptic coordinates differ from ours.
+       INTEGER Re,Im,Lambda,Mu,Nu
+       PARAMETER(Re=1,Im=2,Lambda=1,Mu=2,Nu=3)
+      REAL*8 x(3), b(3), y(3), DyDx(3,3),Poly(0:3),
+     &  Root(Re:Im,3),SQR
+      INTEGER i,j
+      LOGICAL AllReal
+C First check if the semiaxes are in decreasing order and if the point x
+C is not on a coordinate plane
+      IF (.NOT. ((b(1) .GE. b(2)) .AND. (b(2) .GE. b(3))))
+     &  WRITE(*,*) 'Ellipsoid not properly oriented!!!!!!'
+      IF (ABS(x(1)*x(2)*x(3)) .LT. 1.D-10*b(3))
+     &  WRITE(*,*) 'Sorry : No elliptic coordinates here!!!!'
+C Construct the coefficients of the third order equation for the elliptic
+C coordinates
+      Poly(3) = -1.D0
+      Poly(2) = EC_M_SQR(x(1))+EC_M_SQR(x(2))+EC_M_SQR(x(3))
+     &         -EC_M_SQR(b(1))-EC_M_SQR(b(2))-EC_M_SQR(b(3))
+      Poly(1) = EC_M_SQR(x(1))*(EC_M_SQR(b(2))+EC_M_SQR(b(3)))
+     &         -EC_M_SQR(b(1)*b(2))+ EC_M_SQR(x(2))*(EC_M_SQR(b(1))+
+     &          EC_M_SQR(b(3)))-EC_M_SQR(b(1)*b(3))+
+     &          EC_M_SQR(x(3))*(EC_M_SQR(b(1))+EC_M_SQR(b(2)))-
+     &          EC_M_SQR(b(2)*b(3))
+      Poly(0) = EC_M_SQR(x(1)*b (2)*b(3)) + EC_M_SQR(x(2)*b(1)*b(3)) +
+     &          EC_M_SQR(x(3)*b(1)*b(2)) - EC_M_SQR(b(1)*b(2)*b(3))
+C Solve this cubic equation
+      CALL EC_M_Cardano(Poly, Root, AllReal)
+      IF (.NOT.(AllReal))
+     &  WRITE(*,*) 'Error in finding elliptic coordinates!!!'
+      DO i=1,3
+        y(i) = Root(Re,i)
+      END DO
+C Put the elliptic coordinates in correct order and check if they satisfy
+C the relation given in the header
+      DO i=1,2
+        DO j=(i+1),3
+          IF (y(j) .GT. y(i)) CALL EC_M_DSwap(y(i),y(j))
+        END DO
+      END DO
+      IF (.NOT.((-EC_M_SQR(b(1)) .LT. y(Nu)).AND.(y(Nu) .LT. -EC_M_SQR(b(2)))
+     &     .AND.(-EC_M_SQR(b(2)) .LT. y(Mu)).AND.(y(Mu) .LT. -EC_M_SQR(b(3)))
+     &     .AND.(0.D0 .LT. y(Lambda))))
+     &  WRITE(*,*) 'ERROR!!! in determination of elliptic coordinates'
+C Calculate the derivative Dy[i]/Dx[j] of the elliptic coordinates to the
+C Carthesian coordinates
+      DO i=1,3
+        DO j=1,3
+          DyDx(j,i) = 2.D0*x(j)*
+     &  (EC_M_SQR(b(MOD(j    ,3) + 1)) + y(i)) *
+     &  (EC_M_SQR(b(MOD((j+1),3) + 1)) + y(i)) /
+     &  ((y(i) - y(MOD(i,3) + 1)) * (y(i) - y(MOD((i+1),3)+1)))
+        END DO
+      END DO
+      END
+
+
+
+
+
+
+      REAL*8 FUNCTION EC_M_SQR(x)
+C     Give the square of x
+      REAL*8 x
+      SQR = x*x
+      END
+
+
+
+
+
+
+
+
+
+
+      SUBROUTINE EC_M_MMul(a,b,c)
+C     Matrix C is product of 3*3-matrices A and B
+      INTEGER I, J, K
+      REAL*8 A(3,3),B(3,3),C(3,3),Dum(3,3)
+      DO I=1,3
+	DO J=1,3
+	  Dum(i,j)=0.D0
+	  DO K=1,3
+	     Dum(I,J) = Dum(I,J) + A(I,K)*B(K,J)
+	  END DO
+	END DO
+      END DO
+      DO I=1,3
+	DO J=1,3
+	  c(I,J)=Dum(I,J)
+	END DO
+      END DO
+      RETURN
+      END
+
+
+
+
+      REAL*8 FUNCTION EC_M_Det2(x)
+C     Give determinant of REAL*8 2*2-matrix
+      REAL*8 x(2,2)
+      EC_M_Det2 = x(1,1)*x(2,2)-x(2,1)*x(1,2)
+      END
+
+      SUBROUTINE EC_M_InvM2(a, aInv)
+C     Find the inverse of REAL*8 2*2 matrix "a"
+      REAL*8 a(2,2), aInv(2,2), Dum(2,2), Det, EC_M_Det2
+      INTEGER i, j
+      Det = EC_M_Det2(a)
+      IF (ABS(Det) .LT. 1.D-10)
+     &	WRITE(*,*) ' Sorry, cannot invert matrix!'
+      Dum(1,1) =  a(2,2)/Det
+      Dum(2,1) = -a(2,1)/Det
+      Dum(1,2) = -a(1,2)/Det
+      Dum(2,2) =  a(1,1)/Det
+      DO i = 1,2
+	DO j = 1,2
+	  aInv(j,i) = Dum(j,i)
+	END DO
+      END DO
+      RETURN
+      END
+
+
+      REAL*8 FUNCTION EC_M_Determ(x)
+C
+C     Give determinant of real 3*3-matrix
+C
+      REAL*8 x(3,3)
+      EC_M_Determ = x(1,1)*(x(2,2)*x(3,3)-x(2,3)*x(3,2))
+     &        -x(2,1)*(x(1,2)*x(3,3)-x(1,3)*x(3,2))
+     &        +x(3,1)*(x(1,2)*x(2,3)-x(1,3)*x(2,2))
+      END
+
+
+
+
+
+
+      SUBROUTINE EC_M_InvM(a, aInv)
+C
+C     Find the inverse of real 3*3 matrix "a"
+C
+      REAL*8 a(3,3), aInv(3,3), Dum(3,3), Det, EC_M_Determ
+      INTEGER i, j
+      Det = EC_M_Determ(a)
+      IF (DABS(Det) .LT. 1.D-20)
+     &    WRITE(*,*) ' Sorry, cannot invert matrix!'
+      Dum(1,1) =  (a(2,2)*a(3,3)-a(2,3)*a(3,2))/Det
+      Dum(2,1) = -(a(2,1)*a(3,3)-a(2,3)*a(3,1))/Det
+      Dum(3,1) =  (a(2,1)*a(3,2)-a(2,2)*a(3,1))/Det
+      Dum(1,2) = -(a(1,2)*a(3,3)-a(1,3)*a(3,2))/Det
+      Dum(2,2) =  (a(1,1)*a(3,3)-a(1,3)*a(3,1))/Det
+      Dum(3,2) = -(a(1,1)*a(3,2)-a(1,2)*a(3,1))/Det
+      Dum(1,3) =  (a(1,2)*a(2,3)-a(1,3)*a(2,2))/Det
+      Dum(2,3) = -(a(1,1)*a(2,3)-a(1,3)*a(2,1))/Det
+      Dum(3,3) =  (a(1,1)*a(2,2)-a(1,2)*a(2,1))/Det
+      DO i = 1,3
+        DO j = 1,3
+          aInv(j,i) = Dum(j,i)
+        END DO
+      END DO
+      RETURN
+      END
+
+
+
+
+
+
+      SUBROUTINE EC_M_MapVec(a,x,y)
+C
+C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
+C
+C input : a : REAL*8 (3,3) : the mapping matrix
+C	  x : REAL*8 (3)   : the vector to be mapped
+C output : y : REAL*8 (3)  : the image of the map
+c
+C
+      IMPLICIT NONE
+
+      REAL*8 a(3,3),x(3),y(3),Dum(3)
+      INTEGER I,J
+
+      DO I=1,3
+	Dum(I) = 0.D0
+      ENDDO
+
+      DO I=1,3
+	DO J=1,3
+	  Dum(I) = Dum(I) + a(I,J)*x(J)
+	ENDDO
+      ENDDO
+
+      DO I=1,3
+	y(I) = Dum(I)
+      ENDDO
+
+      RETURN
+      END
+
+      SUBROUTINE EC_M_Map2Vec(a,x,y)
+C
+C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
+C
+C input : a : REAL*8 (2,2) : the mapping matrix
+C	  x : REAL*8 (2)   : the vector to be mapped
+C output : y : REAL*8 (2)  : the image of the map
+C
+      IMPLICIT NONE
+
+      REAL*8 a(2,2),x(2),y(2),Dum(2)
+      INTEGER I,J
+
+      DO I=1,2
+	Dum(I) = 0.D0
+      ENDDO
+
+      DO I=1,2
+	DO J=1,2
+	  Dum(I) = Dum(I) + a(I,J)*x(J)
+	ENDDO
+      ENDDO
+
+      DO I=1,2
+	y(I) = Dum(I)
+      ENDDO
+
+      RETURN
+      END
+
+
+
+
+
+
+
+
+
+      SUBROUTINE EC_M_MapMtx(a,x,y)
+C
+C Calculates the image of "x" under the map "a";
+C y(ji) = a(ki)a(lj)x(lk)
+C
+C input : a : REAL*8 (3,3) : the mapping matrix
+C	  x : REAL*8 (3,3) : the tensor to be mapped
+C output : y : REAL*8 (3,3) : the image of the map
+C
+C Revision: June 21, 2001:
+C     - indices i and j in the mapping  have
+C       been interchanged. This has also been done in the
+C       routines that used EC_M_MapMtx (EC_C_T05)
+C
+      IMPLICIT NONE
+
+      REAL*8 a(3,3),x(3,3),y(3,3),Dum(3,3)
+      INTEGER I,J,K,L
+
+      DO I=1,3
+	 DO J=1,3
+	    Dum(I,J) = 0.D0
+	 ENDDO
+      ENDDO
+
+      DO I=1,3
+	 DO J=1,3
+	    DO K=1,3
+	       DO L=1,3
+		  Dum(I,J) = Dum(I,J) + a(I,K)*a(J,L)*x(K,L)
+	       ENDDO
+	    ENDDO
+	 ENDDO
+      ENDDO
+
+      DO I=1,3
+	 DO J=1,3
+	    y(I,J) = Dum(I,J)
+	 ENDDO
+      ENDDO
+
+      RETURN
       END

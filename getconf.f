@@ -1,5 +1,5 @@
 C $Id$
-      SUBROUTINE GetConf(ConfUnit,
+      SUBROUTINE EC_F_GetConf(ConfUnit,
      &           DatDir, OutDir,  ParmDir,
      &           FluxName, ParmName, InterName,
      &           PlfName,

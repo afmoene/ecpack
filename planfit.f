@@ -49,7 +49,7 @@ C
 
       LOGICAL       HAVE_UNCAL(NNNMax),Flag(NNMAx,MMMax),
      &        TrustWilczak, SingleRun
-      LOGICAL ENDINTERVAL, BadTc, DoPrint, HAVE_SAMP, DoPf
+      LOGICAL ENDINTERVAL, BadTc, DoPrint, HAVE_SAMP, DoPf, DoClassic
       INTEGER EC_G_STRLEN
 C
 C The name of the calibration routine specified at the end of this file
@@ -63,6 +63,7 @@ C...........................................................................
 C Set DoPrint to true
       DoPrint = .TRUE.
       DoPF = .TRUE.
+      DoClassic = .TRUE.
 C
 C Open and read configuration file
 C
@@ -174,7 +175,8 @@ C Open file where results of Planar fit method are written
       OPEN(PlfFile, FILE=PlfName, status='Replace',
      &     FORM='FORMATTED')
       WRITE(PlfFile,62) 'Doy', 'Hourmin', 'Sec', 'Doy', 'Hourmin',
-     &                  'Sec', 'Alpha',  'Beta', 'Gamma', 'WBias',
+     &                  'Sec', '#sample', '#u', '#v', '#w',
+     &                  'Alpha',  'Beta', 'Gamma', 'WBias',
      &                  'Alpha1',  'Beta1', 'Gamma1', 'WBias1',
      &                  'Swing', 'meanu1',  'meanv1', 'meanw1',
      &                  'uu1', 'uv1', 'uw1', 'vu1', 'vv1', 'vw1',
@@ -382,6 +384,8 @@ C      WRITE(*,50) Apf(3,1),Apf(3,2),Apf(3,3)
 C
 C Now perform individual tilt-corrections per run
 C
+
+
 C ENDIF of IF (DOPF)
          ENDIF
          SingleRun = (.TRUE.)
@@ -400,6 +404,11 @@ C
      &	      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
      &        Have_Uncal)
          ENDDO
+	 CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
+     &                 GMean, GTolMean, GCov, GTolCov, MIndep, CIndep,
+     &                 Mok, Cok)
+         write(*,*) (GMean(i),i=1,3)
+         write(*,*) ((GCov(i,j),i=1,3),j=1,3)
 
 C
 C To which numbers should N and M be set ??? M has been set already above
@@ -479,10 +488,8 @@ C
 	 ELSE
 	     DO I=1,3
 		MEAN1(I) = USUM(I)
-		MEAN2(I) = MEAN1(I)
 	        DO J=1,3
 		   STRESS1(I,J) = UUSUM(I,J)-USUM(I)*USUM(J)
-		   STRESS2(I,J) = STRESS1(I,J)
 		ENDDO
              ENDDO
 	 ENDIF
@@ -525,6 +532,7 @@ C apply it to raw data
 	    CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
      &                 Gmean, GTolMean, GCov, GTolCov, MIndep, CIndep,
      &                 Mok, Cok)
+            IF (DoClassic) THEN
 	    dPitch1 = (1/(1+(GMean(3)/GMean(1))**2))*
      &              abs(GMean(3)/GMean(1))*
      &              (abs(GTolMean(1)/GMean(1)) + 
@@ -585,6 +593,8 @@ C	    CALL ECRoll(MEAN2, 3, 3, STRESS2, 30.0D0, Roll1)
             dYaw1 = dYaw1*(180.0/Pi)
             dPitch1 = dPitch1*(180.0/Pi)
             dRoll1 = dRoll1*(180.0/Pi)
+C End of DoClassic
+         ENDIF 
 	 ELSE
 	    DO I=1,3
 	       MEAN2(I) = DUMMY
@@ -605,6 +615,7 @@ C	    CALL ECRoll(MEAN2, 3, 3, STRESS2, 30.0D0, Roll1)
          WRITE(OutFile,*) 'Alpha   Beta    Gamma WBias Swing'
          WRITE(OutFile, 60)  RAlpha,RBeta,RGamma,RWBias,Swing
          WRITE(PlfFile, 61) (StartTime(i),i=1,3), (StopTime(i),i=1,3),
+     &                       M, (Mok(i),i=1,3),
      &                       Alpha,Beta,Gamma,WBias,
      &                       RAlpha,RBeta,RGamma,RWBias,Swing,
      &                       (MEAN1(ii), ii=1,3),
@@ -614,8 +625,8 @@ C	    CALL ECRoll(MEAN2, 3, 3, STRESS2, 30.0D0, Roll1)
      &                       ((STRESS2(ii,jj), jj=1,3), ii=1,3),
      &                       dYaw1, dPitch1, dRoll1
  60      FORMAT(3(F10.2,1X),F10.4,1X,F10.1)
- 61      FORMAT(6(F10.0,1X),39(G14.6:,1X))
- 62      FORMAT('#', 6(A10,1X), 39(A14,1X))
+ 61      FORMAT(6(F10.0,1X),4(I10,1x),39(G14.6:,1X))
+ 62      FORMAT('#', 6(A10,1X), 43(A14,1X))
       ENDDO
  1100 CONTINUE
       CLOSE(IntervalFile)

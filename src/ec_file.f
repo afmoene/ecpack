@@ -488,7 +488,8 @@ C
      &        XTYPE,      ! number type of variable
      &        VARDIMS,    ! # of dimensions for variable
      &        DIMIDS(NF_MAX_VAR_DIMS), ! IDs of dimensions
-     &        NATTS       ! # of attributes
+     &        NATTS,      ! # of attributes
+     &        DIMLEN      ! length of a dimension   
       INTEGER I, J, K
       INTEGER NMax,N,MMax,M,Delay(NMax),HMStart,HMStop,Counter
       REAL Dum
@@ -574,27 +575,39 @@ C
       IF (.NOT. OK) STOP
 
 C
+C Check whether data have samples
+C
+      DO I=1,NMax
+        IF (NCVarID(I) .NE. 0) THEN
+            STATUS = NF_INQ_VAR(NCID,NCVARID(I),
+     &                          NAME,XTYPE,VARDIMS,DIMIDS,NATTS)
+            IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
+            STATUS = NF_INQ_DIMLEN(NCID, DIMIDS(1), DIMLEN)
+            IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
+	    IF (DIMLEN .LT. 1) THEN
+               WRITE(*,5120) NCVarName(I)(:EC_G_STRLEN(NCVarName(I)))
+               STATUS = NF_CLOSE(NCID)
+               IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
+               RETURN
+	    ENDIF
+        ENDIF
+      ENDDO
+ 5120 FORMAT('ERROR: no samples in variable ',A)
+      
+
+C
 C Find start and stop index in file
 C
       DOYStart = ANINT(StartTime(1))
       DOYStop = ANINT(StopTime(1))
-      IF (NCVarID(Sec) .GT. 0) THEN
-         CALL EC_NCDF_FINDTIME(DoyStart, HMSTART, NCID, NCVarID(Doy),
-     +                 NCVarID(HourMin),
-     +                 NCVarID(Sec),
-     +                 STARTIND)
-         CALL EC_NCDF_FINDTIME(DoyStop, HMSTOP, NCID, NCVarID(Doy),
-     +                 NCVarID(HourMin),
-     +                 NCVarID(Sec),
-     +                 STOPIND)
-      ELSE
-         CALL EC_NCDF_FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
+C For security: always use time search routine without seconds:
+C is more robust
+      CALL EC_NCDF_FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
      +                 NCVarID(HourMin),
      +                 STARTIND)
-         CALL EC_NCDF_FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(Doy),
+      CALL EC_NCDF_FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(Doy),
      +                 NCVarID(HourMin),
      +                 STOPIND)
-      ENDIF
       NSAMPLE = STOPIND - STARTIND
       IF ((STARTIND .EQ. -1) .OR. (STOPIND .EQ. -1))  NSAMPLE = 0
       IF ((NSAMPLE .EQ. 0) .OR.

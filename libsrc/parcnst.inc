@@ -41,7 +41,7 @@ C Constants used for maximum array dimensions
 C
       INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder
 
-      PARAMETER(MMMax  = 50000) ! Maximum number of samples allowed
+      PARAMETER(MMMax = 100000) ! Maximum number of samples allowed
       PARAMETER(NNNMax	  = 13) ! Maximum number of uncalibrated quantities in 1 sample
       PARAMETER(NNMax	  =  8) ! Maximum number of calibrated quantities in 1 sample
       PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]

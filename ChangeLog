@@ -105,4 +105,13 @@ Revision 1.23: October 31, 2001
           - in ECReadNetCDF: now handle correctly the situation
 	    when there are no samples in the file
           - removed HAVE_UNCAL from argument list of ECYaw
+Revision 2.00: November 1, 2001
+          - Routines have been renamed and grouped in appropriate files
+	  - A start has been made to separate different functions in 
+	    corrections: calculate correction and subsequently apply it.
+Revision 2.01: February 13, 2002
+          - Now empty NetCDF files are dealt with correctly (empty
+	    in the sense of: no samples).
+          - Maximum number of samples is jumped to 100000. This allows
+	    analysis of 83 minutes of data sampled at 20 Hz.
 
