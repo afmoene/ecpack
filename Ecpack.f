@@ -1,5 +1,8 @@
 C Changes:
 C 14-09-1999: Arnold Moene: changed check on time in reading of netcdf data
+C 14-09-1999: Wouter Meijninger: added Rho in calculation of LvE
+C            (subroutine ECFlux); we use RhoSon for the moment, since
+C             that will be available always.
 C###########################################################################
 C
 C
@@ -960,9 +963,9 @@ C
 C
 C Latent heat flux [W m^{-2}]
 C
-      LvE = Lv*Cov(W,Humidity)
-      dLvE = Lv*TolCov(W,Humidity)
-      LvEWebb = Lv*Mean(W)*Mean(Humidity)
+      LvE = Lv*RhoSon*Cov(W,Humidity)
+      dLvE = Lv*RhoSon*TolCov(W,Humidity)
+      LvEWebb = Lv*RhoSon*Mean(W)*Mean(Humidity)
 C
 C These few statements are eliminated to make sure that the
 C error in the mean velocity is NOT YET taken into the error
