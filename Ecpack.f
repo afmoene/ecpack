@@ -3,13 +3,13 @@ C###########################################################################
 C
 C
 C
-C      EEEEE	   CCCC        PPPPP	       A	        CCCC   K    K
-C      E	       C    C	      P    P      A A       C    C  K   K
-C      E	      C		         P     P    A   A     C	      K  K
-C      EEEE	   C    	  ------ PPPPPP    A	    A    C	      K K
-C      E        C		         P	      AAAAAAAAA   C	      KK K
-C      E	        C    C	      P	     A	      A   C    C  K   K
-C      EEEEE	   CCCC 	      P      A	          A   CCCC   K    K
+C      EEEEE   CCCC        PPPPP        A         CCCC   K    K
+C      E      C    C       P    P      A A       C    C  K   K
+C      E      C	           P     P    A   A     C	 K  K
+C      EEEE   C     ------ PPPPPP    A     A    C	 K K
+C      E      C		   P	    AAAAAAAAA   C	 KK K
+C      E      C    C	   P	   A         A   C    C  K   K
+C      EEEEE   CCCC 	   P      A	      A   CCCC   K    K
 C
 C	     Library for processing Eddy-Correlation data
 C     EC Special Interest Group of Wag-UR-METAIR Wageningen and KNMI
@@ -2458,6 +2458,562 @@ C
       END
 
 
+C
+C ########################################################################
+C
+C Planar fit method for tiltcorrection
+C
+C ########################################################################
+C
+
+
+
+      SUBROUTINE PlanarFit(uMean, NRuns,Apf,Alpha,Beta,Gamma,WBias)
+C
+C Subroutine performs tilt correction of Sonic data, using Planar Fit
+C Method, as described in James M. Wilczak et al (2001), 'Sonic
+C Anemometer tilt correction algorithms', Boundary Meteorology 99: 127:150
+C References to formulae are to this article
+C The planar fit matrix is extended with an additional yaw-correction
+C to turn the first coordinate into the direction of the mean wind
+C over all runs. This extra rotation makes results from different
+C eddy-covariance systems comparable.
+C
+C Input: uMean : NRuns x 3 matrix of run mean velocity vectors, where
+C        NRuns : the number of runs
+C Output: Apf  : The planar fit 3*3 untilt-matrix
+C        Alpha : tiltangle alpha in degrees
+C        Beta  : tiltangle beta in degrees
+C        Gamma : Fixed yaw-angle in degrees associated with mean over all runs
+C        WBias : The bias in the vertical velocity
+C
+      INTEGER i,j,k,NRuns,UmeanMax
+c     REAL*8 uMean(NRuns,3),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
+      REAL*8 uMean(3, Nruns),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
+     &  UUSum(3,3)
+C
+C Make all sums of mean velocity components and of products of
+C mean velocity components in relation W.48
+C
+c     write(*,*) Umean(1,1),Umean(1,2), Umean(1,3),
+c    &           Umean(1,Nruns), Umean(2,Nruns), Umean(3,Nruns)
+      DO i=1,3
+        USum(i) = 0.D0
+	DO j=1,3
+	  UUSum(i,j) = 0.D0
+	ENDDO
+      ENDDO
+
+      DO k=1,NRuns
+	DO i=1,3
+          USum(i) = USum(i) + UMean(i,k)
+	  DO j=1,3
+	    UUSum(i,j) = UUSum(i,j) + UMean(i,k)*UMean(j,k)
+	  ENDDO
+	ENDDO
+      ENDDO
+      DO i=1,3
+c	USum(i) = USum(i)/NRuns
+	USum(i) = USum(i)
+	DO j=1,3
+c	  UUSum(i,j) = UUSum(i,j)/NRuns
+	  UUSum(i,j) = UUSum(i,j)
+	ENDDO
+      ENDDO
+C
+C Call to slave-routine for details
+C
+      CALL PFit(uSum,UUSum,Apf,Alpha,Beta,Gamma,WBias)
+
+      END
+
+
+
+
+
+
+      SUBROUTINE PFit(uSum,UUSum,Apf,Alpha,Beta,Gamma,WBias)
+C
+C Supportive routine for planar fit method for tilt-correction
+C
+      REAL*8 b(0:2),S(3,3),SInv(3,3),x(3),Apf(3,3),
+     &  Sqrt1,Sqrt2,Alpha,Beta,SinAlpha,SinBeta,CosAlpha,CosBeta,Pi,
+     &  Gamma,WBias,SinGamma,CosGamma,UHor,Yaw(3,3),USum(3),UUSum(3,3)
+
+      Pi = 4.D0*ATAN(1.D0)
+C
+C Make matrix in relation W.48
+C
+      S(1,1) = 1.D0
+      S(1,2) = USum(1)
+      S(1,3) = USum(2)
+      S(2,1) = USum(1)
+      S(2,2) = UUSum(1,1)
+      S(2,3) = UUSum(1,2)
+      S(3,1) = USum(2)
+      S(3,2) = UUSum(1,2)
+      S(3,3) = UUSum(2,2)
+C
+C Invert this matrix
+C
+      CALL ECInvM(S,Sinv)
+C
+C Make RHS of relation W.48
+C
+      x(1) = USum(3)
+      x(2) = UUSum(1,3)
+      x(3) = UUSum(2,3)
+C
+C Calculate coefficients b0, b1 and b2 in relation W.48
+C
+      CALL ECMapVec(SInv,x,b(0))
+C
+C Find the bias in the vertical velocity via relation W.39
+C
+      WBias = b(0)
+C
+C Construct the factors involved in the planar angles
+C
+      Sqrt1 = SQRT(b(2)*b(2)+1)
+      Sqrt2 = SQRT(b(1)*b(1)+b(2)*b(2)+1)
+C
+C Planar tilt angles alpha and beta in relation W.44
+C
+      SinAlpha = -b(1)/Sqrt2
+      CosAlpha = Sqrt1/Sqrt2
+      SinBeta = b(2)/Sqrt1
+      CosBeta = 1.D0/Sqrt1
+
+      Alpha = 180.D0/Pi*ATAN2(SinAlpha,CosAlpha)
+      Beta = 180.D0/Pi*ATAN2(SinBeta,CosBeta)
+C
+C Planar (un-)tilt matrix P from relation W.36
+C
+      Apf(1,1) = CosAlpha
+      Apf(1,2) = SinAlpha*SinBeta
+      Apf(1,3) = -SinAlpha*CosBeta
+      Apf(2,1) = 0.D0
+      Apf(2,2) = CosBeta
+      Apf(2,3) = SinBeta
+      Apf(3,1) = SinAlpha
+      Apf(3,2) = -CosAlpha*SinBeta
+      Apf(3,3) = CosAlpha*CosBeta
+C
+C Additional yaw-correction to align the first coordinate axis with
+C the mean velocity over all runs according to relation W.45
+C
+      CALL ECMapVec(Apf,USum,USum)
+
+      UHor = ((USum(1))**2+(USum(2))**2)**0.5
+      SinGamma = USum(2)/UHor
+      CosGamma = USum(1)/UHor
+      Gamma = 180.D0*ACOS(CosGamma)/PI
+      IF (SinGamma.LT.0.D0) Gamma = 360.D0-Gamma
+      IF (Gamma.GT.180.D0) Gamma = Gamma-360.D0
+
+      Yaw(1,1) = CosGamma
+      Yaw(1,2) = SinGamma
+      Yaw(1,3) = 0.D0
+      Yaw(2,1) = -SinGamma
+      Yaw(2,2) = CosGamma
+      Yaw(2,3) = 0.D0
+      Yaw(3,1) = 0.D0
+      Yaw(3,2) = 0.D0
+      Yaw(3,3) = 1.D0
+
+      CALL ECMMul(Yaw,Apf,Apf)
+
+      END
+
+
+
+
+
+
+C
+C ########################################################################
+C
+C This is a bundle of simple mathematics routines
+C
+C ########################################################################
+C
+
+
+
+
+
+      SUBROUTINE mulvec(x,y)
+      REAL*8 x(3),y
+      INTEGER I
+      DO I=1,3
+         x(I) = x(I)*y
+      END DO
+      RETURN
+      END
+
+
+
+
+      SUBROUTINE DSWAP(x,y)
+C     Interchanges x and y
+      REAL*8 x,y,dum
+      dum = x
+      x = y
+      y = dum
+      RETURN
+      END
+
+      SUBROUTINE ISWAP(x,y)
+C     Interchanges x and y
+      INTEGER x,y,dum
+      dum = x
+      x = y
+      y = dum
+      RETURN
+      END
+
+      SUBROUTINE sortdecr(x,permutation)
+C     Sorts the elements of vector x in decreasing order;
+C     permutation needed is returned as well
+      REAL*8 x(3)
+      INTEGER permutation(3),I,J
+      permutation(1) = 1
+      permutation(2) = 2
+      permutation(3) = 3
+      DO I = 1,2
+         DO J = (I+1),3
+            IF (x(J).GT.x(I)) THEN
+               CALL DSWAP(x(I),x(J))
+               CALL ISWAP(permutation(I),permutation(J))
+            END IF
+         END DO
+      END DO
+      RETURN
+      END
+
+      SUBROUTINE sortuse(x,permutation)
+C     Reorders the elements of x according to permutation
+      REAL*8 x(3),dum(3)
+      INTEGER permutation(3),I
+      DO I=1,3
+         dum(I) = x(I)
+      END DO
+      DO I=1,3
+         x(I) = dum(permutation(I))
+      END DO
+      RETURN
+      END
+
+      SUBROUTINE unsort(x,permutation)
+C     Unsorts the elements of x originally sorted using permutation
+      REAL*8 x(3),dum(3)
+      INTEGER permutation(3),I
+      DO I=1,3
+         dum(I) = x(I)
+      END DO
+      DO I=1,3
+         x(permutation(I)) = dum(I)
+      END DO
+      RETURN
+      END
+
+      SUBROUTINE ell1Q(phi,alpha,ff,ee)
+C     Calculates the elliptic integrals F(Phi\Alpha) and
+C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
+C     as described in Abramowitz and Stegun, 17.6 (Numbers in
+C     text refer to equations in A&S). Only ok for first quadrant
+      REAL*8 phi,alpha,ff,ee,a,b,aprev,bprev,edum,eedum
+     &   ,c(0:9),psi(0:9),PI,epsilon
+      INTEGER It
+      PARAMETER (epsilon = 1.D-15)
+      PI = 2.D0*DASIN(1.D0)
+      It = 0
+C     A&S: 17.6.2:
+      aprev = 1.D0
+C     A&S: 17.6.2:
+      bprev = DCOS(alpha)
+C     A&S: 17.6.2:
+      c(0) = DSIN(alpha)
+C     A&S: 17.6.8:
+      psi(0) = phi
+      edum = c(0)*c(0)
+      eedum = 0.D0
+      DO WHILE (DABS(c(It)).GT.epsilon)
+         It      = It + 1
+C        A&S: 17.6.1:
+         a       = (aprev + bprev) / 2.D0
+C        A&S: 17.6.1:
+         b       = DSQRT(aprev * bprev)
+C        A&S: 17.6.1:
+         c(It)   = (aprev - bprev) / 2.D0
+C        A&S: 17.6.8:
+         psi(It) = psi(It-1) + DATAN(TAN(psi(It-1))*bprev/aprev)
+         psi(It) = psi(It) + PI*DINT((2.D0*psi(It-1)-psi(It))/PI+.5D0)
+C        A&S: 17.6.4:
+         edum    = edum  + c(It)*c(It)*2.D0**It
+C        A&S: 17.6.10:
+         eedum   = eedum + c(It)*DSIN(psi(It))
+         aprev   = a
+         bprev   = b
+      END DO
+C     A&S: 17.6.9:
+      ff = psi(It)/(a*(2.D0**DBLE(It)))
+C     A&S: 17.6.10:
+      ee = eedum + ff*(1.D0-edum/2.D0)
+      RETURN
+      END
+
+      SUBROUTINE ellint(phi,alpha,ff,ee)
+C     Calculates the elliptic integrals F(Phi\Alpha) and
+C     E(Phi\Alpha) using the Arithmetic-Geometric Mean process
+C     as described in Abramowitz and Stegun, 17.6 (Numbers in
+C     text refer to equations in A&S). ok for all angles.
+      REAL*8 phi,alpha,ff,ee,ffcomp,eecomp,PI
+      INTEGER SignArg, Wind
+      PI = 2.D0*DASIN(1.D0)
+      Wind = IDNINT(phi/PI)
+      phi = phi - Wind*PI
+      IF (Wind .NE. 0) THEN
+        CALL ell1Q(0.5D0*PI,alpha,ffcomp,eecomp)
+      ELSE
+        ffcomp = 0.D0
+        eecomp = 0.D0
+      END IF
+      SignArg = INT(DSIGN(1.D0,phi))
+      CALL ell1Q(DABS(phi),alpha,ff,ee)
+C     A&S: 17.4.3:
+      ff = SignArg*ff + 2.D0*Wind*ffcomp
+C     A&S: 17.4.3:
+      ee = SignArg*ee + 2.D0*Wind*eecomp
+      RETURN
+      END
+
+      SUBROUTINE ABCForm(a,b,c,Root1, Root2, AllReal)
+C     Solves ax^2 + bx + c = 0
+      INTEGER Re, Im
+      PARAMETER(Re = 1, Im = 2)
+      REAL*8 a, b, c, Discrim, Root1(Re:Im), Root2(Re:Im)
+      LOGICAL AllReal
+      Root1(Re) = 0.D0
+      Root1(Im) = 0.D0
+      Root2(Re) = 0.D0
+      Root2(Im) = 0.D0
+      Discrim = b*b - 4.D0*a*c
+      AllReal = (Discrim .GE. 0.D0)
+      IF (AllReal) THEN
+        Root1(Re) = (-b + DSQRT(Discrim)) / (2.D0*a)
+        Root2(Re) = (-b - DSQRT(Discrim)) / (2.D0*a)
+      ELSE
+        Root1(Re) = -b/(2.D0*a)
+        Root2(Re) =  Root1(Re)
+        Root1(Im) =  DSQRT(-Discrim)/(2.D0*a)
+        Root2(Im) = -Root1(Im)
+      END IF
+      RETURN
+      END
+
+      SUBROUTINE Cardano(Poly, Root, AllReal)
+C Uses the Cardano solution to solve exactly: ax^3 + bx^2 + cx + d = 0
+C See e.g. Abramowitz and Stegun. Here "a" is not allowed to be zero.
+      INTEGER Re, Im
+      PARAMETER(Re = 1, Im = 2)
+      REAL*8 Poly(0:3), a(0:2), q, r, Discrim, t1, t2,
+     &  s1(Re:Im), s2(Re:Im), Root(Re:Im,3), Radius, Phi
+      LOGICAL AllReal
+      INTEGER i
+      Root(Im,1) = 0.D0
+      Root(Im,2) = 0.D0
+      Root(Im,3) = 0.D0
+      DO i = 0,2
+        a(i) = Poly(i)/Poly(3)
+      ENDDO
+      Root(Re,1) = -a(2)/3.D0
+      Root(Re,2) = Root(Re,1)
+      Root(Re,3) = Root(Re,1)
+      q = a(1)/3.D0 - (a(2)*a(2))/9.D0
+      r = (a(1)*a(2) - 3.D0*a(0))/6.D0 - a(2)*a(2)*a(2)/27.D0
+      Discrim = q*q*q + r*r
+      AllReal = (Discrim .LE. 0.D0)
+      IF (.NOT. AllReal) THEN
+        t1 = r + DSQRT(Discrim)
+        t2 = r - DSQRT(Discrim)
+        s1(Re) = DSIGN(1.D0,t1)*DABS(t1)**(1.D0/3.D0)
+        s2(Re) = DSIGN(1.D0,t2)*DABS(t2)**(1.D0/3.D0)
+        Root(Re,1) =  Root(Re,1) +  s1(Re) + s2(Re)
+        Root(Re,2) =  Root(Re,2) - (s1(Re) + s2(Re))/2.D0
+        Root(Im,2) =  (DSQRT(3.D0)/2.D0) * (s1(Re) - s2(Re))
+        Root(Re,3) =  Root(Re,2)
+        Root(Im,3) = -Root(Im,2)
+      ELSE IF ((Discrim .LT. 0.D0) .OR. (DABS(r) .GT. 1.D-15)) THEN
+        Radius = DSQRT(r*r - Discrim)
+        Phi = DACOS(r/Radius)/3.D0
+        Radius = Radius**(1.D0/3.D0)
+        s1(Re) = Radius * DCOS(Phi)
+        s1(Im) = Radius * DSIN(Phi)
+        Root(Re,1) = Root(Re,1) + 2.D0*s1(Re)
+        Root(Re,2) = Root(Re,2) - s1(Re) - DSQRT(3.D0)*s1(Im)
+        Root(Re,3) = Root(Re,3) - s1(Re) + DSQRT(3.D0)*s1(Im)
+      END IF
+      RETURN
+      END
+
+
+
+
+
+
+
+      SUBROUTINE EllCoords(x,b,y,DyDx)
+C Calculate the elliptic coordinates (Lambda, Mu, Nu) plus
+C derivatives Dy[i]/Dx[j] corresponding to the Carthesian coordinates
+C (x[1], x[2], x[3]) for an ellipsoid with semiaxes (b[1], b[2], b[3])
+C with b[1]>b[2]>b[3]. Procedure cannot handle points at coordinateplanes.
+C Outside the ellipsoid the elliptic coordinates satisfy:
+C -b[1]^2 < Nu < -b[2]^2 < Mu < -b[3]^2 < 0 < Lambda.  See e.g. :
+C "Einfuehrung in die Kurven- und Flaechentheorie auf vektorieller
+C Grundlage" by C.F. Baeschlin, Orell Fuessli Verlag, Zuerich, 1947,
+C but mind that there the elliptic coordinates differ from ours.
+       INTEGER Re,Im,Lambda,Mu,Nu
+       PARAMETER(Re=1,Im=2,Lambda=1,Mu=2,Nu=3)
+      REAL*8 x(3), b(3), y(3), DyDx(3,3),Poly(0:3),
+     &  Root(Re:Im,3),SQR
+      INTEGER i,j
+      LOGICAL AllReal
+C First check if the semiaxes are in decreasing order and if the point x
+C is not on a coordinate plane
+      IF (.NOT. ((b(1) .GE. b(2)) .AND. (b(2) .GE. b(3))))
+     &  WRITE(*,*) 'Ellipsoid not properly oriented!!!!!!'
+      IF (ABS(x(1)*x(2)*x(3)) .LT. 1.D-10*b(3))
+     &  WRITE(*,*) 'Sorry : No elliptic coordinates here!!!!'
+C Construct the coefficients of the third order equation for the elliptic
+C coordinates
+      Poly(3) = -1.D0
+      Poly(2) = SQR(x(1))+SQR(x(2))+SQR(x(3))
+     &         -SQR(b(1))-SQR(b(2))-SQR(b(3))
+      Poly(1) = SQR(x(1))*(SQR(b(2))+SQR(b(3)))-SQR(b(1)*b(2))+
+     &          SQR(x(2))*(SQR(b(1))+SQR(b(3)))-SQR(b(1)*b(3))+
+     &          SQR(x(3))*(SQR(b(1))+SQR(b(2)))-SQR(b(2)*b(3))
+      Poly(0) = SQR(x(1)*b(2)*b(3)) + SQR(x(2)*b(1)*b(3)) +
+     &          SQR(x(3)*b(1)*b(2)) - SQR(b(1)*b(2)*b(3))
+C Solve this cubic equation
+      CALL Cardano(Poly, Root, AllReal)
+      IF (.NOT.(AllReal))
+     &  WRITE(*,*) 'Error in finding elliptic coordinates!!!'
+      DO i=1,3
+        y(i) = Root(Re,i)
+      END DO
+C Put the elliptic coordinates in correct order and check if they satisfy
+C the relation given in the header
+      DO i=1,2
+        DO j=(i+1),3
+          IF (y(j) .GT. y(i)) CALL DSwap(y(i),y(j))
+        END DO
+      END DO
+      IF (.NOT.((-SQR(b(1)) .LT. y(Nu)).AND.(y(Nu) .LT. -SQR(b(2)))
+     &     .AND.(-SQR(b(2)) .LT. y(Mu)).AND.(y(Mu) .LT. -SQR(b(3)))
+     &     .AND.(0.D0 .LT. y(Lambda))))
+     &  WRITE(*,*) 'ERROR!!! in determination of elliptic coordinates'
+C Calculate the derivative Dy[i]/Dx[j] of the elliptic coordinates to the
+C Carthesian coordinates
+      DO i=1,3
+        DO j=1,3
+          DyDx(j,i) = 2.D0*x(j)*
+     &  (SQR(b(MOD(j    ,3) + 1)) + y(i)) *
+     &  (SQR(b(MOD((j+1),3) + 1)) + y(i)) /
+     &  ((y(i) - y(MOD(i,3) + 1)) * (y(i) - y(MOD((i+1),3)+1)))
+        END DO
+      END DO
+      END
+
+
+
+
+
+
+      REAL*8 FUNCTION SQR(x)
+C     Give the square of x
+      REAL*8 x
+      SQR = x*x
+      END
+
+
+
+
+
+
+
+
+
+
+      SUBROUTINE ECMMul(a,b,c)
+C     Matrix C is product of 3*3-matrices A and B
+      INTEGER I, J, K
+      REAL*8 A(3,3),B(3,3),C(3,3),Dum(3,3)
+      DO I=1,3
+	DO J=1,3
+	  Dum(i,j)=0.D0
+	  DO K=1,3
+	     Dum(I,J) = Dum(I,J) + A(I,K)*B(K,J)
+	  END DO
+	END DO
+      END DO
+      DO I=1,3
+	DO J=1,3
+	  c(I,J)=Dum(I,J)
+	END DO
+      END DO
+      RETURN
+      END
+
+
+
+      REAL*8 FUNCTION ECDeterm(x)
+C
+C     Give determinant of real 3*3-matrix
+C
+      REAL*8 x(3,3)
+      ECDeterm = x(1,1)*(x(2,2)*x(3,3)-x(2,3)*x(3,2))
+     &        -x(2,1)*(x(1,2)*x(3,3)-x(1,3)*x(3,2))
+     &        +x(3,1)*(x(1,2)*x(2,3)-x(1,3)*x(2,2))
+      END
+
+
+
+
+
+
+      SUBROUTINE ECInvM(a, aInv)
+C
+C     Find the inverse of real 3*3 matrix "a"
+C
+      REAL*8 a(3,3), aInv(3,3), Dum(3,3), Det, ECDeterm
+      INTEGER i, j
+      Det = ECDeterm(a)
+      IF (DABS(Det) .LT. 1.D-20)
+     &    WRITE(*,*) ' Sorry, cannot invert matrix!'
+      Dum(1,1) =  (a(2,2)*a(3,3)-a(2,3)*a(3,2))/Det
+      Dum(2,1) = -(a(2,1)*a(3,3)-a(2,3)*a(3,1))/Det
+      Dum(3,1) =  (a(2,1)*a(3,2)-a(2,2)*a(3,1))/Det
+      Dum(1,2) = -(a(1,2)*a(3,3)-a(1,3)*a(3,2))/Det
+      Dum(2,2) =  (a(1,1)*a(3,3)-a(1,3)*a(3,1))/Det
+      Dum(3,2) = -(a(1,1)*a(3,2)-a(1,2)*a(3,1))/Det
+      Dum(1,3) =  (a(1,2)*a(2,3)-a(1,3)*a(2,2))/Det
+      Dum(2,3) = -(a(1,1)*a(2,3)-a(1,3)*a(2,1))/Det
+      Dum(3,3) =  (a(1,1)*a(2,2)-a(1,2)*a(2,1))/Det
+      DO i = 1,3
+        DO j = 1,3
+          aInv(j,i) = Dum(j,i)
+        END DO
+      END DO
+      RETURN
+      END
+
+
+
+
+
+
+
 
 
 
@@ -2497,11 +3053,16 @@ C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
 C Purpose :
-C Calculates the image of "x" under the map "a"; y(i) = a(ji)x(j)
+C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
 C
 C input : a : REAL*8 (3,3) : the mapping matrix
 C	  x : REAL*8 (3)   : the vector to be mapped
 C output : y : REAL*8 (3)  : the image of the map
+c
+C Revision: June 21, 2001:
+C    - indices i and j have been interchanged. In the routines that
+C      use ECMapVec implicitly (ECKRoll, ECKYaw and ECKPitch) the
+C      mappings have been changed accordingly
 C
       IMPLICIT NONE
 
@@ -2514,7 +3075,7 @@ C
 
       DO I=1,3
 	DO J=1,3
-	  Dum(I) = Dum(I) + a(J,I)*x(J)
+	  Dum(I) = Dum(I) + a(I,J)*x(J)
 	ENDDO
       ENDDO
 
@@ -2555,6 +3116,11 @@ C input : a : REAL*8 (3,3) : the mapping matrix
 C	  x : REAL*8 (3,3) : the tensor to be mapped
 C output : y : REAL*8 (3,3) : the image of the map
 C
+C Revision: June 21, 2001: 
+C     - indices i and j in the mapping  have
+C       been interchanged. This has also been done in the
+C       routines that used ECMapMtx (ECRotate)
+C
       IMPLICIT NONE
 
       REAL*8 a(3,3),x(3,3),y(3,3),Dum(3,3)
@@ -2570,7 +3136,7 @@ C
 	 DO J=1,3
 	    DO K=1,3
 	       DO L=1,3
-		  Dum(J,I) = Dum(J,I) + a(K,I)*a(L,J)*x(L,K)
+		  Dum(I,J) = Dum(I,J) + a(I,K)*a(J,L)*x(K,L)
 	       ENDDO
 	    ENDDO
 	 ENDDO
@@ -2578,7 +3144,7 @@ C
 
       DO I=1,3
 	 DO J=1,3
-	    y(J,I) = Dum(J,I)
+	    y(I,J) = Dum(I,J)
 	 ENDDO
       ENDDO
 
@@ -2759,9 +3325,9 @@ C
       CosPhi = COS(PI*Direction/180.D0)
 
       Yaw(1,1) = CosPhi
-      Yaw(1,2) = -SinPhi
+      Yaw(1,2) = SinPhi
       Yaw(1,3) = 0.D0
-      Yaw(2,1) = SinPhi
+      Yaw(2,1) = -SinPhi
       Yaw(2,2) = CosPhi
       Yaw(2,3) = 0.D0
       Yaw(3,1) = 0.D0
@@ -2852,11 +3418,11 @@ C
 
       Pitch(1,1) = CosTheta
       Pitch(1,2) = 0.D0
-      Pitch(1,3) = -SinTheta
+      Pitch(1,3) = SinTheta
       Pitch(2,1) = 0.D0
       Pitch(2,2) = 1.D0
       Pitch(2,3) = 0.D0
-      Pitch(3,1) = SinTheta
+      Pitch(3,1) = -SinTheta
       Pitch(3,2) = 0.D0
       Pitch(3,3) = CosTheta
 
@@ -2945,9 +3511,9 @@ C
       Roll(1,3) = 0.D0
       Roll(2,1) = 0.D0
       Roll(2,2) = CosRoll
-      Roll(2,3) = -SinRoll
+      Roll(2,3) = SinRoll
       Roll(3,1) = 0.D0
-      Roll(3,2) = SinRoll
+      Roll(3,2) = -SinRoll
       Roll(3,3) = CosRoll
 
       CALL ECRotate(Mean,NMax,N,Cov,Roll)
@@ -3525,6 +4091,155 @@ C
 
       RETURN
       END
+
+
+
+C
+C ########################################################################
+C
+C
+C     This file provides the matrix for the correction of
+C     turbulent air flow measurements for the presence of
+C     small disturbing objects, like a box with electronic
+C     apparatus. The approach followed is described in:
+C     "Flow distortion by an ellipsoid and its application
+C     to atmpspheric measurements" by W.A. Oost, May 1989,
+C     KNMI internal report, accepted by J.Atm.Oc.Tech.,'90.
+C     References in the code are to this article.
+C
+C
+C ########################################################################
+C
+
+C
+C The generic call is to the following subroutine:
+C
+      SUBROUTINE DistCorMatrix(x,b,aInv)
+C
+C Input: x : Position vector of the point where measurements have been taken.
+C            The ellipsoid is placed in the origin.
+C            A right-handed frame of coordinates is chosen.
+C            The flow is supposed to be expressed in this coordinate frame.
+C            Therefore, when the flow velocity has positive components,
+C            upstream measurement points are selected when by giving
+C            vector x negative components!
+C        b : Three ellipsoid semi-axes in meters. The ellipsoid is
+C            supposed to be oriented along the coordinate axes.
+C            Somehow the algorithm does not seem to like it when two or more
+C            semi-axes are equal, or when your point x is in one of the
+C            coordinate planes (one component of x equal to zero).
+C            To circumvent problems one can take values slightly off
+C            the problematic values.
+C Output: aInv : The matrix which can be used to correct samples and
+C            covariances for flow distortion.
+C            Sum_j aInv(i,j)*u(j)     gives the distortion-corrected
+C            image of measured velocity u.
+C
+      REAL*8 x(3),b(3),a(3,3),aInv(3,3)
+      CALL distmx(x,b,a)
+      CALL ECInvM(a,aInv)
+      RETURN
+      END
+C
+C All following procedures and functions are implementations of the details
+C
+      SUBROUTINE specint(lambda,b,integral)
+C
+C     Calculates the integrals at the bottom of page seven
+C     \INT_(\lambda)^(\infty) \frac{dq}{{b_{i}^{2}+q}k_{q}}
+C     References "G&R" in the code are to Gradshteyn and Ryzhik:
+C     Tables of Integrals, Series and Products, 4th ed.,Ac. Press,'65
+C
+      REAL*8 lambda,b(3),integral(3),phi,alpha,ff,ee,dum1
+     &   ,dum2,dum3,dum4,dum5,epsilon,PI
+      PARAMETER (epsilon = 1.D-18)
+      PARAMETER (PI = 0.31415926535897929170D+01)
+      IF (DABS(b(1)-b(2)).LT.epsilon) THEN
+         dum1 = ((b(1)**2-b(3)**2)**-(1.5D0))*(PI/2.D0
+     &   -DATAN(DSQRT((b(3)**2+lambda)/(b(1)**2-b(3)**2))))
+         integral(1) = -DSQRT(b(3)**2+lambda)/((b(1)**2-b(3)**2)*
+     &      (b(1)**2+lambda))+dum1
+         integral(2) = integral(1)
+         integral(3) = 2.D0/((b(1)**2+lambda)*DSQRT(b(3)**2+lambda))
+     &      -2.D0*integral(1)
+      ELSE IF (DABS(b(2)-b(3)).LT.epsilon) THEN
+         dum1 = ((b(1)**2-b(3)**2)**-(1.5D0))*
+     &      DLOG((DSQRT(b(1)**2+lambda)
+     &      -DSQRT(b(1)**2-b(3)**2))**2/(lambda+b(3)**2))
+         integral(1) = -2.D0/((b(1)**2-b(3)**2)*DSQRT(b(1)**2+lambda))
+     &      -dum1
+         integral(2) = DSQRT(b(1)**2+lambda)/((b(1)**2-b(3)**2)*
+     &      (b(3)**2+lambda)) + 0.5D0*dum1
+         integral(3) = integral(2)
+      ELSE
+C        alpha and phi : G&R 3.13
+         phi   = DASIN(DSQRT((b(1)**2-b(3)**2)/(b(1)**2+lambda)))
+         alpha = DASIN(DSQRT((b(1)**2-b(2)**2)/(b(1)**2-b(3)**2)))
+         CALL ellint(phi,alpha,ff,ee)
+         dum1 = 2.D0/((b(1)**2-b(2)**2)*DSQRT(b(1)**2-b(3)**2))
+         dum2 = 2.D0*DSQRT(b(1)**2-b(3)**2)/
+     &          ((b(1)**2-b(2)**2)*(b(2)**2-b(3)**2))
+         dum3 = 2.D0/(b(2)**2-b(3)**2)*DSQRT((b(3)**2+lambda)/
+     &          ((b(1)**2+lambda)*(b(2)**2+lambda)))
+         dum4 = 2.D0/((b(3)**2-b(2)**2)*DSQRT(b(1)**2-b(3)**2))
+         dum5 = 2.D0/(b(2)**2-b(3)**2)*DSQRT((b(2)**2+lambda)/
+     &          ((b(1)**2+lambda)*(b(3)**2+lambda)))
+C      G&R 3.133.1
+         integral(1) = dum1 * (-ee +        ff)
+C      G&R 3.133.7
+         integral(2) = dum2 *   ee - dum1 * ff - dum3
+C      G&R 3.133.13
+         integral(3) = dum4 *   ee             + dum5
+      END IF
+      RETURN
+      END
+
+      REAL*8 FUNCTION ka(x,b)
+C     From equation 8
+      REAL*8 x,b(3)
+      ka = DSQRT((x+b(1)**2)*(x+b(2)**2)*(x+b(3)**2))
+      END
+
+
+
+
+
+
+      SUBROUTINE distmx(x,b,a)
+C     Calculates the distortion matrix according to equation 12
+C     INPUT : b = a vector containing the three semiaxes of the
+C                 ellipsoid
+C             x = position where the distortion-matrix will be
+C                 calculated; coordinates are relative to the
+C                 center of the ellipsoid
+C     OUTPUT: a = the distortion matrix, when applied to an
+C                 undisturbed wind, "a" gives the disturbed wind
+      INTEGER Lambda, Mu, Nu
+      PARAMETER(Lambda=1,Mu=2,Nu=3)
+      REAL*8 x(3),b(3),a(3,3)
+     &   ,alphaint(3),integral(3),ka,y(3),DyDx(3,3)
+      INTEGER i,j,perm(3)
+      CALL sortdecr(b,perm)
+      CALL sortuse(x,perm)
+      CALL EllCoords(x,b,y,DyDx)
+      CALL specint(0.D0,b,alphaint)
+      CALL MulVec(alphaint,b(1)*b(2)*b(3))
+      CALL specint(y(Lambda),b,integral)
+      DO i=1,3
+         DO j=1,3
+            a(perm(i),perm(j)) = -x(j) * b(1)*b(2)*b(3) *
+     &      DyDx(i,Lambda)/
+     &      ((2.D0-alphaint(j))*(b(j)**2+y(lambda))*ka(y(lambda),b))
+            IF (i.EQ.j) a(perm(i),perm(j)) = a(perm(i),perm(j))
+     &      + 1.D0 + b(1)*b(2)*b(3)*integral(i)/(2.D0-alphaint(i))
+         END DO
+      END DO
+      CALL unsort(x,perm)
+      CALL unsort(b,perm)
+      RETURN
+      END
+
+
 
 
 

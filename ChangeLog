@@ -74,7 +74,13 @@ Revision 1.19: Jun 14, 2001
 	    and at end of file for which either DOY or HOURMIN is negative.
 	    In this way missing values for either DOY or HOURMIN (-32767)
 	    are not spoiling the search routine.
-
-
-
-
+Revision 1.20: June 21, 2001
+          - inclusion of planar fit method in ecpack.f
+	  - inclusion correction for obstruction in ecpack.f
+	  - change in ECMapVec in ecpack.f: indices of mapping interchanged
+	  - indices interchanged in mappings in routines that use ECMapVec
+	    (implicitly: ECKRoll, ECKYaw and ECKPitch)
+	  - change in ECMapMtx in ecpack.f: indices of mapping interchanged
+	  - indices interchanged in mappings in routines that use ECMapMtx:
+	    ECRotate)
+          - MaxRhoV in physcnst.inc changed from 100 to 1 (in kg/m3 !!)

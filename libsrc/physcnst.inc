@@ -59,4 +59,4 @@ C
       PARAMETER(MinT	= -20.D0) ! [Celsius]
       PARAMETER(MaxT	=  60.D0) ! [Celsius]
       PARAMETER(MinRhoV =   0.D0) ! [kg m^{-3}]
-      PARAMETER(MaxRhoV = 100.D0) ! [kg m^{-3}]
+      PARAMETER(MaxRhoV =   1.D0) ! [kg m^{-3}]

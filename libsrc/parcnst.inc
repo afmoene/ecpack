@@ -3,7 +3,7 @@ C
 C Constants to indicate files
 C
       INTEGER InFile,OutFile,TempFile,DumpFile,FluxFile,DataFile,
-     &	TrendFile,IntervalFile, ECConfFile
+     &	TrendFile,IntervalFile, ECConfFile, PlfIntFile, PlfFile
       PARAMETER(InFile	  = 13)
       PARAMETER(OutFile   = 14)
       PARAMETER(TempFile  = 15)
@@ -12,6 +12,8 @@ C
       PARAMETER(DataFile  = 18)
       PARAMETER(TrendFile = 19)
       PARAMETER(IntervalFile = 20)
+      PARAMETER(PlfIntFile = 21)  ! File in which intermediate mean velocities are written
+      PARAMETER(PlfFile = 22)     ! File to which planerfit results are written
 C If Ecconffile is set to 5, input is read from standard input
 C else a file named 'ecconf' is opened
       PARAMETER(ECConfFile = 5)

@@ -2,6 +2,7 @@ C $Id$
       SUBROUTINE GetConf(ConfUnit,
      &           DatDir, OutDir,  ParmDir,
      &           FluxName, ParmName, InterName,
+     &           PlfName,
      &           SonName, CoupName, HygName, NCVarName,
      &           NCNameLen)
 
@@ -11,7 +12,7 @@ C $Id$
       
       INTEGER         ConfUnit, NCNameLen
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
-     &                InterName, SonName, CoupName, HygName
+     &                InterName, SonName, CoupName, HygName, PlfName
       CHARACTER*(*)   NCVarName(NCNameLen)
 
       INTEGER         IOCODE, KINDEX
@@ -33,6 +34,7 @@ C $Id$
       CALL CLEARSTR(SonName)
       CALL CLEARSTR(CoupName)
       CALL CLEARSTR(HygName)
+      CALL CLEARSTR(PlfName)
       
       IOCODE = 0
       DO 4000, WHILE (IOCODE .EQ. 0)
@@ -77,6 +79,8 @@ C     See which token this is
                CoupName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'HYGNAME') .GT. 0) THEN
                HygName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+            ELSE IF (INDEX(TOKLINE, 'PLFNAME') .GT. 0) THEN
+               PlfName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
 C NetCdF variable names
             ELSE IF (INDEX(TOKLINE, 'U_VAR') .GT. 0) THEN
                NCVarName(U) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
@@ -104,6 +108,14 @@ C NetCdF variable names
          ENDIF
  4000 CONTINUE
  9000 CONTINUE
+
+      CALL CLEARSTR(DUMSTRING)
+      IF (STRLEN(PlfName) .GT. 0) THEN
+         DUMSTRING = OutDir
+         CALL STRCAT(DUMSTRING,'/')
+         CALL STRCAT(DUMSTRING,PlfName)
+      ENDIF
+      PlfName = DUMSTRING
 
       CALL CLEARSTR(DUMSTRING)
       IF (STRLEN(FluxName) .GT. 0) THEN
