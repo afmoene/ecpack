@@ -42,54 +42,29 @@ C ########################################################################
 
 
       SUBROUTINE EC_G_Main(OutF,DoPrint,
-     &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
-     &	Psychro,Freq,CalSonic,CalTherm,CalHyg, CalCO2, P,
+     &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,PCal,PIndep,
+     &	Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
      &	Calibr,
      &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &	DoDetren,PDetrend,
-     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	DoYaw,PYaw,DirYaw,
-     &	DoPitch,PPitch,PitchLim,DirPitch,
-     &	DoRoll,PRoll,RollLim,DirRoll,
-     &  DoPF, PPF, Apf, 
-     &	DoSonic,PSonic,SonFactr,
-     &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,FrCor,
-     &	DoWebb,PWebb,
+     &  DoCorr, PCorr, ExpVar, DirYaw, DirPitch, DirRoll,
+     &  Apf, SonFactr, O2Factor, FrCor,
      &	Mean,TolMean,Cov,TolCov,
-     &	HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau,
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-     &  MEANW, TOLMEANW, VectWind, dVectWind,
-     &  DirFrom, dDirFrom,
+     &  QPhys, dQPhys,
      &  HAVE_UNCAL, FirstDay)
 C     ****f* ec_gene.f/EC_G_Main
 C NAME
 C     EC_G_Main
 C SYNOPSIS
 C     CALL EC_G_Main(OutF,DoPrint,
-C        RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
-C        Psychro,Freq,CalSonic,CalTherm,CalHyg, CalCO2, P,
+C        RawSampl,MaxChan,Channels,NMax,N,MMax,M, PCal,PIndep,
+C        Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
 C        Calibr,
 C        Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-C        DoDetren,PDetrend,
-C        DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-C        DoYaw,PYaw,DirYaw,
-C        DoPitch,PPitch,PitchLim,DirPitch,
-C        DoRoll,PRoll,RollLim,DirRoll,
-C        DoPF, PPF, Apf, 
-C        DoSonic,PSonic,SonFactr,
-C        DoO2,PO2,O2Factor,
-C        DoFreq,PFreq,LLimit,ULimit,FrCor,
-C        DoWebb,PWebb, 
+C        DoCorr, PCorr, ExpVar,
+C        DirYaw, DirPitch, DirRoll,
+C        Apf, SonFactr, O2Factor, FrCor,
 C        Mean,TolMean,Cov,TolCov,
-C        HSonic,dHSonic,HTc,dHTc,
-C        LvE,dLvE,LvEWebb,dLvEWebb,
-C        UStar,dUStar,Tau,dTau,
-C        FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-C        MEANW, TOLMEANW, VectWind, dVectWind,
-C        DirFrom, dDirFrom,
+C        QPhys, dQPhys,
 C        HAVE_UNCAL, FirstDay)
 C FUNCTION
 C     Integrated routine which:
@@ -118,17 +93,18 @@ C     MMax      : [INTEGER]
 C                 maximum number of samples
 C     M         : [INTEGER]
 C                 actual number of samples
-C     DoCrMean  : [LOGICAL]
-C                 correct mean quantities of drift-sensitive apparatus 
-C                 using slow signal?
 C     PCal      : [LOGICAL]
 C                 print results of slow sensor correction?
 C     PIndep    : [LOGICAL]
 C                 print number of independent samples?
+C     DoCorr    : [LOGICAL](NMaxCorr)
+C                 which corrections to do?
+C     PCorr     : [LOGICAL](NMaxCorr)
+C                 intermediate results of which corrections?
+C     ExpVar    : [REAL*8](NMaxExp)
+C                 array with experimental settings
 C     Psychro   : [REAL*8]
 C                 water vapour density of slow sensor (kg/m^3)
-C     Freq      : [REAL*8]
-C                 sampling frequency
 C     CalSonic  : [REAL*8(NNQ)]
 C                 array with calibration data of sonic
 C     CalTherm  : [REAL*8(NNQ)]
@@ -141,69 +117,14 @@ C     P         : [REAL*8]
 C                 atmospheric pressure (Pa)
 C     Calibr    : [SUBROUTINE]
 C                 calibration subroutine
-C     DoDetren  : [LOGICAL]
-C                 do linear deterending?
-C     PDetrend  : [LOGICAL]
-C                 print results of linear detrending?
-C     DoTilt    : [LOGICAL]
-C                 do tilt correction with known tilt angles
-C     PTilt     : [LOGICAL]
-C                 print results of tilting?
-C     PreYaw    : [REAL*8]
-C                 known yaw angle (degree)
-C     PrePitch  : [REAL*8]
-C                 known pitch angle (degree)
-C     PreRoll   : [REAL*8]
-C                 known roll angle (degree)
-C     DoYaw     : [LOGICAL]
-C                 do yaw correction?
-C     PYaw      : [LOGICAL]
-C                 print results of yaw correction?
-C     DoPitch   : [LOGICAL]
-C                 do pitch correction?
-C     PPitch    : [LOGICAL]
-C                 print results of pitch correction?
-C     PitchLim  : [REAL*8]
-C                 maximum allowable pith rotation angle (degrees)
-C     DoRoll    : [LOGICAL]
-C                 do roll correction?
-C     PRoll     : [LOGICAL]
-C                 print results of roll correction?
-C     RollLim   : [REAL*8]
-C                 maximum allowable roll rotation angle (degrees)
-C     DoPF      : [LOGICAL]
-C                 do tilt correction with planar fit?
-C     PPF       : [LOGICAL]
-C                 Print intermediate results for Planar fit tilt correction ?
 C     Apf       : [REAL*8(3,3)]
 C                 planar fit untilt matrix
-C     DoSonic   : [LOGICAL]
-C                 do correction of sonic temperature (Schotanus)?
-C     PSonic    : [LOGICAL]
-C                 print results of sonic temperature correction?
-C     DoO2      : [LOGICAL]
-C                 Correct hygrometer data for oxygen sensitivity ?
-C     PO2       : [LOGICAL]
-C                 Print intermediate result for oxygen correction ?
-C     DoFreq    : [LOGICAL]
-c                 Do frequency response correction ?
-C     PFreq     : [LOGICAL]
-C                 Print intermediate results for frequency response
-C                 correction ?
-C     LLimit    : [REAL*8]
-C                 Lower limit for correction factor for frequency response
-C     ULimit    : [REAL*8]
-C                 Upper limit for correction factor for frequency response
-C     DoWebb    : [LOGICAL]
-C                 Do Webb correction for humidity flux ?
-C     PWebb     : [LOGICAL]
-C                 Print intermediate results for Webb correction ?
-C     HAVE_UNCAL: [LOGICAL(NMax)]
+C     HAVE_UNCAL:   [LOGICAL(NMax)]
 C                 switch whether data for uncalibrated data
 C                 are available for each channel
 C     FirstDay  : [INTEGER]
 C                 day number of first sample in array (needed for
-C                 detrending data that pass midnight
+C                 detrending data that pass midnight)
 C OUTPUTS
 C     Sample    : [REAL*8(NMax, MMax)]
 C                 array with calibrated samples
@@ -249,51 +170,10 @@ C     Cov       : [REAL*8(NMax,NMax)] (in/out)
 C                 Covariances of all calibrated signals
 C     TolCov    : [REAL*8(NMax,NMax)] (in/out)
 C                 Tolerances in covariances of all calibrated signals
-C     HSonic    : [REAL*8]
-C                 sensible heat flux with sonic temperature (W/m^2)
-C     dHSonic   : [REAL*8]
-C                 tolerance in sensible heat flux with sonic temperature (W/m^2)
-C     HTc       : [REAL*8]
-C                 sensible heat flux with thermocouple temperature (W/m^2)
-C     dHTc      : [REAL*8]
-C                 tolerance in sensible heat flux with thermocouple temperature (W/m^2)
-C     LvE       : [REAL*8]
-C                 wq-covariance latent heat flux (W/m^2)
-C     dLvE      : [REAL*8]
-C                 tolerance in wq-covariance latent heat flux (W/m^2)
-C     LvEWebb   : [REAL*8]
-C                 Webb term for latent heat  flux (W/m^2)
-C     dLvEWebb   : [REAL*8]
-C                 tolerance in Webb term for latent heat  flux (W/m^2)
-C     UStar     : [REAL*8]
-C                 friction velocity (m/s)
-C     dUStar    : [REAL*8]
-C                 tolerance in friction velocity (m/s)
-C     Tau       : [REAL*8]
-C                 surface shear stress (N/m^2)
-C     dTau      : [REAL*8]
-C                 tolerance in surface shear stress (N/m^2)
-C     FCO2      : [REAL*8]
-C                 CO2 flux from covariance (kg/m^2 s)
-C     dFCO2     : [REAL*8]
-C                 tolerance in CO2 flux from covariance (kg/m^2 s)
-C     FCO2Webb  : [REAL*8]
-C                 Webb contribution to CO2 flux (kg/m^2 s)
-C     dFCO2Webb : [REAL*8]
-C                 tolerance in Webb contribution to CO2 flux (kg/m^2 s)
-C     VectWind: [Real*8]
-C                 vector wind velocity (m/s)
-C     dVectWind: [Real*8]
-C                 tolerance in vector wind velocity (m/s)
-C     DirFrom  : [Real*8]
-C                 direction of vector wind (degrees)
-C     dDirFrom : [Real*8]
-C                 tolerance in direction of vector wind (degrees)
-C     MEANW     : [REAL*8]
-C                 mean vertical velocity before tilt correction (m/s)
-C     TOLMEANW  : [REAL*8]
-C                 tolerance in mean vertical velocity before 
-C                 tilt correction (m/s)
+C     QPhys     : [REAL*8](NMaxPhys)] (in/out)
+C                 array with physical quantities
+C     dQPhys    : [REAL*8](NMaxPhys)] (in/out)
+C                 array with tolerances physical quantities
 C AUTHOR
 C     Arjan van Dijk, Arnold Moene
 C HISTORY
@@ -305,6 +185,9 @@ C     Revision: 18-09-2002: removed calcomm.inc and added FirstDay
 C                           to interface (to pass it to calibration routine
 C     Revision: 5-12-2002:  added DoPF, PPF, Apf to interface to include planar fit 
 C     Revision: 13-01-2003: added vectorwind and dirfrom to interface
+C     Revision: 27-01-2003: removed physical quantities from interface
+C                           and replace by QPhys
+C                           Put all correction info into DoCorr and PCorr, ExpVar
 C     $Name$
 C     $Id$
 C USES
@@ -329,26 +212,21 @@ C     ***
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
      &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
      &  WhichTemp, FirstDay
-      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
-     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
-     &	DoSonic,DoTilt,PTilt,DoPrint,Flag(NMAx,MMax),DoDetren,
-     &	PDetrend,AnyTilt,DumYaw,DumPitch,DumRoll,DumTilt,BadTc, 
-     &  DoPF, PPF
-      REAL*8 RawSampl(MaxChan,MMax)
+      LOGICAL PCal,PIndep,
+     &	DoPrint,Flag(NMAx,MMax),
+     &	AnyTilt,BadTc,
+     &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
+     &  DumCorr(NMaxCorr), PDumCorr(NMaxCorr)
+      REAL*8 RawSampl(MaxChan,MMax), ExpVar(NMaxExp)
       REAL*8 P,Psychro,Sample(NMax,MMax),
      &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
-     &	PitchLim,RollLim,DirYaw,RC(NMax),O2Factor(NMax),
-     &	Freq,DirPitch,DirRoll,
-     &	SonFactr(NMax),CorMean(NNMax),PreYaw,PrePitch,PreRoll,
-     &	HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3),
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel, VectWind, 
-     &  dVectWind,
-     &  DirFrom, dDirFrom
+     &	TolCov(NMax,NMax),FrCor(NMax,NMax),
+     &	DirYaw,RC(NMax),O2Factor(NMax),
+     &	DirPitch,DirRoll,
+     &	SonFactr(NMax),CorMean(NNMax),
+     &	Speed(3),DumCov(3,3), QPhys(NMaxPhys), dQPhys(NMaxPhys)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
-      REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
+      REAL*8 MINS(NNMax), MAXS(NNMAX), WebVel
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3), Apf(3,3), 
      &        DumOut(3) 
       LOGICAL HAVE_CAL(NMax)
@@ -359,34 +237,40 @@ C
       DO I=1,NMax
          HAVE_CAL(i) = .FALSE.
       ENDDO
-      DO I=U,W
-         IF (HAVE_UNCAL(I)) HAVE_CAL(I) = .TRUE.
-      ENDDO
-      IF (HAVE_UNCAL(TSonic)) THEN
+      IF (HAVE_UNCAL(QUU)) HAVE_CAL(U) = .TRUE.
+      IF (HAVE_UNCAL(QUV)) HAVE_CAL(V) = .TRUE.
+      IF (HAVE_UNCAL(QUW)) HAVE_CAL(W) = .TRUE.
+
+      WhichTemp = 0
+      IF (HAVE_UNCAL(QUTSonic)) THEN
          HAVE_CAL(TSonic) = .TRUE.
 	 WhichTemp = TSonic
       ENDIF
-      IF (HAVE_UNCAL(Humidity)) THEN
+      IF (HAVE_UNCAL(QUHumidity)) THEN
          HAVE_CAL(Humidity) = .TRUE.
          HAVE_CAL(SpecHum) = .TRUE.
       ENDIF
-      IF (HAVE_UNCAL(TCouple)) THEN
+      IF (HAVE_UNCAL(QUTCouple)) THEN
          HAVE_CAL(TCouple) = .TRUE.
 	 WhichTemp = TCouple
       ENDIF
-      IF (HAVE_UNCAL(CO2)) THEN
+      IF (HAVE_UNCAL(QUCO2)) THEN
          HAVE_CAL(CO2) = .TRUE.
          HAVE_CAL(SpecCO2) = .TRUE.
+      ENDIF
+      IF (HAVE_UNCAL(QUDoy) .AND.
+     &    HAVE_UNCAL(QUHourMin)) THEN
+         Have_Cal(TTime) = .TRUE.
       ENDIF
 
 C
 C Check whether we have data needed for corrections
 C
-      IF ((DoSonic) .AND. .NOT. (HAVE_CAL(SpecHum))) THEN
+      IF (DoCorr(QCSonic) .AND. .NOT. HAVE_CAL(SpecHum)) THEN
          WRITE(*,*) 'WARNING: Do not have a hygrometer: ',
      &                 'can not do ',
      &                 'humidity correction on sonic temperature'
-         DoSonic = .FALSE.
+         DoCorr(QCSonic) = .FALSE.
       ENDIF
 C
 C
@@ -394,13 +278,12 @@ C Calibrate the raw samples for the first time ignoring drift in apparatus.
 C
 C
       DO i=1,N
-       	CorMean(i) = 0.D0
+       	CorMean(i) = 0.0D0
       ENDDO
 C
 C First try it with thermocouple
 C
-      Have_Uncal(TTime) = .TRUE.
-      IF (HAVE_UNCAL(TCouple)) THEN
+      IF (HAVE_UNCAL(QUTCouple)) THEN
          NTcOut = 0
          BadTc = (.FALSE.)
          DO i=1,M
@@ -426,36 +309,30 @@ C
         ENDDO
       ENDIF
 C
-C
 C Calibrate the raw samples for the second time, now correcting mean
 C quantities of drift-sensitive apparatus using slow signals.
 C
-C
-      IF (DoCrMean) THEN
+      IF (DoCorr(QCMean)) THEN
 C
 C Find the shift/drift in humidity of the krypton hygrometer
 C
 	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-        IF (.NOT. Have_Uncal(Humidity)) THEN
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Cal(Humidity)) THEN
 	   Mean(Humidity) = Psychro
 	   MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
 	ENDIF
-        CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
 	IF (DoPrint) THEN
-	   WRITE(OUTF,*) 'Min/max of samples'
-	   DO I=1,N
-	      WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
-     &                   Maxs(I)
-	   ENDDO
+           CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+           CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
 	ENDIF
 
 	CorMean(Humidity) = Psychro - Mean(Humidity)
 	IF (DoPrint.AND.PCal) THEN
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'Added to humidity : ',
-     &	  (Psychro - Mean(Humidity)),' [kg m^{-3}]'
+     &	     (Psychro - Mean(Humidity)),' [kg m^{-3}]'
 	  WRITE(OutF,*)
         ENDIF
 
@@ -483,44 +360,33 @@ C Estimate mean values, covariances and tolerances of both
 C
 C
       CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-      IF (.NOT. Have_Uncal(Humidity)) THEN
+     &	               Mean,TolMean,Cov,TolCov,MIndep,
+     &                 CIndep,Mok,Cok)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      IF (.NOT. Have_Cal(Humidity)) THEN
         Mean(Humidity) = Psychro
         MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
       ENDIF
-      CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
       IF (DoPrint) THEN
-	   WRITE(OUTF,*) 'Min/max of samples'
-           DO I=1,N
-              WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
-     &                   Maxs(I)
-           ENDDO
+           CALL EC_G_ShwHead(OutF,'For raw calibrated data : ')
+           CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+           CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
+           IF (PIndep) THEN
+	       CALL EC_G_ShwInd(OutF,MIndep,CIndep,
+     &	                         NMax,N,M,ExpVar(QEFreq))
+           ENDIF
+           IF (PCal) THEN
+	       CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+           ENDIF
       ENDIF
 
-C
-C Print number of independent contributions
-C
-      IF (DoPrint.AND.PIndep) THEN
-	CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
-      ENDIF
-C
-C Print averages of raw, calibrated data
-C
-      IF (DoPrint.AND.PCal) THEN
-	WRITE(OutF,*)
-	WRITE(OutF,*) 'For raw calibrated data : '
-	WRITE(OutF,*)
-	CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-      ENDIF
 C
 C
 C Subtract a linear trend from all quantities
 C
 C
-      IF (DoDetren) THEN
-
-	CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,Sample,RC)
+      IF (DoCorr(QCDetrend)) THEN
+	CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,RC)
 C
 C
 C Estimate mean values, covariances and tolerances of both
@@ -528,36 +394,30 @@ C for the detrended dataset
 C
 C
 	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-        IF (.NOT. Have_Uncal(Humidity)) THEN
+     &	                 Mean,TolMean,Cov,TolCov,
+     &                   MIndep,CIndep,Mok,Cok)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_cal(Humidity)) THEN
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
         ENDIF
         CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
 
-	IF (DoPrint.AND.PDetrend) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After detrending : '
-	  WRITE(OutF,*)
-
-	  WRITE(OUTF,*) 'Min/max of samples'
-          DO I=1,N
-             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
-     &                Maxs(I)
-          ENDDO
+	IF (DoPrint.AND.PCorr(QCDetrend)) THEN
+	  CALL EC_G_ShwHead(OutF, 'After detrending : ')
+          CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+          CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
 	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
 	  ENDIF
-
 	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
 C Get the mean W before we do tilt correction
 C
-      MEANW = MEAN(W)
-      TOLMEANW = TolMean(W)
+      QPhys(QPMEANW) = MEAN(W)
+      dQPhys(QPMEANW) = TolMean(W)
 C
 C Correct mean values and covariances for all thinkable effects, first
 C time only to get run-based tilt correction (if needed). But 
@@ -565,7 +425,7 @@ C before all that, the planar fit untilting needs to be applied.
 C
 C Do Planar fit tilt correction (only) here 
 C
-      IF (DoPF) THEN
+      IF (DoCorr(QCPF)) THEN
 C
 C Tilt ALL samples
         DO i=1,M
@@ -585,28 +445,18 @@ C
         ENDDO
       ENDIF
       CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-      IF (.NOT. Have_Uncal(Humidity)) THEN
+     &	               Mean,TolMean,Cov,TolCov,
+     &                 MIndep,CIndep,Mok,Cok)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+      IF (.NOT. Have_cal(Humidity)) THEN
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
       ENDIF
-      CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-
-      IF (DoPrint.AND.PPF) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After planar fit untilting : '
-	  WRITE(OutF,*)
-
-	  WRITE(OUTF,*) 'Min/max of samples'
-          DO I=1,N
-             WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
-     &                Maxs(I)
-          ENDDO
+      IF (DoPrint.AND. PCorr(QCPF)) THEN
+	  CALL EC_G_ShwHead(OUTF, 'After planar fit untilting : ')
 	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
 	  ENDIF
-
 	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
       ENDIF
       
@@ -614,23 +464,23 @@ C If 'classic' run-based tilt corrections are not done,
 C the first call to EC_C_Main is redundant and skipped), else
 C this run is only done to establish the 'classic' rotation
 C angles.
-      AnyTilt = ((DoTilt.OR.DoYaw).OR.(DoPitch.OR.DoRoll))
+      AnyTilt = ((DoCorr(QCTilt).OR.DoCorr(QCYaw)) .OR.
+     &           (DoCorr(QCPitch).OR.DoCorr(QCRoll)))
       IF (AnyTilt) THen
         CALL EC_C_Main(OutF,
      &	  DoPrint,
      &    Mean,NMax,N,TolMean,
      &	  Cov,TolCov,
-     &    BadTc,
-     &	  DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &    DoYaw,PYaw,DirYaw,
-     &	  DoPitch,PPitch,PitchLim,DirPitch,
-     &	  DoRoll,PRoll,RollLim,DirRoll,
-     &	  DoSonic,PSonic,SonFactr,
-     &	  DoO2,PO2,O2Factor,
-     &	  DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
+     &    DoCorr, PCorr, ExpVar,
+     &    DirYaw,
+     &	  DirPitch,
+     &	  DirRoll,
+     &	  SonFactr,
+     &	  O2Factor,
+     &	  CalSonic,CalTherm,CalHyg,
      &    CalCO2, FrCor,
-     &	  DoWebb,PWebb, WebVel, P,Have_Uncal)
-        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+     &	  WebVel, P,Have_cal)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
       ENDIF
 C
 C If any transformation of coordinates was required (one of the options
@@ -649,7 +499,7 @@ C
       IF (AnyTilt) THEN
         DO i=1,3
           DO j=1,3
-            DumCov(i,j) = 0.D0
+            DumCov(i,j) = 0.0D0
           ENDDO
         ENDDO
 C
@@ -660,24 +510,24 @@ C
           Speed(2) = Sample(V,i)
           Speed(3) = Sample(W,i)
 
-          IF (DoTilt) THEN
-            CALL EC_C_T06(PreYaw,Yaw)
+          IF (DoCorr(QCTilt)) THEN
+            CALL EC_C_T06(ExpVar(QEPreYaw),Yaw)
             CALL EC_C_T05(Speed,3,3,DumCov,Yaw)
-            CALL EC_C_T08(PrePitch,Pitch)
+            CALL EC_C_T08(ExpVar(QEPrePitch),Pitch)
             CALL EC_C_T05(Speed,3,3,DumCov,Pitch)
-            CALL EC_C_T10(PreRoll,Roll)
+            CALL EC_C_T10(ExpVar(QEPreRoll),Roll)
             CALL EC_C_T05(Speed,3,3,DumCov,Roll)
           ENDIF
 
-          IF (DoYaw) THEN
+          IF (DoCorr(QCYaw)) THEN
             CALL EC_C_T06(DirYaw,Yaw)
             CALL EC_C_T05(Speed,3,3,DumCov,Yaw)
 	  ENDIF
-          IF (DoPitch) THEN
+          IF (DoCorr(QCPitch)) THEN
             CALL EC_C_T08(DirPitch,Pitch)
             CALL EC_C_T05(Speed,3,3,DumCov,Pitch)
 	  ENDIF
-          IF (DoRoll) THEN
+          IF (DoCorr(QCRoll)) THEN
             CALL EC_C_T10(DirRoll,Roll)
             CALL EC_C_T05(Speed,3,3,DumCov,Roll)
 	  ENDIF
@@ -691,30 +541,34 @@ C
 C Reestablish the averages and covariances in the correct frame of reference.
 C
 	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-        IF (.NOT. Have_Uncal(Humidity)) THEN
+     &	                 Mean,TolMean,Cov,TolCov,
+     &                   MIndep,CIndep,Mok,Cok)
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_cal(Humidity)) THEN
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
         ENDIF
 
 	IF (DoPrint) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After untilting raw data : '
-	  WRITE(OutF,*)
-
+	  CALL EC_G_ShwHead(OutF, 'After untilting raw data : ')
 	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,Freq)
+	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
 	  ENDIF
-
 	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
 
       ENDIF
-      DumTilt  = (.FALSE.)
-      DumYaw = (.FALSE.)
-      DumPitch   = (.FALSE.)
-      DumRoll  = (.FALSE.)
+C
+C Make copy of DoCorr and PCorr, and reset tilt info's
+C
+      DO I=1,NMaxCorr
+         DumCorr(I) = DoCorr(I)
+         PDumCorr(I) = PCorr(I)
+      ENDDO
+      DumCorr(QCTilt)  = (.FALSE.)
+      DumCorr(QCYaw) = (.FALSE.)
+      DumCorr(QCPitch)   = (.FALSE.)
+      DumCorr(QCRoll)  = (.FALSE.)
 
 C
 C Perform all necessary corrections on the mean values and (co-)variances.
@@ -724,17 +578,15 @@ C
      &	  DoPrint,
      &	  Mean,NMax,N,TolMean,
      &	  Cov,TolCov,
-     &    BadTc,
-     &	  DumTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	  DumYaw,PYaw,DirYaw,
-     &	  DumPitch,PPitch,PitchLim,DirPitch,
-     &	  DumRoll,PRoll,RollLim,DirRoll,
-     &	  DoSonic,PSonic,SonFactr,
-     &	  DoO2,PO2,O2Factor,
-     &	  DoFreq,PFreq,LLimit,ULimit,Freq,
-     &    CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
-     &	  DoWebb,PWebb, WebVel, P, Have_Uncal)
-      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+     &    DumCorr, PDumCorr, ExpVar,
+     &	  DirYaw,
+     &	  DirPitch,
+     &	  DirRoll,
+     &	  SonFactr,
+     &	  O2Factor,
+     &	  CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
+     &	  WebVel, P, Have_cal)
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
       
 C
 C
@@ -743,54 +595,12 @@ C
 C
 C The 180 degrees is to trick ec_Ph_Flux
 C
-      IF (.NOT. DoYaw) DirYaw = 180D0
-C
+      IF (.NOT. DoCorr(QCYaw)) DirYaw = 180D0
+      
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
-     &	HSonic,dHSonic,HTc,dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-     &  WebVel, VectWind, dVectWind, DirFrom, dDirFrom, DirYaw)
+     &                QPhys, dQPhys, WebVel, DirYaw)
 
-      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-      IF ((.NOT. HAVE_Uncal(U)) .OR.
-     +    (.NOT. HAVE_Uncal(V)) .OR.
-     +    (.NOT. HAVE_Uncal(W))) THEN
-         Ustar = DUMMY
-         dUstar = DUMMY
-         VectWind = Dummy
-         dVectWind = Dummy
-         Tau = Dummy
-         dTau = Dummy
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TSonic)) THEN
-	  HSonic = DUMMY
-	  dHSonic = DUMMY
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TCouple)) THEN
-	  HTc = DUMMY
-	  dHTc = DUMMY
-      ENDIF
-      IF (((.NOT. HAVE_Uncal(TSonic)) .AND.
-     +     (.NOT. HAVE_Uncal(Tcouple))) .OR.
-     +     (.NOT. DoWebb)) THEN
-        LvEWebb  = DUMMY
-        dLvEWebb  = DUMMY
-        FCO2Webb  = DUMMY
-        dFCO2Webb  = DUMMY
-      ENDIF
-      IF (.NOT. HAVE_Uncal(Humidity)) THEN
-	  Lve = DUMMY
-	  dLvE = DUMMY
-	  LveWebb = DUMMY
-	  dLvEWebb = DUMMY
-      ENDIF
-      IF (.NOT. HAVE_Uncal(CO2)) THEN
-	  FCO2 = DUMMY
-	  dFCO2 = DUMMY
-	  FCO2Webb = DUMMY
-	  dFCO2Webb = DUMMY
-      ENDIF
+      CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
 
       RETURN
       END
@@ -799,18 +609,18 @@ C
 
 
 
-      SUBROUTINE EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      SUBROUTINE EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
 C     ****f* ec_gene.f/EC_G_Reset
 C NAME
 C     EC_G_Reset
 C SYNOPSIS
-C     CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+C     CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov)
 C FUNCTION
 C     Routine to reset means and covariances based on availability
 C     of the uncalibrated data
 C INPUTS
-C     Have_Uncal  : [LOGICAL(NMax)]
-C                   switch for each channel whether uncalibrated
+C     Have_cal  : [LOGICAL(NMax)]
+C                   switch for each channel whether calibrated
 C                   data are available
 C     Mean        : [REAL*8(NMax)]
 C                   mean of quantities
@@ -840,71 +650,24 @@ C     ***
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
-      LOGICAL Have_Uncal(NNMax)
+      LOGICAL Have_cal(NNMax)
       REAL*8  Mean(NNmax), TolMean(NNMax), Cov(NNMax, NNMax),
      +        TolCov(NNMax, NNMax)
       INTEGER I,J
 
-      IF ((.NOT. HAVE_Uncal(U)) .OR.
-     +    (.NOT. HAVE_Uncal(V)) .OR.
-     +    (.NOT. HAVE_Uncal(W))) THEN
-         DO I=U,W
-	    MEAN(I) = DUMMY
-	    TolMean(I) = DUMMY
-	    DO J=1,NNMax
-	        COV(I,J) = DUMMY
-		TolCOV(I,J) = DUMMY
-	        COV(J,I) = DUMMY
-		TolCOV(J,I) = DUMMY
-	    ENDDO
-	 ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TSonic)) THEN
-          Mean(TSonic) = DUMMY
-          TolMean(TSonic) = DUMMY
-	  DO I=1,NNMax
-	     Cov(Tsonic,I) = DUMMY
-	     Cov(I,Tsonic) = DUMMY
-	     TolCov(Tsonic,I) = DUMMY
-	     TolCov(I,Tsonic) = DUMMY
-	  ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(TCouple)) THEN
-          Mean(TCouple) = DUMMY
-          TolMean(TCouple) = DUMMY
-	  DO I=1,NNMax
-	     Cov(TCouple,I) = DUMMY
-	     Cov(I,TCouple) = DUMMY
-	     TolCov(TCouple,I) = DUMMY
-	     TolCov(I,TCouple) = DUMMY
-	  ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(Humidity)) THEN
-          Mean(SpecHum) = DUMMY
-          TolMean(SpecHum) = DUMMY
-      	  DO I=1,NNMax
-	    DO J=Humidity, SpecHum
-	      Cov(J,I) = DUMMY
-	      Cov(I,J) = DUMMY
-	      TolCov(J,I) = DUMMY
-	      TolCov(I,J) = DUMMY
-	    ENDDO
-	  ENDDO
-      ENDIF
-      IF (.NOT. HAVE_Uncal(CO2)) THEN
-        Mean(SpecCO2) = DUMMY
-        TolMean(SpecCO2) = DUMMY
-        Mean(CO2) = DUMMY
-        TolMean(CO2) = DUMMY
-        DO I=1,NNMax
-	    DO J=CO2, SpecCO2
-	      Cov(J,I) = DUMMY
-	      Cov(I,J) = DUMMY
-	      TolCov(J,I) = DUMMY
-	      TolCov(I,J) = DUMMY
-	    ENDDO
-	  ENDDO
-      ENDIF
+      DO I=1,NNMax
+         IF (.NOT. Have_CAL(I)) THEN
+             MEAN(I) = DUMMY
+             TolMean(I) = DUMMY
+         ENDIF
+         DO J=1,NNMax
+            IF ((.NOT. HAVE_CAL(I)).OR.
+     +          (.NOT. HAVE_CAL(J))) THEN
+                COV(I,J) = DUMMY
+                TolCov(I,J) = DUMMY
+            ENDIF
+         ENDDO
+      ENDDO
  
       END
 
@@ -1153,6 +916,75 @@ C     ***
  50	FORMAT(a6,20(F9.3:,1X))
       ENDDO
 
+      RETURN
+      END
+
+      SUBROUTINE EC_G_ShwMinMax(OutF, N, Mins, Maxs)
+C     ****f* ec_gene.f/EC_G_ShwMinMax
+C NAME
+C     EC_G_ShwMinMax
+C SYNOPSIS
+C     CALL EC_G_ShwInd(OutF, N, Mins, Maxs)
+C FUNCTION
+C     Prints min/max of series
+C INPUTS
+C     OUTF    : [INTEGER]
+C               unit number of file
+C     N       : [INTEGER]
+C               number of series
+C     Mins    : [INTEGER(NMax)]
+C               min value of series
+C     Maxs    : [INTEGER(NMax)]
+C               max value of series
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
+
+      INCLUDE 'parcnst.inc'
+      INTEGER i,N,OutF
+      REAL*8   Mins(N),maxs(N)
+      
+      WRITE(OUTF,*) 'Min/max of samples'
+      DO I=1,N
+         WRITE(OUTF,*) QName(I),': min = ', Mins(I), ', max = ',
+     &                 Maxs(I)
+      ENDDO
+      RETURN
+      END
+
+      SUBROUTINE EC_G_ShwHead(OutF, STRING)
+C     ****f* ec_gene.f/EC_G_ShwHead
+C NAME
+C     EC_G_ShwHead
+C SYNOPSIS
+C     CALL EC_G_ShwHead(OutF,String)
+C FUNCTION
+C     Prints header to intermediate results file
+C INPUTS
+C     OUTF    : [INTEGER]
+C               unit number of file
+C     N       : [CHARACTER](*)
+C               String to write
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
+
+      INTEGER OutF
+      CHARACTER*(*) String
+      
+      WRITE(OUTF,*) 
+      WRITE(OUTF,*) String
+      WRITE(OUTF,*) 
       RETURN
       END
 

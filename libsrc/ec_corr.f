@@ -126,8 +126,8 @@ C     EC_M_MulVec
 C     EC_M_UnSort
 C     ***
       IMPLICIT NONE
-      INTEGER Lambda, Mu, Nu
-      PARAMETER(Lambda=1,Mu=2,Nu=3)
+      INTEGER Lambda
+      PARAMETER(Lambda=1)
       REAL*8 x(3),b(3),a(3,3)
      &   ,alphaint(3),integral(3),EC_M_ka,y(3),DyDx(3,3)
       INTEGER i,j,perm(3)
@@ -141,7 +141,8 @@ C     ***
          DO j=1,3
             a(perm(i),perm(j)) = -x(j) * b(1)*b(2)*b(3) *
      &      DyDx(i,Lambda)/
-     &      ((2.D0-alphaint(j))*(b(j)**2+y(lambda))*EC_M_ka(y(lambda),b))
+     &      ((2.D0-alphaint(j))*(b(j)**2+y(lambda))*
+     &       EC_M_ka(y(lambda),b))
             IF (i.EQ.j) a(perm(i),perm(j)) = a(perm(i),perm(j))
      &      + 1.D0 + b(1)*b(2)*b(3)*integral(i)/(2.D0-alphaint(i))
          END DO
@@ -156,14 +157,14 @@ C     ***
 
 
       SUBROUTINE EC_C_F01(Mean,Cov,NMax,NSize,WhichTemp,
-     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,
+     &	NSta,NEnd,NumInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,
      &  CalCO2,WXT)
 C     ****f* ec_corr.f/EC_C_F01
 C NAME
 C     EC_C_F01
 C SYNOPSIS
 C     CALL EC_C_F01(Mean, Cov, NMax, NSize, WhichTemp,
-C                   NSta, NEnd, NInt, NS, TauD, TauV, CalSonic,
+C                   NSta, NEnd, NumInt, NS, TauD, TauV, CalSonic,
 C                   CalTherm, CalHyg, CalCO2,WXT)
 C FUNCTION
 C     Calculate frequency response corrections for sensor response, path
@@ -190,7 +191,7 @@ C              Popular value: -5.D0 [unit?].
 C     NEND   : [REAL*8]  
 C              End frequency numerical integration.
 C              Popular value: LOG(5) = 0.69897D0 [unit?].
-C     NINT   : [INTEGER]  
+C     NumINT : [INTEGER]  
 C              Number of intervals in integration.
 C              Popular value: 19.
 C     NS     : [INTEGER]
@@ -237,6 +238,7 @@ C HISTORY
 C       28-05-2001: added info on which temperature should be used
 C                   in corrections (Sonic or thermocouple)
 C       19-09-2002: added CalCO2 in interface
+C       27-01-2003: replaced Nint by NumInt
 C     $Name$ 
 C     $Id$
 C USES
@@ -248,7 +250,7 @@ C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
-      INTEGER I1,I2,I3,I4,I,J,NINT,NMax,NSize, WhichTemp
+      INTEGER I1,I2,I3,I4,I,J,NumINT,NMax,NSize, WhichTemp
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CALCO2(NQQ),
      &	GAIND,GAINV,GAINT1,GAINT2,GAINUV,GAINW,GAINQ1, GAINCO21,
      &	TRANA,TRANQ1,TRANUV,TRANW,TRANT1,TRANT2,TRANWT1,TRANWT2,TRANWQ1,
@@ -256,14 +258,13 @@ C     ***
      &  TRANCO21, TRANWCO21,
      &	XI,ZETA,CW,CU,WT,UW,TT,UU,WW,F,NS,C,NSTA,NEND,N,LF,X,ZL,
      &	INTTS(NNMax,NNMAX),G(NNMAX,NNMAX),
-     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),UStar,
-     &	Lower,Upper,TolCov(NMax,NMax)
+     &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),UStar
 C
 C-- Declarations of constants ----------------------------------------
 C
       TAUT = CalTherm(QQTime)/
-     &	(1.D0+4.9D0*(CalTherm(QQTime)**0.5*Mean(U))**0.45D0)
-      LF   = (NEND-NSTA)/DBLE(NINT-1)	    ! Interval width num. integr.
+     &	(1.D0+4.9D0*(CalTherm(QQTime)**0.5D0*Mean(U))**0.45D0)
+      LF   = (NEND-NSTA)/DBLE(NumINT-1)	    ! Interval width num. integr.
       C    = 1.D0/(LOG(10.D0)*LF/3.D0)	    ! Constant of integration, eq.1
       LF   = 10.D0**LF
       N    = 10.D0**NSTA
@@ -273,171 +274,174 @@ C
          ENDDO
       ENDDO
 
-      Ustar = ((Cov(U,W))**2.D0)**0.25D0
+      Ustar = (Cov(U,W)**2.D0)**0.25D0
       ZL = (CalSonic(QQZ)*Karman*GG*Cov(W,WhichTemp))/
-     &	(-Mean(WhichTemp)*Ustar**3.D0)
+     &	(-Mean(WhichTemp)*Ustar**3.0D0)
 
       IF(ZL.GE.0.D0) THEN
 C
 C-- Stable spectral and co-spectral function factors, eq. 20b, 21b
 C
-	ATT=0.0961D0+0.644D0*ZL**0.6D0
-	AWW=0.838D0+1.172D0*ZL
-	AUU=0.2D0*AWW
-	AWT=0.284D0*(1.D0+6.4D0*ZL)**0.75D0
-	AUW=0.124D0*(1.D0+7.9D0*ZL)**0.75D0
-	BTT=3.124D0/ATT**0.667D0
-	BWW=3.124D0/AWW**0.667D0
-	BUU=3.124D0/AUU**0.667D0
-	BWT=2.34D0/AWT**1.1D0
-	BUW=2.34D0/AUW**1.1D0
+        ATT=0.0961D0+0.644D0*ZL**0.6D0
+        AWW=0.838D0+1.172D0*ZL
+        AUU=0.2D0*AWW
+        AWT=0.284D0*(1.D0+6.4D0*ZL)**0.75D0
+        AUW=0.124D0*(1.D0+7.9D0*ZL)**0.75D0
+        BTT=3.124D0/ATT**0.667D0
+        BWW=3.124D0/AWW**0.667D0
+        BUU=3.124D0/AUU**0.667D0
+        BWT=2.34D0/AWT**1.1D0
+        BUW=2.34D0/AUW**1.1D0
       ELSE
 C
 C-- Unstable spectral and co-spectral function factors, eq. 23 -----
 C
-	XI   = (-ZL)**0.667D0
-	ZETA = (0.001D0*CalSonic(QQZ))**1.667D0
-	CW   = 0.7285D0+1.4115D0*XI
-	CU   = 9.546D0+1.235D0*XI/(ZETA**0.4D0)
+        XI   = (-ZL)**0.667D0
+        ZETA = (0.001D0*CalSonic(QQZ))**1.667D0
+        CW   = 0.7285D0+1.4115D0*XI
+        CU   = 9.546D0+1.235D0*XI/(ZETA**0.4D0)
       END IF
 C
 C-- Start Simpson's rule numerical integration -----------------------
-C     From -5 to log(5) in NInt steps
+C     From -5 to log(5) in NumInt steps
 C
       I3=0
       DO I1=1,10
-	DO I2=2,4,2
-	  I3=I3+1
-	  IF (I3.GT.NInt) GOTO 200
-	  I4=I2
-	  IF (I3.EQ.1)	I4=I4-1
-	  IF (I3.EQ.NInt) I4=I4-1
+        DO I2=2,4,2
+          I3=I3+1
+          IF (I3.GT.NumInt) GOTO 200
+          I4=I2
+          IF (I3.EQ.1)	I4=I4-1
+          IF (I3.EQ.NumInt) I4=I4-1
 C
 C-- Skip integration if frequency exceeds Nyquist frequency ------
 C
-	  IF (N.GT.(0.5D0*NS)) GOTO 999
+          IF (N.GT.(0.5D0*NS)) GOTO 999
 
 C
 C-- ELECTRONIC / DIGITAL FILTERS !!
 C-- Auto Regressive Moving Average filter response gain, eq. 19 --
 C
-	  GAIND=1.D0
-	  X=2.D0*PI*N*TAUD
-	  IF (X.LT.6.D0 .AND. X.GT.0.D0) GAIND=X*X/(1.D0+X*X)
+          GAIND=1.0D0
+          X=2.0D0*PI*N*TAUD
+          IF (X.LT.6.D0 .AND. X.GT.0.0D0) GAIND=X*X/(1.0D0+X*X)
 C
 C-- Butterworth filter frequency response gain, eq. 5 ------------
 C
-	  GAINV = 1.D0
-	  GAINV=(2.D0*PI*N*TAUV)**2.D0
-	  GAINV=1.D0+GAINV*GAINV
+          GAINV = 1.0D0
+          GAINV=(2.0D0*PI*N*TAUV)**2.0D0
+          GAINV=1.0D0+GAINV*GAINV
 C
 C-- Data aquisition co-spectral transfer function, eq. 15 (b=3) --
 C
-	  TRANA=1.D0+(N/(NS-N))**3.D0
+          TRANA=1.0D0+(N/(NS-N))**3.0D0
 C
 C-- LUW THERMOCOUPLE TEMPERATURE !!
 C-- Thermocouple frequency response gain, eq. 2 ------------------
 C
-	  GAINT1=1.D0+(2.D0*PI*N*TAUT)**2.D0
+          GAINT1=1.0D0+(2.0D0*PI*N*TAUT)**2.0D0
 C
 C-- Thermocouple spatial averaging transfer function, eq. 7 ------
 C
-	  TRANT1=1.D0	       !spatial averaging negligible
+          TRANT1=1.0D0	       !spatial averaging negligible
 C
 C-- W-T lateral separation transfer function, eq. 11 -------------
 C
-	  TRANWT1=1.D0
-	  X=N/Mean(U)*(CalTherm(QQX)-CalSonic(QQX))
-	  IF (X.GT.0.01D0) TRANWT1=EXP(-9.9D0*X**1.5D0)
+          TRANWT1=1.0D0
+          X=N/Mean(U)*(CalTherm(QQX)-CalSonic(QQX))
+          IF (X.GT.0.01D0) TRANWT1=EXP(-9.9D0*X**1.5D0)
 C
 C-- SOLENT SONIC TEMPERATURE !!
 C-- Sonic temperature frequency response gain, eq. 2 -------------
 C
-	  GAINT2=1.D0	       !sonic temperature gain negligible
+          GAINT2=1.0D0	       !sonic temperature gain negligible
 C
 C-- Sonic temperature spatial averaging transfer function, eq.7 --
 C
-	  TRANT2=1.D0
-	  X=2.D0*PI*N/Mean(U)*CalSonic(QQExt4)
-	  IF (X.GT.0.02D0) TRANT2=(3.D0+EXP(-X)-4.D0*(1.D0-EXP(-X))/X)/X
+          TRANT2=1.0D0
+          X=2.0D0*PI*N/Mean(U)*CalSonic(QQExt4)
+          IF (X.GT.0.02D0) 
+     &	       TRANT2=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
 C
 C-- W-T lateral separation transfer function, eq. 11 -------------
 C
-	  TRANWT2=1.D0	       !there is no lateral separation
+          TRANWT2=1.0D0	       !there is no lateral separation
 
 C
 C-- SOLENT SONIC HORIZONTAL WINDSPEED !!
 C-- UV-sensor frequency response gain, eq. 2 ---------------------
 C
-	  GAINUV=1.D0	       !sonic UV windspeed gain negligible
+          GAINUV=1.0D0	       !sonic UV windspeed gain negligible
 C
 C-- UV-sensor spatial averaging transfer function, eq. 7 ---------
 C
-	  TRANUV=1.D0
-	  X=2.D0*PI*N/Mean(U)*CalSonic(QQPath)
-	  IF (X.GT.0.02D0) TRANUV=(3.D0+EXP(-X)-4.D0*(1.D0-EXP(-X))/X)/X
+          TRANUV=1.0D0
+          X=2.0D0*PI*N/Mean(U)*CalSonic(QQPath)
+          IF (X.GT.0.02D0) 
+     &          TRANUV=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
 C
 C-- W-UV lateral separation transfer function, eq. 11 ------------
 C
-	  TRANWUV=1.D0
-	  X = N/Mean(U)*CalSonic(QQExt3)
-	  IF (X .GT.0.01D0) TRANWUV = EXP(-9.9D0*X**1.5D0)
+          TRANWUV=1.0D0
+          X = N/Mean(U)*CalSonic(QQExt3)
+          IF (X .GT.0.01D0) TRANWUV = EXP(-9.9D0*X**1.5D0)
 
 C
 C-- SOLENT SONIC VERTICAL WINDSPEED !!
 C-- W-sensor frequency response gain, eq. 2 ----------------------
 C
-	  GAINW=1.D0	       !sonic W windspeed gain neglectible
+          GAINW=1.0D0	       !sonic W windspeed gain neglectible
 C
 C-- W-sensor spatial averaging transfer function, eq. 9 ----------
 C
-	  TRANW=1.D0
-	  X=2.D0*PI*N/Mean(U)*CalSonic(QQPath)
-	  IF (X.GT.0.04D0)
-     &	    TRANW=(1.D0+(EXP(-X)-3.D0*(1.D0-EXP(-X))/X)/2.D0)*4.D0/X
+          TRANW=1.0D0
+          X=2.0D0*PI*N/Mean(U)*CalSonic(QQPath)
+          IF (X.GT.0.04D0)
+     &	    TRANW=(1.0D0+(EXP(-X)-3.D0*(1.0D0-EXP(-X))/X)/2.0D0)*4.0D0/X
 
 C
 C-- LYMANN-ALPHA OPEN PATH HYGROMETER !!
 C-- hygrometer frequency response gain, eq. 2 ------------
 C
-	  GAINQ1=1.D0	       !hygrometer gain neglectible
+          GAINQ1=1.0D0	       !hygrometer gain neglectible
 C
 C-- lymann-alpha spatial averaging transfer function, eq.7 ------------
 C
-	  TRANQ1=1.D0
-	  X=2.D0*PI*N/Mean(U)*CalHyg(QQPath)
-	  IF (X.GT.0.02D0) TRANQ1=(3.D0+EXP(-X)-4.D0*(1.D0-EXP(-X))/X)/X
+          TRANQ1=1.0D0
+          X=2.0D0*PI*N/Mean(U)*CalHyg(QQPath)
+          IF (X.GT.0.02D0) 
+     &           TRANQ1=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
 C
 C-- W-Q lateral separation transfer function, eq. 11 -------------
 C
-	  TRANWQ1=1.D0
-	  X=N/Mean(U)*CalHyg(QQX)
-	  IF (X.GT.0.01D0) TRANWQ1=EXP(-9.9D0*X**1.5D0)
+          TRANWQ1=1.0D0
+          X=N/Mean(U)*CalHyg(QQX)
+          IF (X.GT.0.01D0) TRANWQ1=EXP(-9.9D0*X**1.5D0)
 C
 C-- CO2 sensor !!
 C-- CO2 sensor frequency response gain, eq. 2 ------------
 C
-	  GAINCO21=1.D0	       !CO2 sensor gain neglectible
+          GAINCO21=1.0D0	       !CO2 sensor gain neglectible
 C
 C-- lymann-alpha spatial averaging transfer function, eq.7 ------------
 C
-	  TRANCO21=1.D0
-	  X=2.D0*PI*N/Mean(U)*CalCO2(QQPath)
-	  IF (X.GT.0.02D0) THEN
-	     TRANCO21=(3.D0+EXP(-X)-4.D0*(1.D0-EXP(-X))/X)/X
+          TRANCO21=1.0D0
+          X=2.D0*PI*N/Mean(U)*CalCO2(QQPath)
+          IF (X.GT.0.02D0) THEN
+	     TRANCO21=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
           ENDIF
 C
 C-- W-Q lateral separation transfer function, eq. 11 -------------
 C
-	  TRANWCO21=1.D0
-	  X=N/Mean(U)*CalCO2(QQX)
-	  IF (X.GT.0.01D0) TRANWCO21=EXP(-9.9D0*X**1.5D0)
+          TRANWCO21=1.0D0
+          X=N/Mean(U)*CalCO2(QQX)
+          IF (X.GT.0.01D0) TRANWCO21=EXP(-9.9D0*X**1.5D0)
 C
 C-- Composite transfer functions, eq. 28 -------------------------
 C
-	  DO I=1,NNMAX
+          DO I=1,NNMAX
 	     DO J=1,NNMAX
-	        G(I,J) = 0.D0
+	        G(I,J) = 0.0D0
              ENDDO
 	  ENDDO
 
@@ -471,39 +475,39 @@ C
           G(W,SpecCO2) = TRANWCO21 * 
      &                   SQRT (G(W,W) * G(CO2,CO2))	    ! WqCO2
           G(SpecCO2,W) = G(W,SpecCO2)
-	  DO I=1,NNMax
+          DO I=1,NNMax
 	     DO J=1,NNMax
 	        G(I,J) = G(I,J)*TRANA/GAINV*GAIND
              ENDDO
-	  ENDDO
+          ENDDO
 
-	  F=N/Mean(U)*CalSonic(QQZ)
-	  IF (ZL.LT.0.D0) THEN
+          F=N/Mean(U)*CalSonic(QQZ)
+          IF (ZL.LT.0.0D0) THEN
 C
 C-- Unstable normalised spectral and co-spectral forms ---------
 C
-	    UU=210.0D0*F/(1.D0+33.D0*F)**1.667D0		       !eq. 23
-	    UU=UU+F*XI/(ZETA+2.2D0*F**1.667D0)
-	    UU=UU/CU
-	    WW=16.D0*F*XI/(1.D0+17.D0*F)**1.667D0		       !eq. 22
-	    WW=WW+F/(1.D0+5.3D0*F**1.667D0)
-	    WW=WW/CW
-	    TT=14.94D0*F/(1.+24.D0*F)**1.667D0			     !eq. 24
-	    IF (F.GE.0.15D0) TT=6.827D0*F/(1.D0+12.5D0*F)**1.667D0
-	    WT=12.92D0*F/(1.D0+26.7D0*F)**1.375D0		       !eq. 25
-	    IF (F.GE.0.54D0) WT=4.378D0*F/(1.D0+3.8D0*F)**2.4D0
-	    UW=20.78D0*F/(1.D0+31.D0*F)**1.575D0		       !eq. 26
-	    IF (F.GE.0.24D0) UW=12.66D0*F/(1.D0+9.6D0*F)**2.4D0
-	  ELSE
+            UU=210.0D0*F/(1.0D0+33.0D0*F)**1.667D0		       !eq. 23
+            UU=UU+F*XI/(ZETA+2.2D0*F**1.667D0)
+            UU=UU/CU
+            WW=16.0D0*F*XI/(1.0D0+17.0D0*F)**1.667D0		       !eq. 22
+            WW=WW+F/(1.0D0+5.3D0*F**1.667D0)
+            WW=WW/CW
+            TT=14.94D0*F/(1.0D0+24.0D0*F)**1.667D0			     !eq. 24
+            IF (F.GE.0.15D0) TT=6.827D0*F/(1.0D0+12.5D0*F)**1.667D0
+            WT=12.92D0*F/(1.0D0+26.7D0*F)**1.375D0		       !eq. 25
+            IF (F.GE.0.54D0) WT=4.378D0*F/(1.0D0+3.8D0*F)**2.4D0
+            UW=20.78D0*F/(1.0D0+31.0D0*F)**1.575D0		       !eq. 26
+            IF (F.GE.0.24D0) UW=12.66D0*F/(1.0D0+9.6D0*F)**2.4D0
+          ELSE
 C
 C-- Stable normalised spectral and co-spectral forms, eq. 20a --
 C
-	    UU=F/(AUU+BUU*F**1.667D0)
-	    WW=F/(AWW+BWW*F**1.667D0)
-	    TT=F/(ATT+BTT*F**1.667D0)
-	    WT=F/(AWT+BWT*F**2.1D0)
-	    UW=F/(AUW+BUW*F**2.1D0)
-	  ENDIF
+            UU=F/(AUU+BUU*F**1.667D0)
+            WW=F/(AWW+BWW*F**1.667D0)
+            TT=F/(ATT+BTT*F**1.667D0)
+            WT=F/(AWT+BWT*F**2.1D0)
+            UW=F/(AUW+BUW*F**2.1D0)
+          ENDIF
 C
 C-- Integral of co-spectral transfer function * atm. co-spectrum -
 C
@@ -534,20 +538,20 @@ C
 C
 C-- Increase frequency by interval width -------------------------
 C
-	  N=N*LF
-	ENDDO
+          N=N*LF
+        ENDDO
       ENDDO
 
-200   CONTINUE
+ 200  CONTINUE
 
 C
 C-- Final flux loss correction factors !! ----------------------------
 C
 
       DO I=1,NSize
-	DO J=1,NSize
-	  WXT(I,J) = 1.0D0
-	ENDDO
+        DO J=1,NSize
+           WXT(I,J) = 1.0D0
+        ENDDO
       ENDDO
 
 999   CONTINUE
@@ -647,17 +651,17 @@ C     ***
       REAL*8 WXT(NMax,NMax),Cov(NMax,NMax),Lower,Upper,TolCov(NMax,NMax)
 
       DO i=1,NSize
-	DO j=1,NSize
-	  IF ((WXT(i,j).GE.Lower).AND.(WXT(i,j).LE.Upper)) THEN
-	    Cov(i,j) = Cov(i,j)*WXT(i,j)
+        DO j=1,NSize
+          IF ((WXT(i,j).GE.Lower).AND.(WXT(i,j).LE.Upper)) THEN
+            Cov(i,j) = Cov(i,j)*WXT(i,j)
 C
 C The tolerance is augmented by half the amount added by frequency-
 C response correction.
 C
-	    TolCov(i,j) = SQRT(TolCov(i,j)**2.D0+
+            TolCov(i,j) = SQRT(TolCov(i,j)**2.D0+
      &	      (0.5D0*Cov(i,j)*(WXT(i,j)-1.D0))**2.D0)
-	  ENDIF
-	ENDDO
+          ENDIF
+        ENDDO
       ENDDO
 
       RETURN
@@ -691,32 +695,25 @@ C
      &	DoPrint,
      &	Mean,NMax,N,TolMean,
      &	Cov,TolCov,
-     &  BadTc,
-     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &	DoYaw,PYaw,DirYaw,
-     &	DoPitch,PPitch,PitchLim,DirPitch,
-     &	DoRoll,PRoll,RollLim,DirRoll,
-     &	DoSonic,PSonic,SonFactr,
-     &	DoO2,PO2,O2Factor,
-     &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
+     &  DoCorr, PCorr, ExpVar, 
+     &	DirYaw, DirPitch, DirRoll,
+     &	SonFactr,
+     &	O2Factor,
+     &	CalSonic,CalTherm,CalHyg,
      &  CalCo2, FrCor,
-     &	DoWebb,PWebb, WebVel,P, Have_Uncal)
+     &	WebVel,P, Have_Cal)
 C     ****f* ec_corr.f/EC_C_Main
 C NAME
 C     EC_C_MAIN
 C SYNOPSIS
 C     CALL EC_C_Main(OutF,
 C     	DoPrint, Mean,NMax,N,TolMean, Cov,TolCov,
-C     	BadTc,
-C     	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-C     	DoYaw,PYaw,DirYaw,
-C     	DoPitch,PPitch,PitchLim,DirPitch,
-C     	DoRoll,PRoll,RollLim,DirRoll,
-C     	DoSonic,PSonic,SonFactr,
-C     	DoO2,PO2,O2Factor,
-C     	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
+C     	DoCorr, PCorr, ExpVar,
+C     	DirYaw, DirPitch, DirRoll,
+C     	SonFactr, O2Factor,
+C     	CalSonic,CalTherm,CalHyg,
 C       CalCo2,FrCor,
-C     	DoWebb,PWebb,P, Have_Uncal)
+C     	P, Have_Cal)
 C FUNCTION
 C     Integrated correction routine applying ALL (user-selected)
 C     corrections in this library on mean values and covariances.
@@ -742,66 +739,25 @@ C     Cov     : [REAL*8(NMax,NMax)] (in/out)
 C               Covariances of all calibrated signals
 C     TolCov  : [REAL*8(NMax,NMax)] (in/out)
 C               Tolerances in covariances of all calibrated signals
-C     BadTc   : [LOGICAL]
-C               Is thermocouple data unreliable ?
-C     DoTilt  : [LOGICAL]
-C               Perform tilt correction with known angles?
-C     PTilt   : [LOGICAL]
-C               Print intermediate results of known angle tilt-correction ?
-C     PreYaw  : [REAL*8]
-C               Known yaw angle (degrees)
-C     PrePitch: [REAL*8]
-C               Known pitch angle (degrees)
-C     PreRoll : [REAL*8]
-C               Known roll angle (degrees)
-C     DoYaw   : [LOGICAL]
-C               Do yaw rotation ?
-C     PYaw    : [LOGICAL]
-C               Print intermediate results of yaw-rotation
+C     DoCorr  : [LOGICAL](NMaxCorr)
+C               which corrections to do?
+C     PCorr   : [LOGICAL](NMaxCorr)
+C               intermediate results of which corrections?
+C     ExpVar  : [REAL*8](NMaxExp)
+C               array with experimental settings
 C     DirYaw  : [REAL*8] (out)
 C               Yaw angle (degrees)
-C     DoPitch : [LOGICAL]
-C               Do pitch rotation ?
-C     PPitch  : [LOGICAL]
-C               Print intermediate results of pitch-rotation?
-C     PitchLim: [REAL*8]
-C               Maximum pitch angle (degrees)
 C     DirPitch: [REAL*8] (out)
 C               Pitch angle (degrees)
-C     DoRoll  : [LOGICAL]
-C               Do roll rotation ?
-C     PRoll   : [LOGICAL]
-C               Print intermediate results of roll-rotation?
-C     RollLim : [REAL*8]
-C               Maximum roll angle (degrees)
 C     DirRoll : [REAL*8] (out)
 C               Roll angle (degrees)
-C     DoSonic : [LOGICAL]
-C               Do Schotanus correction on sonic temperature ?
-C     PSonic  : [LOGICAL]
-C               Print intermediate info on Schotanus correction ?
 C     SonFactr: [REAL*8(NMax)] (out)
 C               Correction factor due to Schotanus correction for
 C               covariance of sonic temperature with each calibrated
 C               signal.
-C     DoO2    : [LOGICAL]
-C               Correct hygrometer data for oxygen sensitivity ?
-C     PO2     : [LOGICAL]
-C               Print intermediate result for oxygen correction ?
 C     O2Factor: [REAL*8(NMax)] (out)
 C               Correction factor due to oxygen correction for
 C               covariance of humidity with each calibrated
-C     DoFreq  : [LOGICAL]
-c               Do frequency response correction ?
-C     PFreq   : [LOGICAL]
-C               Print intermediate results for frequency response
-C               correction ?
-C     LLimit  : [REAL*8]
-C               Lower limit for correction factor for frequency response
-C     ULimit  : [REAL*8]
-C               Upper limit for correction factor for frequency response
-C     Freq    : [REAL*8]
-C               Sampling frequency (Hz)
 C     CalSonic: [REAL*8(NQQ)]
 C               Calibration info for sonic anemometer
 C     CalTherm: [REAL*8(NQQ)]
@@ -813,14 +769,10 @@ C               Calibration info for CO2 sensor
 C     FrCor   : [REAL*8(NMax,NMax)] (out)
 C               Correction factors for covariances for frequency
 C               response
-C     DoWebb  : [LOGICAL]
-C               Do Webb correction for humidity flux ?
-C     PWebb   : [LOGICAL]
-C               Print intermediate results for Webb correction ?
 C     P       : [REAL*8]
 C               Atmospheric pressure (Pa)
-C     Have_Uncal : [LOGICAL(NMax)]
-C               Uncalibrated signal available for given quantity ?
+C     Have_Cal : [LOGICAL(NMax)]
+C               Calibrated signal available for given quantity ?
 C OUTPUT
 C     Mean    : [REAL*8(NMax)] (in/out)
 C               Mean values of all calibrated signals
@@ -855,6 +807,9 @@ C                 for sonic and/or Couple temperature since that
 C                 is used for various corrections)  
 C     07-10-2002: added WebVel to interface to pass
 C                 Webb velocity independent from Mean(W)
+C     27-01-2003: removed BadTC from interface
+C                 replaced list of correction switches by DoCorr and PCorr, ExpVar
+C                 replaced Nint by NumInt
 C     $Name$ 
 C     $Id$
 C USES
@@ -880,32 +835,32 @@ C     ***
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
-      INTEGER N,NInt,NMAx,OutF, WhichTemp, I, J
-      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,
-     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
-     &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
+      INTEGER N,NumInt,NMAx,OutF, WhichTemp, I
+      LOGICAL DoCorr(NMaxCorr), PCorr(NMaxCorr),
+     &	DoPrint,
      &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
-     &  Have_Uncal(NMax), QSchot, DoPF, PPF
+     &  Have_Cal(NMax), QSchot
       REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
-     &	PitchLim,RollLim,DirYaw,O2Factor(NMax),
-     &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
-     &	SonFactr(NMax),PreYaw,PrePitch,PreRoll,TSonFact,
-     &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs, WebVel, Apf(3,3)
+     &	TolCov(NMax,NMax),FrCor(NMax,NMax),
+     &	DirYaw,O2Factor(NMax),
+     &	NSTA,NEND,TAUV,TauD,DirPitch,DirRoll, TSonFact,
+     &	SonFactr(NMax),
+     &  Yaw(3,3), Roll(3,3), Pitch(3,3), WebVel,
+     &  ExpVar(NMaxExp)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
 C
 C
 C Only print intermediate results if desired
 C
 C
-      QTilt  = (PTilt  .AND. DoPrint)
-      QYaw = (PYaw .AND. DoPrint)
-      QPitch   = (PPitch   .AND. DoPrint)
-      QRoll  = (PRoll  .AND. DoPrint)
-      QSonic = (PSonic .AND. DoPrint)
-      QO2    = (PO2    .AND. DoPrint)
-      QFreq  = (PFreq  .AND. DoPrint)
-      QWebb  = (PWebb  .AND. DoPrint)
+      QTilt  = (PCorr(QCTilt)  .AND. DoPrint)
+      QYaw   = (PCorr(QCYaw)   .AND. DoPrint)
+      QPitch = (PCorr(QCPitch) .AND. DoPrint)
+      QRoll  = (PCorr(QCRoll)  .AND. DoPrint)
+      QSonic = (PCorr(QCSonic) .AND. DoPrint)
+      QO2    = (PCorr(QCO2)    .AND. DoPrint)
+      QFreq  = (PCorr(QCFreq)  .AND. DoPrint)
+      QWebb  = (PCorr(QCWebb)  .AND. DoPrint)
 C A Hack: Just set Qschot to QSonic (name confusion, apparently)
       QSchot = QSonic
 C
@@ -917,92 +872,87 @@ C to zero, to are carried out later!!!!!!
 C If no fixed tilt-angles are known, this subroutine may be skipped.
 C
 C
-      IF (DoTilt) THEN
-	CALL EC_C_T06(PreYaw,Yaw)
-	CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
-	CALL EC_C_T08(PrePitch,Pitch)
-	CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
-	CALL EC_C_T10(PreRoll,Roll)
-	CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
-	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      IF (DoCorr(QCTilt)) THEN
+        CALL EC_C_T06(ExpVar(QEPreYaw),Yaw)
+        CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
+        CALL EC_C_T08(ExpVar(QEPrePitch),Pitch)
+        CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
+        CALL EC_C_T10(ExpVar(QEPreRoll),Roll)
+        CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 
-	IF (QTilt) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Averages of data after fixed ',
-     &	  'tilt-correction: '
-	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+        IF (QTilt) THEN
+          CALL EC_G_ShwHead(OutF, 
+     &	  'Averages of data after fixed tilt-correction: ')
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+        ENDIF
       ENDIF
 C
 C
 C Perform classic yaw-correction : Mean(V) --> 0
 C
 C
-      IF (DoYaw) THEN
-	CALL EC_C_T07(Mean(U),Mean(V),DirYaw)
-	CALL EC_C_T06(DirYaw,Yaw)
-	CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
+      IF (DoCorr(QCYaw)) THEN
+        CALL EC_C_T07(Mean(U),Mean(V),DirYaw)
+        CALL EC_C_T06(DirYaw,Yaw)
+        CALL EC_C_T05(Mean,NMax,N,Cov,Yaw)
 
-	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 
-	IF (QYaw) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Yaw angle = ',DirYaw,' degrees'
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After yaw-correction (Mean(V) -> 0) : '
-	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+        IF (QYaw) THEN
+          WRITE(OutF,*)
+          WRITE(OutF,*) 'Yaw angle = ',DirYaw,' degrees'
+          CALL EC_G_ShwHead(OutF,
+     &	           'After yaw-correction (Mean(V) -> 0) : ')
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+        ENDIF
       ENDIF
 C
 C
 C Perform classic pitch-correction : Mean(W) --> 0
 C
 C
-      IF (DoPitch) THEN
-	CALL EC_C_T09(Mean(U),Mean(W),DirPitch)
-	IF (ABS(DirPitch).LE.PitchLim) THEN
+      IF (DoCorr(QCPitch)) THEN
+        CALL EC_C_T09(Mean(U),Mean(W),DirPitch)
+        IF (ABS(DirPitch).LE. ExpVar(QEPitchLim)) THEN
           CALL EC_C_T08(DirPitch,Pitch)
           CALL EC_C_T05(Mean,NMax,N,Cov,Pitch)
-	ENDIF
-	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        ENDIF
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 
-	IF (QPitch) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Pitch angle = ',DirPitch,' degrees'
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After pitch-correction (Mean(W) -> 0) : '
-	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+        IF (QPitch) THEN
+          WRITE(OutF,*)
+          WRITE(OutF,*) 'Pitch angle = ',DirPitch,' degrees'
+          CALL EC_G_ShwHead(OutF,
+     &         'After pitch-correction (Mean(W) -> 0) : ')
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+        ENDIF
       ENDIF
 C
 C
 C Perform classic roll-correction : Cov(W,V) --> 0
 C
 C
-      IF (DoRoll) THEN
-	CALL EC_C_T11(Cov(V,V),Cov(V,W),Cov(W,W),DirRoll)
-	IF (ABS(DirRoll) .LE. RollLim) THEN
+      IF (DoCorr(QCRoll)) THEN
+        CALL EC_C_T11(Cov(V,V),Cov(V,W),Cov(W,W),DirRoll)
+        IF (ABS(DirRoll) .LE. ExpVar(QERollLim)) THEN
           CALL EC_C_T10(DirRoll,Roll)
           CALL EC_C_T05(Mean,NMax,N,Cov,Roll)
-	ENDIF
-	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        ENDIF
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 
-	IF (QRoll) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Roll angle = ',DirRoll,' degrees'
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After roll-correction (Cov(V,W) -> 0) : '
-	  WRITE(OutF,*)
+        IF (QRoll) THEN
+          WRITE(OutF,*)
+          WRITE(OutF,*) 'Roll angle = ',DirRoll,' degrees'
+          CALL EC_G_ShwHead(OutF,
+     &          'After roll-correction (Cov(V,W) -> 0) : ')
           CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+        ENDIF
       ENDIF
 C
 C Reset the coveriances for which no data available
 C
-      CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 C
 C Correct sonic temperature and all covariances with sonic temperature
 C for humidity. This is half the Schotanus-correction. Side-wind
@@ -1011,32 +961,31 @@ C
 C Now we need to know if and which temperature we have. Default to
 C Sonic temperature
 C
-      IF (HAVE_UNCAL(TSonic)) THEN
+      IF (HAVE_CAL(TSonic)) THEN
          WhichTemp = Tsonic
-      ELSE IF (Have_UNCAL(TCouple)) THEN
+      ELSE IF (Have_CAL(TCouple)) THEN
          WhichTemp = TCouple
       ELSE
          WhichTemp = -1
       ENDIF
 
-      IF (DoSonic) THEN
+      IF (DoCorr(QCSonic)) THEN
         CALL EC_C_Schot1(Mean(SpecHum),Mean(TSonic),NMax,N,Cov,
      &    SonFactr,TSonFact)
         CALL EC_C_Schot2(SonFactr,TSonFact,Mean(TSonic),NMax,N,Cov)
-	CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 
-	IF (QSchot) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Correction factors for H2O-sensitivity of ',
-     &	  'sonic'
-	  DO i=1,N
+        IF (QSchot) THEN
+          WRITE(OutF,*)
+            CALL EC_G_ShwHead(OutF,
+     &          'Correction factors for H2O-sensitivity of sonic')
+          DO i=1,N
 	    WRITE(OutF,45) QName(i),SonFactr(i)
-	  ENDDO
+          ENDDO
    45	FORMAT('For (',a6,',T(son)) : ',F10.5)
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'After H2O-correction for sonic : '
-	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+          CALL EC_G_ShwHead(OutF,
+     &                      'After H2O-correction for sonic : ')
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C
@@ -1044,28 +993,26 @@ C
 C Perform correction for oxygen-sensitivity of hygrometer
 C
 C
-      IF (DoO2) THEN
+      IF (DoCorr(QCO2)) THEN
         IF (WhichTemp .GT. 0) THEN
           CALL EC_C_Oxygen1(Mean(WhichTemp),NMax,N,Cov,P,CalHyg(QQType),
      &      WhichTemp,O2Factor)
           CALL EC_C_Oxygen2(O2Factor,NMax,N,Cov)
-	  CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
+          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
 
-	  IF (QO2) THEN
-	    WRITE(OutF,*)
-	    WRITE(OutF,*) 'Correction factors for O2-sensitivity of ',
-     &        'hygrometer'
-	    DO i=1,N
+          IF (QO2) THEN
+            CALL EC_G_ShwHead(OutF,
+     &        'Correction factors for O2-sensitivity of hygrometer')
+            DO i=1,N
 	      WRITE(OutF,46) QName(i),O2Factor(i)
-	    ENDDO
+            ENDDO
  46         FORMAT('For (',a6,',RhoV or q) : ',F10.5)
-	    WRITE(OutF,*)
-	    WRITE(OutF,*) 'After oxygen-correction for hygrometer : '
-	    WRITE(OutF,*)
-	    CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	  ENDIF
+            CALL EC_G_ShwHead(OutF,
+     &           'After oxygen-correction for hygrometer : ')
+            CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+          ENDIF
         ELSE
-	    WRITE(*,*) 'ERROR: can not perform O2 correction without ',
+            WRITE(*,*) 'ERROR: can not perform O2 correction without ',
      &                 'a temperature'
         ENDIF
       ENDIF
@@ -1078,58 +1025,55 @@ C
 C
 C Constants for integration routine in correction frequency response
 C
-      NSTA   = -5.D0	 ! [?] start frequency numerical integration
+      NSTA   = -5.0D0	 ! [?] start frequency numerical integration
       NEND   = 0.69897D0 ! [?] end frequency numerical integration (LOG(5))
-      NINT   = 19	 ! [1] number of intervals
-      TAUV   = 0.D0	 ! [?] Low pass filter time constant
-      TauD   = 0.D0	 ! [?] interval length for running mean
+      NumINT = 19	 ! [1] number of intervals
+      TAUV   = 0.0D0	 ! [?] Low pass filter time constant
+      TauD   = 0.0D0	 ! [?] interval length for running mean
 
-      IF (DoFreq) THEN
+      IF (DoCorr(QCFreq)) THEN
         IF (WhichTemp .GT. 0) THEN
-	  CALL EC_C_F01(Mean,Cov,NMax,N,WhichTemp,
-     &         NSta,NEnd,NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,
-     &         CALCO2, FrCor)
-	  CALL EC_C_F02(FrCor,NMax,N,LLimit,ULimit,Cov,TolCov)
-	  CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-	  IF (QFreq) THEN
-	    CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
-	    WRITE(OutF,*)
-	    WRITE(OutF,*) 'After frequency-correction : '
-	    WRITE(OutF,*) 'Factors accepted between ',LLimit,
-     &	                  ' and ',ULimit
-	    WRITE(OutF,*)
-	    CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	  ENDIF
-
+          CALL EC_C_F01(Mean,Cov,NMax,N,WhichTemp,
+     &         NSta,NEnd,NumInt,ExpVar(QEFreq),TauD,TauV,
+     &         CalSonic,CalTherm,CalHyg,
+     &         CalCO2, FrCor)
+          CALL EC_C_F02(FrCor,NMax,N,ExpVar(QELLimit),
+     &                  ExpVar(QEULimit),Cov,TolCov)
+     
+          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+          IF (QFreq) THEN
+            CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
+            WRITE(OutF,*) 'Factors accepted between ',
+     &                     ExpVar(QELLimit),
+     &	                  ' and ',ExpVar(QEULimit)
+            CALL EC_G_ShwHead(OutF, 'After frequency-correction : ')
+            CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+          ENDIF
         ELSE
-	    WRITE(*,*) 'ERROR: can not perform freq. response correction',
-     &                 ' without a temperature'
-	ENDIF
+            WRITE(*,*) 'ERROR: can not perform freq. response ',
+     &                 ' correction without a temperature'
+        ENDIF
       ENDIF
 C
 C
 C Calculate mean vertical velocity according to Webb
 C
 C
-      IF (DoWebb) THEN
+      WebVel = DUMMY
+      IF (DoCorr(QCWebb)) THEN
          IF (WhichTemp .GT. 0) THEN
-	   CALL EC_C_Webb(Mean,NMax,Cov,P, WhichTemp, WebVel)
-	   CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
-
-	   IF (QWebb) THEN
-	     WRITE(OutF,*)
+           CALL EC_C_Webb(Mean,NMax,Cov,P, WhichTemp, WebVel)
+           CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov)
+           IF (QWebb) THEN
 	     WRITE(OutF,*) 'Webb-velocity (vertical) = ',WebVel,' m/s'
-	     WRITE(OutF,*)
-	     WRITE(OutF,*) 'After addition of Webb-term : '
-	     WRITE(OutF,*)
+             CALL EC_G_ShwHead(OutF, 'After addition of Webb-term: ')
 	     CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,
      &              NMax,N)
-	   ENDIF
+           ENDIF
          ELSE
-	    WRITE(*,*) 'ERROR: can not perform Webb correction',
+           WRITE(*,*) 'ERROR: can not perform Webb correction',
      &                 ' without a temperature'
-	 ENDIF
+         ENDIF
       ENDIF
 
       RETURN
@@ -1199,7 +1143,7 @@ C     ***
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i, WhichTemp
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax),OXC,P, HygType,
+      REAL*8 Cov(NMax,NMax),Factor(NMax),OXC,P, HygType,
      +       GenKo, GenKw, MeanT
 
       IF (HygType .EQ. ApCampKrypton) THEN
@@ -1263,7 +1207,7 @@ C     ***
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
-      INTEGER NMax,N,i, WhichTemp
+      INTEGER NMax,N,i
       REAL*8 Cov(NMax,NMax),Factor(NMax)
       DO i = 1,N
 	Cov(i,Humidity) = Factor(i)*Cov(i,Humidity)
@@ -1353,7 +1297,7 @@ C     ***
 
       REAL*8   UCorr, VCorr, WCorr, AziNew, AziOld, ElevNew, ElevOld,
      &         UC1, UC2, UC3, VC1, WC1, WC2
-      INTEGER  I, NITER, ITMAX
+      INTEGER  NITER, ITMAX
 
 
       UC1 = Cal(QQExt6)
@@ -1378,13 +1322,13 @@ C     ***
          DO WHILE (((ABS(AziNew-AziOld) .GT. 1./60) .OR.
      &              (ABS(ElevNew-ElevOld) .GT. 1./60)) .AND.
      &           (NITER .LT. ITMAX))
-            UCorr =  UDum/(UC1*(1 - 0.5*
+            UCorr =  UDum/(UC1*(1.D0 - 0.5D0*
      &              ((AziNew + (ElevNew/0.5236D0)*UC2)*
      &              (1 - UC3*Abs(ElevNew/0.5236D0))
      &              )**2        )
      &                     )
             VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
-            WCorr =  WDum/(WC1*(1 - 0.5*(ElevNew*WC2)**2))
+            WCorr =  WDum/(WC1*(1.D0 - 0.5D0*(ElevNew*WC2)**2))
 
             AziOld = AziNew
             ElevOld = ElevNew
@@ -1511,7 +1455,7 @@ C     ***
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax), MeanTSon, TSonFact
+      REAL*8 Cov(NMax,NMax),Factor(NMax), MeanTSon, TSonFact
 
       DO i = 1,N
 	Cov(i,TSonic) = Factor(i)*Cov(i,TSonic)
@@ -1563,16 +1507,15 @@ C     EC_Ph_Q
 C     ***
       IMPLICIT NONE
 
-      INTEGER NMax,N,i
       REAL*8   Temp, Rhov, Press, SPHUM, SPHUMNEW, NEWTEMP
       REAL*8 EC_Ph_Q ! External function calls
 
       SPHUM = EC_Ph_Q(Temp, Rhov, Press)
-      SPHUMNEW = 1.0
+      SPHUMNEW = 1.0D0
       NEWTEMP = Temp
 C Does this converge ?
       DO WHILE (ABS((SPHUM - SPHUMNEW)/SPHUM) .GT. 0.0001)
-         NEWTEMP = TEMP/(1+0.51*SPHUM)
+         NEWTEMP = TEMP/(1.D0+0.51D0*SPHUM)
          SPHUMNEW = SPHUM
          SPHUM = EC_Ph_Q(NEWTEMP, Rhov, Press)
       ENDDO
@@ -1638,7 +1581,7 @@ C     ***
 
       IMPLICIT NONE
       LOGICAL SingleRun,DoWBias
-      INTEGER i,j,k,NRuns,UmeanMax
+      INTEGER i,j,k,NRuns
       REAL*8 uMean(3,NRuns),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
      &  UUSum(3,3)
 C
@@ -1824,22 +1767,37 @@ C
      &   -v*R13*u**2+w*R12*v**2-v**3*R13-w*R12*u**2
       Disc = w**4*R11**2+4*w**2*R13**2*u**2+4*w**4*R12**2+v**4*R11**2
      &+4*v
-     #**2*R13**2*u**2+8*u**2*R23*v*R11*w-4*u**2*R23*v*R33*w-4*w*R22*v*u*
-     #*2*R23-4*v**3*R11*u*R12+4*v**2*R12**2*w**2+4*v**3*R23*R11*w-4*v**3
-     #*R23*R33*w-2*v**2*R11*w**2*R22-8*u**3*R23*w*R12+2*u**2*R33*w**2*R1
-     #1-2*u**2*R22*w**2*R11+4*v*R12*u**3*R33-4*w**3*R22*v*R23+4*v*R11*w*
-     #*3*R23+8*u*R22*v**2*R13*w+4*u**3*R22*w*R13-2*v**2*R33*u**2*R22-2*u
-     #**2*R33*w**2*R22-4*v**2*R33*u*w*R13-8*v**3*R12*R13*w+4*v**2*R12**2
-     #*u**2-4*v*R12*u*w**2*R11+2*v**2*R11**2*w**2-8*v**3*R23*u*R13+2*v**
-     #2*R33**2*u**2+
-     &4*v**4*R13**2+4*u**4*R23**2+u**4*R22**2+u**4*R33**2+4*w**3*R
-     #22*u*R13-4*w**3*R11*u*R13-8*w**3*R12*v*R13+2*v**2*R33*w**2*R22-2*v
-     #**2*R33*w**2*R11-4*u**3*R33*w*R13+8*u*R33*w**2*R12*v-4*v*R12*u**3*
-     #R22-4*v*R12*u*w**2*R22-8*u*R23*w**3*R12-8*u**3*R23*v*R13-4*v**2*R1
-     #1*u*w*R13+4*v**3*R12*u*R33+v**4*R33**2+2*v**2*R11*u**2*R22-2*v**2*
-     #R11*u**2*R33+4*u**2*R23**2*w**2+4*w**2*R12**2*u**2-2*u**4*R22*
-     #R33+w**4*R22**2+4*v**2*R23**2*u**2+2*u**2*R22**2*w**2-2*v**4*R11*R
-     #33-2*w**4*R22*R11+4*v**2*R23**2*w**2+4*v**2*R13**2*w**2
+     # **2*R13**2*u**2+8*u**2*R23*v*R11*w-
+     # 4*u**2*R23*v*R33*w-4*w*R22*v*u**2*R23-
+     # 4*v**3*R11*u*R12+4*v**2*R12**2*w**2+
+     # 4*v**3*R23*R11*w-4*v**3
+     # *R23*R33*w-2*v**2*R11*w**2*R22-
+     # 8*u**3*R23*w*R12+2*u**2*R33*w**2*R11-
+     # 2*u**2*R22*w**2*R11+4*v*R12*u**3*R33-
+     # 4*w**3*R22*v*R23+4*v*R11*w**3*R23+
+     # 8*u*R22*v**2*R13*w+4*u**3*R22*w*R13-
+     # 2*v**2*R33*u**2*R22-2*u
+     # **2*R33*w**2*R22-4*v**2*R33*u*w*R13-
+     # 8*v**3*R12*R13*w+4*v**2*R12**2
+     # *u**2-4*v*R12*u*w**2*R11+2*v**2*R11**2*w**2-
+     # 8*v**3*R23*u*R13+2*v**
+     # 2*R33**2*u**2+
+     & 4*v**4*R13**2+4*u**4*R23**2+u**4*R22**2+
+     # u**4*R33**2+4*w**3*R22*u*R13-
+     # 4*w**3*R11*u*R13-
+     # 8*w**3*R12*v*R13+2*v**2*R33*w**2*R22-
+     #  2*v**2*R33*w**2*R11-4*u**3*R33*w*R13+
+     # 8*u*R33*w**2*R12*v-4*v*R12*u**3*
+     # R22-4*v*R12*u*w**2*R22-8*u*R23*w**3*R12-
+     # 8*u**3*R23*v*R13-4*v**2*R11*u*w*R13+
+     # 4*v**3*R12*u*R33+v**4*R33**2+
+     # 2*v**2*R11*u**2*R22-2*v**2*
+     # R11*u**2*R33+4*u**2*R23**2*w**2+
+     # 4*w**2*R12**2*u**2-2*u**4*R22*
+     # R33+w**4*R22**2+4*v**2*R23**2*u**2+
+     # 2*u**2*R22**2*w**2-2*v**4*R11*R33-
+     # 2*w**4*R22*R11+4*v**2*R23**2*w**2+
+     # 4*v**2*R13**2*w**2
 
       b(1) = -0.5D0*(-v**3*R11+2*u*R12*v**2+2*w**2*R12*u-2*u**2*R23*w
      &  -u**2*R22*v+u**2*v*R33+w**2*R22*v-w**2*R11*v-2*w*R23*v**2
@@ -1885,7 +1843,7 @@ C the mean velocity over all runs according to relation W.45
 C
       CALL EC_M_MapVec(Apf,USum,USum)
 
-      UHor = ((USum(1))**2+(USum(2))**2)**0.5
+      UHor = (USum(1)**2+USum(2)**2)**0.5D0
       SinGamma = USum(2)/UHor
       CosGamma = USum(1)/UHor
       Gamma = 180.D0*ACOS(CosGamma)/PI
@@ -2181,7 +2139,7 @@ C     ***
 
       REAL*8 UHor,SinPhi,CosPhi,MeanU,MeanV,Direction
 
-      UHor = (MeanU**2+MeanV**2)**0.5
+      UHor = (MeanU**2+MeanV**2)**0.5D0
       SinPhi = MeanV/UHor
       CosPhi = MeanU/UHor
       Direction = 180.D0*ACOS(CosPhi)/PI
@@ -2271,7 +2229,7 @@ C     ***
 
       REAL*8 SinTheta,MeanU,MeanW,Direction,UTot
 
-      UTot = (MeanU**2+MeanW**2)**0.5
+      UTot = (MeanU**2+MeanW**2)**0.5D0
       SinTheta = MeanW/UTot
       Direction = 180.D0*ASIN(SinTheta)/PI
 
@@ -2426,7 +2384,8 @@ C     ***
 C
 C Ratio of mean densities of water vapour and dry air
 C
-      Sigma = Mean(Humidity)/EC_Ph_RhoDry(Mean(Humidity),Mean(WhichTemp),P)
+      Sigma = Mean(Humidity)/EC_Ph_RhoDry(Mean(Humidity),
+     &                                    Mean(WhichTemp),P)
       WebVel = (1.D0+Mu*Sigma)*Cov(W,WhichTemp)/Mean(WhichTemp) +
      &	Mu*Sigma*Cov(W,Humidity)/Mean(Humidity)
 

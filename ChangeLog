@@ -253,4 +253,29 @@ Revision 2.4.4: January 14, 2003
             for output-on-demand).
           - added some checks to EC_G_Reset (related to CO2)
 	  - removed leading spaces in writing hear to flux file in ec_ncdf
+Revision 2.4.5:  January 29, 2003
+          - Now (in parcnts.inc) have separate indices for calibrate and
+	    uncalibrated quantities. Hopefully replaced have_uncal by have_cal
+	    where appropriate in all source files (ec_file.f, ec_gene.f,
+	    ec_corr.f, ec_ncdf.f)
+	  - Implemented QPhys and dQPhys to replace endless lists of physical
+	    quantities
+	  - Implemented Std and dStd in ec_ncdf.f to replace endless lists
+	    of standard deviations
+	  - Moved information about which corrections to do, which info
+	    to print to intermediate file to arrays of logicals
+	    (to reduce length of interface of routines, and reduce chance
+	    of bugs). Variables that describe certain experimental
+	    settings (such as sampling freq., preyaw etc.) moved to
+	    array as well.
+	  - All source checked with ftnchek (not bothered about arrayness
+	    mismatches!)
+	  - removed y from interface of EC_M_Detren since it causes aliasing
+	    (and is not necessary to arrive at the same result).
+	  - fixed error in EC_Ph_Flux in computation of Ustar (bug present
+	    since 2.4.4)
+	    
+	  
+	  
+	    
 

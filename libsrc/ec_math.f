@@ -206,6 +206,7 @@ C
 	NChange(j,j) = 0
         NMin(j,j) = 0
         NPlus(j,j) = 0
+        PrevPrime(j) = 0
       ENDDO
 
       DO i=1,M
@@ -250,7 +251,7 @@ C
       DO j=1,N
         PSwap = 2.D0*DBLE(NMin(j,j))*DBLE(NPlus(j,j))/
      &    DBLE(NMin(j,j) + NPlus(j,j))**2.D0
-	MIndep(j) = ANINT(DBLE(NChange(j,j))/PSwap) - 1
+	MIndep(j) = INT(DBLE(NChange(j,j))/PSwap) - 1
 	MIndep(j) = MAX(MIndep(j),1)
 	IF (Cok(j,j) .GT. 0) THEN
 	   TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
@@ -269,7 +270,7 @@ C
 	  DO k=j,N
 	    IF (.NOT.(Flag(j,i).OR.Flag(k,i))) THEN
 	      dTolCov(j,k)=xPrime(j)*xPrime(k)-Cov(j,k)
-	      TolCov(j,k)=TolCov(j,k)+(dTolCov(j,k))**2
+	      TolCov(j,k)=TolCov(j,k)+dTolCov(j,k)**2
 	    ENDIF
 	  ENDDO
 	ENDDO
@@ -293,7 +294,7 @@ C
 C
 C Tolerance is defined as 2*sigma, where sigma is standard deviation
 C
-	     TolCov(j,k) = 2.D0*(TolCov(j,k))**0.5
+	     TolCov(j,k) = 2.D0*TolCov(j,k)**0.5D0
 	  ENDIF
 	ENDDO
       ENDDO
@@ -523,7 +524,7 @@ C
 
 
 
-      SUBROUTINE EC_M_Detren(x,NMax,N,MMAx,M,Mean,Cov,y,RC)
+      SUBROUTINE EC_M_Detren(x,NMax,N,MMAx,M,Mean,Cov,RC)
 C     ****f* ec_math.f/EC_M_Detren
 C NAME
 C     EC_M_Detren
@@ -532,10 +533,10 @@ C     CALL EC_M_Detren(x,NMax,N,MMAx,M,Mean,Cov,y,RC)
 C FUNCTION
 C     Construct a linearly detrended dataset from a given dataset
 C INPUTS
-C     x      : [REAL*8(NMax,MMax)] 
+C     x      : [REAL*8(NMax,MMax)] (in/out)
 C              array with samples: x(i,j) = quantity i in sample j
 C              only the first N quantities and the first M samples
-C              are used.
+C              are used. On output: detrended series
 C     NMax   : [INTEGER]
 C              maximum number of quantities in x
 C     N      : [INTEGER]
@@ -549,8 +550,6 @@ C              mean of all quantities
 C     Cov    : [REAL*8 (NMax,NMAx)]
 C              covariances of quantities used to find trend.
 C OUTPUT 
-C     y      : [REAL*8(NMAx,MMax)]
-C              detrended timeseries
 C     RC     : [REAL*8(NMAx)]  
 C              Directional coefficients of linear regression
 C              trend-lines.
@@ -559,6 +558,8 @@ C     Arjan van Dijk
 C HISTORY
 C     $Name$
 C     $Id$
+C Revision 28-01-2003: remove argument y, since it causes aliassing (and is not
+C                      needed).
 C USES
 C     parcnst.inc
 C     ***
@@ -566,7 +567,7 @@ C     ***
       INCLUDE 'parcnst.inc'
       INTEGER NMax,N,i,MMax,M,j
       REAL*8 x(NMax,MMax),Mean(NMax),Cov(NMax,NMax),RC(NMax),
-     &	y(NMax,MMax),Trend
+     &	Trend
 
       DO j = 1,N
 	RC(j) = Cov(TTime,j)/Cov(TTime,TTime)
@@ -576,7 +577,7 @@ C     ***
 	DO j= 1,N
 	  IF (j.NE.TTime) THEN
 	    Trend = RC(j)*(x(TTime,i)-Mean(TTime))
-	    y(j,i) = x(j,i) - Trend
+	    x(j,i) = x(j,i) - Trend
 	  ENDIF
 	ENDDO
       ENDDO
@@ -756,7 +757,7 @@ C coordinates
      &          EC_M_SQR(x(3)*b(1)*b(2)) - EC_M_SQR(b(1)*b(2)*b(3))
 C Solve this cubic equation
       CALL EC_M_Cardano(Poly, Root, AllReal)
-      IF (.NOT.(AllReal))
+      IF (.NOT. AllReal)
      &  WRITE(*,*) 'Error in finding elliptic coordinates!!!'
       DO i=1,3
         y(i) = Root(Re,i)
@@ -768,9 +769,11 @@ C the relation given in the header
           IF (y(j) .GT. y(i)) CALL EC_M_DSwap(y(i),y(j))
         END DO
       END DO
-      IF (.NOT.((-EC_M_SQR(b(1)) .LT. y(Nu)).AND.(y(Nu) .LT. -EC_M_SQR(b(2)))
-     &     .AND.(-EC_M_SQR(b(2)) .LT. y(Mu)).AND.(y(Mu) .LT. -EC_M_SQR(b(3)))
-     &     .AND.(0.D0 .LT. y(Lambda))))
+      IF (.NOT.((-EC_M_SQR(b(1)) .LT. y(Nu)) .AND.
+     &          (y(Nu) .LT. -EC_M_SQR(b(2))) .AND.
+     &          (-EC_M_SQR(b(2)) .LT. y(Mu)) .AND.
+     &          (y(Mu) .LT. -EC_M_SQR(b(3))) .AND.
+     &          (0.D0 .LT. y(Lambda))))
      &  WRITE(*,*) 'ERROR!!! in determination of elliptic coordinates'
 C Calculate the derivative Dy[i]/Dx[j] of the elliptic coordinates to the
 C Carthesian coordinates
@@ -1197,18 +1200,21 @@ C              the maximum of each quantity, only taking into
 C              account samples with Flag = 0
 C AUTHOR
 C     Arnold Moene 
+C USES
+C     parcnst.inc
 C HISTORY
 C     $Name$
 C     $Id$
 C     ***
       IMPLICIT NONE
+      include 'parcnst.inc'
       INTEGER I,J, N, M, NSAMP, NMax, MMax
-      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax), DUMMY
+      REAL*8 x(NMax,MMax),Mins(NMax),Maxs(NMax) 
       LOGICAL Flag(NMax,MMax)
 
       DO I=1,N
-         Mins(I) = 1e10
-	 Maxs(I) = -1e10
+         Mins(I) = 1D10
+	 Maxs(I) = -1D10
       ENDDO
 
       DO I=1,N
@@ -1439,7 +1445,7 @@ C     ***
       PARAMETER (epsilon = 1.D-18)
       PARAMETER (PI = 0.31415926535897929170D+01)
       IF (DABS(b(1)-b(2)).LT.epsilon) THEN
-         dum1 = ((b(1)**2-b(3)**2)**-(1.5D0))*(PI/2.D0
+         dum1 = ((b(1)**2-b(3)**2)**(-1.5D0))*(PI/2.D0
      &   -DATAN(DSQRT((b(3)**2+lambda)/(b(1)**2-b(3)**2))))
          integral(1) = -DSQRT(b(3)**2+lambda)/((b(1)**2-b(3)**2)*
      &      (b(1)**2+lambda))+dum1
@@ -1447,7 +1453,7 @@ C     ***
          integral(3) = 2.D0/((b(1)**2+lambda)*DSQRT(b(3)**2+lambda))
      &      -2.D0*integral(1)
       ELSE IF (DABS(b(2)-b(3)).LT.epsilon) THEN
-         dum1 = ((b(1)**2-b(3)**2)**-(1.5D0))*
+         dum1 = ((b(1)**2-b(3)**2)**(-1.5D0))*
      &      DLOG((DSQRT(b(1)**2+lambda)
      &      -DSQRT(b(1)**2-b(3)**2))**2/(lambda+b(3)**2))
          integral(1) = -2.D0/((b(1)**2-b(3)**2)*DSQRT(b(1)**2+lambda))
@@ -1504,7 +1510,6 @@ C     $Name$
 C     $Id$
 C     ***
       IMPLICIT NONE
-      REAL*8 lambda,b(3),integral(3),phi,alpha,ff,ee,dum1
       REAL*8 x
       EC_M_SQR = x*x
       END

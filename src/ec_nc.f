@@ -31,9 +31,11 @@ C AUTHOR:    Arnold Moene
 C DATE:      May 28, 2001
 C...........................................................................
       REAL*8 FUNCTION EC_NCDF_CSI2HOUR(HOURMIN)
-
+      IMPLICIT NONE
       REAL*8 HOURMIN
       INTEGER HOUR, MIN
+      
+
 
       HOUR = INT(HOURMIN/100.0D0)
       MIN = INT(HOURMIN-HOUR*100D0)
@@ -47,14 +49,18 @@ C               time without having seconds
 C...........................................................................
       SUBROUTINE EC_NCDF_FINDNOSEC(FDOY, FHOURMIN, NCID,
      +                    NCdoyID, NChmID, IND)
+      IMPLICIT NONE     
+      INCLUDE 'netcdf.inc'
+      
       INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, IND,
-     +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
-     +        CURCH
-      REAL*8 DOY1, DOY2, DOY3, HM1, HM2, HM3,
-     +     SAMPF, TIME1, TIME2, TIME3, HM4, DOY4,
-     +     DOYD, HOURD, TIMED
+     +        DIMID, MAXIND, ATTEMPTS, IND1, IND2, IND3, IND4,
+     +        CURCH, STATUS
+      REAL*8 DOY1, DOY2, DOY3, HM1, HM2, HM3, HM4, DOY4,
+     +       DOYD, HOURD, TIMED
       REAL*8 EC_NCDF_CSI2HOUR
       LOGICAL OK
+      
+
 
       STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
@@ -83,7 +89,7 @@ C...........................................................................
 	      IND3 = IND3 - 1
 	   ENDIF
          ENDDO
-         IND2 = ANINT((IND3+IND1)/2.0)
+         IND2 = INT((IND3+IND1)/2.0)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
@@ -93,18 +99,20 @@ C...........................................................................
 
 C Check whether point is before start or beyond end of file
          DOYD = FDOY - DOY1
-         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM1)
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0
+         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - 
+     +           EC_NCDF_CSI2HOUR(HM1)
+         TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0
          IF (TIMED .LT. 0) THEN
-            FDOY = DOY1
-	    FHOURMIN = HM1
+            FDOY = INT(DOY1)
+	    FHOURMIN = INT(HM1)
          ENDIF
          DOYD = DOY3 - FDOY
-         HOURD = EC_NCDF_CSI2HOUR(HM3) - EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0
+         HOURD = EC_NCDF_CSI2HOUR(HM3) - 
+     +           EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
+         TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0
          IF (TIMED .LT. 0) THEN
-            FDOY = DOY3
-	    FHOURMIN = HM3
+            FDOY = INT(DOY3)
+	    FHOURMIN = INT(HM3)
          ENDIF
 
          CURCH = IND2
@@ -112,10 +120,10 @@ C Check whether point is before start or beyond end of file
 
          DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 50))
 C Determine time difference between current sample and required time
-            PREVCH = CURCH
             DOYD = FDOY - DOY2
-            HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM2)
-            TIMED = 3600.0*24*DOYD + HOURD*3600.0
+            HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - 
+     +              EC_NCDF_CSI2HOUR(HM2)
+            TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0
             IF (ANINT(TIMED) .LT. 0) THEN
 	       CURCH = IND3 - IND2
                IND3 = IND2
@@ -140,7 +148,7 @@ C Determine time difference between current sample and required time
 	         DOY3 = DOY2
 	       ENDIF
             ENDIF
-            IND2 = ANINT((IND3+IND1)/2.0)
+            IND2 = INT((IND3+IND1)/2.0)
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
 
@@ -159,7 +167,7 @@ C Determine time difference between current sample and required time
       ENDIF
       IF (IND2 .LT. 1) IND2 = 1
       IF (IND2 .GT. MAXIND) IND2 = MAXIND
-      IF (ABS(TIMED) .GT. 1.5/60D0) IND2 = -1
+      IF (ABS(TIMED) .GT. 1.5D0/60D0) IND2 = -1
       IND = IND2
       END
 
@@ -169,11 +177,14 @@ C PURPOSE   :  To find the index in a NetCDF File for a given DOY and time
 C...........................................................................
       SUBROUTINE EC_NCDF_FINDTIME(FDOY, FHOURMIN, NCID,
      +                    NCdoyID, NChmID, NCsecID,IND)
+      IMPLICIT None
+      INCLUDE 'netcdf.inc'
+      
       INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, NCsecID, IND,
-     +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
-     +        CURCH
+     +        DIMID, MAXIND, ATTEMPTS, IND1, IND2, IND3,
+     +        CURCH, STATUS
       REAL*8 SEC1, SEC2, SEC3, DOY1, DOY2, DOY3, HM1, HM2, HM3,
-     +     SAMPF, TIME1, TIME2, TIME3, SEC4, HM4, DOY4,
+     +     SAMPF, SEC4, HM4, DOY4,
      +     DOYD, HOURD, SECD, TIMED
       LOGICAL OK
 
@@ -219,33 +230,36 @@ C Get mean sample rate
          DOYD = DOY3 - DOY1
          HOURD = EC_NCDF_CSI2HOUR(HM3) - EC_NCDF_CSI2HOUR(HM1)
          SECD = SEC3 - SEC1
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0 + SECD
          SAMPF = MAXIND/ABS(TIMED)
 C Check whether point is before start or beyond end of file
          DOYD = FDOY - DOY1
-         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM1)
+         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - 
+     +           EC_NCDF_CSI2HOUR(HM1)
          SECD = 0 - SEC1
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0 + SECD
          IF (TIMED .LT. 0) THEN
-            FDOY = DOY1
-	    FHOURMIN = HM1
+            FDOY = INT(DOY1)
+	    FHOURMIN = INT(HM1)
          ENDIF
          DOYD = DOY3 - FDOY
-         HOURD = EC_NCDF_CSI2HOUR(HM3) - EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
+         HOURD = EC_NCDF_CSI2HOUR(HM3) - 
+     +           EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
          SECD = SEC3 - 0
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0 + SECD
          IF (TIMED .LT. 0) THEN
-            FDOY = DOY3
-	    FHOURMIN = HM3
+            FDOY = INT(DOY3)
+	    FHOURMIN = INT(HM3)
          ENDIF
 
 C Get time difference between start and requested point
          DOYD = FDOY - DOY1
-         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM1)
+         HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - 
+     +          EC_NCDF_CSI2HOUR(HM1)
          SECD = 0 - SEC1
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0 + SECD
          ATTEMPTS = 0
-         IND2 = TIMED*SAMPF+1
+         IND2 = INT(TIMED*SAMPF+1)
          IF (IND2 .LT. 1) THEN
             IND2 = 1
          ELSE IF (IND2 .GT. MAXIND) THEN
@@ -255,7 +269,6 @@ C Get time difference between start and requested point
 
          DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
 C Determine time difference between current sample and required time
-            PREVCH = CURCH
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2, SEC2)
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
@@ -266,15 +279,16 @@ C Get local sample rate
             DOYD = DOY4 - DOY2
             HOURD = EC_NCDF_CSI2HOUR(HM4) - EC_NCDF_CSI2HOUR(HM2)
             SECD = SEC4 - SEC2
-            TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+            TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0 + SECD
 	    SAMPF = 1D0/TIMED
 
 C Get distance between current point and requested point
             DOYD = FDOY - DOY2
-            HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - EC_NCDF_CSI2HOUR(HM2)
+            HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - 
+     +              EC_NCDF_CSI2HOUR(HM2)
             SECD = 0D0 - SEC2
-            TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-            CURCH = ANINT(TIMED*SAMPF)
+            TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0 + SECD
+            CURCH = INT(TIMED*SAMPF)
 C We're there
 	    IF (CURCH .EQ. 0) THEN
 	       IND = IND2
@@ -289,7 +303,7 @@ C Shift forward, but not beyond end of file
 	        HM1 = HM2
 	        SEC1 = SEC2
 	        DOY1 = DOY2
-                IND2 = IND2 + ANINT(TIMED*SAMPF)
+                IND2 = IND2 + INT(TIMED*SAMPF)
 C Shift backward, but not beyond start of file
 	    ELSE IF  (TIMED .LT. 0) THEN
 	        IF (IND2 .EQ. 1) THEN
@@ -300,7 +314,7 @@ C Shift backward, but not beyond start of file
 	        HM3 = HM2
 	        SEC3 = SEC2
 	        DOY3 = DOY2
-                IND2 = IND2 + ANINT(TIMED*SAMPF)
+                IND2 = IND2 + INT(TIMED*SAMPF)
 	   ENDIF
 C
 C Get time difference between start of interval and requested point
@@ -315,7 +329,7 @@ C Get time difference between start of interval and requested point
       ENDIF
       IF (IND2 .LT. 1) IND2 = 1
       IF (IND2 .GT. MAXIND) IND2 = MAXIND
-      IF (ABS(TIMED) .GT. 1./60D0) IND2 = -1
+      IF (ABS(TIMED) .GT. 1.0D0/60D0) IND2 = -1
       IND = IND2
       END
 

@@ -63,47 +63,33 @@ C...........................................................................
       INCLUDE 'version.inc'
 
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
-     &              ParmName,InterName, PlfName, PlfIntName
-      CHARACTER*255 OutName,DumName1,DumName2
-      LOGICAL PRaw,PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
-     &  DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
-     &  DoSonic,DoTilt,PTilt,DoPrint,Flag(NNMAx,MMMax),DoDetren,
-     &  PDetrend,DoStruct,BadTc, DoPF, PPf
+     &              ParmName,InterName, PlfName, PlfIntName,
+     &              OutName,DumName1,DumName2,
+     &              SonName,CoupName,HygName, CO2Name, DUMSTRING,
+     &              NCvarname(NNNMax)
+      LOGICAL PRaw, PCal,PIndep,
+     &  DoPrint,Flag(NNMAx,MMMax),
+     &  DoStruct,BadTc,
+     &  HAVE_UNCAL(NNNMax), AnglesFound, 
+     &  DoCorr(NMaxCorr), PCorr(NMaxCorr)
       INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
-     &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
+     &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
      &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3)
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
-     &  TolCov(NNMax,NNMax),LLimit,ULimit,FrCor(NNMax,NNMax),
-     &  PitchLim,RollLim,DirYaw,RC(NNMax),O2Factor(NNMax),
-     &  Freq,DirPitch,DirRoll,
-     &  SonFactr(NNMax),PreYaw,PrePitch,PreRoll,
-     &  HSonic,dHSonic,HTc,dHTc,
-     &  LvE,dLvE,LvEWebb,dLvEWebb,
-     &  UStar,dUStar,Tau,dTau,CorMean(NNMax),
+     &  TolCov(NNMax,NNMax),FrCor(NNMax,NNMax),
+     &  DirYaw,RC(NNMax),O2Factor(NNMax),
+     &  DirPitch,DirRoll,
+     &  SonFactr(NNMax),
      &  Gain(NNNMax),Offset(NNNMax),
-     &  StructSep,
-     &  FCO2,dFCO2, FCO2Webb, dFCO2Webb,
      &  Apf(3,3), Alpha, Beta, Gamma, WBias,
-     &  CosGamma, SinGamma, Yaw(3,3), InvYaw(3,3), PFValid,
-     &  VectWind, dVectWind, DirFrom, dDirFrom
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ),
+     &  CosGamma, SinGamma, Yaw(3,3), InvYaw(3,3),
+     &  ExpVar(NMaxExp),
+     &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
-     &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
-      REAL*8 MeanW, TolMeanW,
-     &       StdTs, dStdTs,
-     &       StdTc, dStdTc,
-     &       Stdq, dStdq,
-     &       StdU, dStdU,
-     &       StdV, dStdV,
-     &       StdW, dStdW,
-     &       StdspecCO2, dStdspecCO2,
-     &       StdCO2, dStdCO2,
-     &       SumLvE, dSumLvE,
-     &       SumFCO2, dSumFCO2
-      CHARACTER*255 SonName,CoupName,HygName, CO2Name, DUMSTRING
-      CHARACTER*255 NCvarname(NNNMax)
-      LOGICAL       HAVE_UNCAL(NNNMax), AnglesFound
+     &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq,
+     &  Qphys(NMaxPhys), dQPhys(NMaxPHys),
+     &  Std(NNMax), dStd(NNMax)
 
       INTEGER EC_T_STRLEN
 C
@@ -121,7 +107,6 @@ C
       IF (ECConfFile .NE. 5) THEN
          OPEN(ECConfFile, FILE='ecconf')
       ENDIF
-
 C Report version number (VERSION is defined in version.inc)
       WRITE(*,*) 'EC_NCDF Version: ', VERSION
 C Give some RCS info (do not edit this!!, RCS does it for us)
@@ -129,6 +114,7 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
 
+C Get configuration (file names etc.)
       CALL EC_F_GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName, PlfIntName,
@@ -143,34 +129,389 @@ C
       ENDDO
 C
 C Check whether we have a reference temperature for a thermocouple
-      IF (EC_T_STRLEN(NCVarName(Tref)) .GT. 0) THEN
-         HAVE_UNCAL(Tref) = .TRUE.
+      IF (EC_T_STRLEN(NCVarName(QUTref)) .GT. 0) THEN
+         HAVE_UNCAL(QUTref) = .TRUE.
       ENDIF
 C
 C Check which calibration files we have
 C
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
 C For now assume it is always a 3-D sonic
-         HAVE_UNCAL(U) = .TRUE.
-         HAVE_UNCAL(V) = .TRUE.
-         HAVE_UNCAL(W) = .TRUE.
-         HAVE_UNCAL(TSonic) = .TRUE.
+         HAVE_UNCAL(QUU) = .TRUE.
+         HAVE_UNCAL(QUV) = .TRUE.
+         HAVE_UNCAL(QUW) = .TRUE.
+         HAVE_UNCAL(QUTSonic) = .TRUE.
       ENDIF
       IF (EC_T_STRLEN(HygName) .GT. 0) THEN
-         HAVE_UNCAL(Humidity) = .TRUE.
+         HAVE_UNCAL(QUHumidity) = .TRUE.
       ENDIF
       IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
-         HAVE_UNCAL(TCouple) = .TRUE.
+         HAVE_UNCAL(QUTCouple) = .TRUE.
       ENDIF
       IF (EC_T_STRLEN(CO2Name) .GT. 0) THEN
-         HAVE_UNCAL(CO2) = .TRUE.
+         HAVE_UNCAL(QUCO2) = .TRUE.
       ENDIF
 C
-C Open an output file for the fluxes
+C Open an output file for the fluxes and write headers to it
 C
       OPEN(FluxFile,FILE=FluxName,FORM='FORMATTED')
       WRITE(FluxFile,56)
       WRITE(FluxFile,57)
+C
+C Number of quantities involved in this experiment
+C
+      N = NNMax  ! Number of calibrated quantities you will follow
+C
+C Read parameters from file with name ParmName
+C
+      CALL EC_F_Params(ParmName, ExpVar,
+     &  DoCorr, PCorr,
+     &  DoStruct, DoPrint, PRaw,PCal,PIndep)
+C
+C Read calibration data from files :
+C
+      DO i=1,NNNMax
+        Delay( i) = 0
+        Gain(  i) = 1.D0
+        Offset(i) = 0.D0
+      ENDDO
+      IF (EC_T_STRLEN(SonName) .GT. 0) THEN
+           CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
+           IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
+     &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
+     &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
+     &         (CalSonic(QQType) .NE. ApKaijoTR61)) THEN
+               WRITE(*,*) 'ERROR: Calibration file ',SonName,
+     &                    'does not contain sonic info'
+               STOP 'Rewrite your calibration file'
+           ENDIF
+      ENDIF
+      IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
+           CALL EC_F_ReadAp(CoupName,CalTherm) ! A thermo-couple
+           IF (CalTherm(QQType) .NE. ApTCouple) THEN
+               WRITE(*,*) 'ERROR: Calibration file ', CoupName,
+     &                    'does not contain thermocouple info'
+               STOP 'Rewrite your calibration file'
+           ENDIF
+      ENDIF
+      IF (EC_T_STRLEN(HygName) .GT. 0) THEN
+           CALL EC_F_ReadAp(HygName,CalHyg) ! A hygrometer
+           IF ((CalHyg(QQType) .NE. ApCampKrypton) .AND.
+     &         (CalHyg(QQType) .NE. ApMierijLyma) .AND.
+     &         (CalHyg(QQType) .NE. ApLiCor7500)) THEN
+               WRITE(*,*) 'ERROR: Calibration file ', HygName,
+     &                    'does not contain hygrometer info'
+               STOP 'Rewrite your calibration file'
+           ENDIF
+      ENDIF
+      IF (EC_T_STRLEN(CO2Name) .GT. 0) THEN
+           CALL EC_F_ReadAp(CO2Name,CalCO2) ! A CO2 sensor 
+           IF (CalCO2(QQType) .NE. ApLiCor7500) THEN
+               WRITE(*,*) 'ERROR: Calibration file ', CO2Name,
+     &                    'does not contain CO2 sensor info'
+               STOP 'Rewrite your calibration file'
+           ENDIF
+      ENDIF
+C
+C Set delays, gains and offset of all channels in raw datafile
+C At reading time all channels are corrected by mapping:
+C                x --> (x/Gain) + Offset
+C NOTE: this mapping is NOT done in the calibration step!
+C
+
+      Delay(QUU)        = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUV)        = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUW)        = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUHumidity) = NINT(CalHyg(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUTcouple)  = NINT(CalTherm(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUTsonic)   = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUCO2)      = NINT(CalCO2(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+
+      Gain(QUU)        = CalSonic(QQGain)
+      Gain(QUV)        = CalSonic(QQGain)
+      Gain(QUW)        = CalSonic(QQGain)
+      Gain(QUHumidity) = CalHyg(QQGain)
+      Gain(QUTcouple)  = CalTherm(QQGain)
+      Gain(QUTsonic)   = CalSonic(QQGain)
+      Gain(QUCO2)      = CalCO2(QQGain)
+
+      Offset(QUU)        = CalSonic(QQOffset)
+      Offset(QUV)        = CalSonic(QQOffset)
+      Offset(QUW)        = CalSonic(QQOffset)
+      Offset(QUHumidity) = CalHyg(QQOffset)
+      Offset(QUTcouple)  = CalTherm(QQOffset)
+      Offset(QUTsonic)   = CalSonic(QQOffset)
+      Offset(QUCO2)      = CalCO2(QQOffset)
+
+C
+C Get names of files
+C
+      OPEN(IntervalFile,FILE = InterName,IOSTAT=FOO,STATUS='OLD')
+      IF (FOO.NE.0) THEN
+        WRITE(*,*) 'Could not open interval-file ',InterName
+        STOP'- Fatal: no time info could be read -'
+      ENDIF
+C Read one line of comments (blindly, it is supposed to be a comment line)
+      READ(IntervalFile,*)
+C
+C######################################################################
+C######################################################################
+C
+C Here starts the loop over the different files
+C
+C######################################################################
+C######################################################################
+C
+C
+C Read time-interval from file, plus value of psychrometer RhoV and atm.  pressure
+C
+ 36   READ(IntervalFile,*,END=37) (StartTime(i),i=1,3),
+     &  (StopTime(i),i=1,3),Psychro,p,DumName1,DumName2
+      FName   = DumName1
+      OutName = DumName2
+C
+      DUMSTRING=DatDir
+      CALL EC_T_STRCAT(DUMSTRING, '/')
+      CALL EC_T_STRCAT(DUMSTRING, Fname)
+      Fname=DUMSTRING
+
+      DUMSTRING=OutDir
+      CALL EC_T_STRCAT(DUMSTRING, '/')
+      CALL EC_T_STRCAT(DUMSTRING, OutName)
+      OutName=DUMSTRING
+C
+C Show which file is currently being analysed
+C
+      WRITE(*,951) FName(:EC_T_STRLEN(Fname)),(StartTime(i),i=1,3)
+ 951  FORMAT(a,1X,3(I5,1X))
+C
+C If wanted, make a file for printing intermediate results
+C
+      IF (DoPrint) THEN
+        OPEN(OutFile,FILE=OutName,FORM='FORMATTED')
+        WRITE(OutFile,54) FName(:EC_T_STRLEN(Fname))
+ 54     FORMAT('File = ',A)
+        WRITE(OutFile,*) 'From (day,hour,minute)',
+     &    (StartTime(i),' ',i=1,3),' to ',(StopTime(i),i=1,3)
+        WRITE(OutFile,*) 'At RhoV(slow) = ',Psychro,' [kg m^{-3}]',
+     &    ' and atm. pressure = ',p,' [Pascal]'
+      ENDIF
+
+C      
+C Set Number of uncalibrated signals
+C
+      Channels = NNNMax
+C      
+C Set Number of calibrated signals
+C
+      N = NNMax
+C
+C Reset Have_Uncal
+C
+      DO I=1,Channels
+          HAVE_UNCAL(I) = .FALSE.
+      ENDDO
+C
+C Read raw data from file
+C
+      CALL EC_F_ReadNCDF(FName,StartTime,StopTime,
+     &  Delay,Gain,Offset,RawSampl,NNNMax,MMMax,M,
+     &  NCVarName, HAVE_UNCAL)
+      IF (DoPrint.AND.PRaw) THEN
+        WRITE(OutFile,*)
+        WRITE(OutFile,*) 'Received number of samples = ',M
+        WRITE(OutFile,*)
+      ENDIF
+C
+C If planar fit tilt correction , try to get rotation matrix from file
+C
+      IF (DoCorr(QCPF)) THEN
+        CALL EC_F_GetPF(PlfName, StartTime, StopTime, 
+     &                  Alpha, Beta, Gamma, 
+     &                  WBias, Apf, AnglesFound)
+        IF (AnglesFound) THEN
+C Undo Yaw angle of planar fit untilt matrix
+           CosGamma = COS(GAMMA*pi/180)
+           SinGamma = SIN(GAMMA*pi/180)
+           Yaw(1,1) = CosGamma
+           Yaw(1,2) = SinGamma
+           Yaw(1,3) = 0.D0
+           Yaw(2,1) = -SinGamma
+           Yaw(2,2) = CosGamma
+           Yaw(2,3) = 0.D0
+           Yaw(3,1) = 0.D0
+           Yaw(3,2) = 0.D0
+           Yaw(3,3) = 1.D0
+	   CALL EC_M_InvM(Yaw,InvYaw)
+	   CALL EC_M_MMul(InvYaw, Apf, Apf)
+        ELSE
+           M = 0
+        ENDIF
+      ENDIF
+      
+      
+      IF (M.GT.0) THEN
+C
+C Call to main routine
+C
+        CALL EC_G_Main(OutFile,DoPrint,
+     &    RawSampl,NNNMax,Channels,NNMax,N,MMMax,M,
+     &    PCal,PIndep, Psychro,CalSonic,CalTherm,CalHyg,
+     &    CalCO2, P, Calibrat,
+     &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
+     &    DoCorr, PCorr, ExpVar,
+     &    DirYaw,
+     &    DirPitch,
+     &    DirRoll,
+     &    Apf, 
+     &    SonFactr,
+     &    O2Factor,
+     &    FrCor,
+     &    Mean,TolMean,Cov,TolCov,
+     &    QPhys, dQPhys,
+     &    HAVE_UNCAL, StartTime(1))
+C
+C Calculate structure parameters
+C
+        IF (DoStruct) THEN
+          R = ExpVar(QEStructSep)
+          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TSonic ,TSonic ,
+     &      R,dR,ExpVar(QEFreq),CIndep,CTSon2,dCTSon2)
+          R = ExpVar(QEStructSep)
+          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TCouple,TCouple,
+     &      R,dR,ExpVar(QEFreq),CIndep,CTCop2,dCTCop2)
+          R = ExpVar(QEStructSep)
+          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,SpecHum,SpecHum,
+     &      R,dR,ExpVar(QEFreq),CIndep,Cq2   ,dCq2   )
+          R = ExpVar(QEStructSep)
+          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TSonic ,SpecHum,
+     &      R,dR,ExpVar(QEFreq),CIndep,CTSonq,dCTSonq)
+          R = ExpVar(QEStructSep)
+          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TCouple,SpecHum,
+     &      R,dR,ExpVar(QEFreq),CIndep,CTCopq,dCTCopq)
+        ELSE
+           CTSon2 = DUMMY
+          dCTSon2 = DUMMY
+           CTCop2 = DUMMY
+          dCTCop2 = DUMMY
+           Cq2    = DUMMY
+          dCq2    = DUMMY
+           CTSonq = DUMMY
+          dCTSonq = DUMMY
+           CTCopq = DUMMY
+          dCTCopq = DUMMY
+        ENDIF
+C
+C Determine standard deviations
+C
+        DO I=1,NNMax
+	   IF (Cov(I,I) .EQ. DUMMY) THEN
+	     Std(I) = DUMMY
+	     dStd(I) = DUMMY
+	   ELSE
+	     Std(I) = SQRT(Cov(I,I))
+	     dStd(I) = 0.5D0*TolCov(I,I)/
+     &              SQRT(Cov(I,I))
+           ENDIF
+        ENDDO
+C
+C Count error codes of CSAT sonic        
+C
+        IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
+           NDelta = 0
+           NLock = 0
+           NHigh = 0
+           NLow = 0
+           DO I=1,M
+              NDelta = NDelta + INT(Sample(DiagDelta, I))
+              NLock = NLock + INT(Sample(DiagLock, I))
+              NHigh = NHigh + INT(Sample(DiagHigh, I))
+              NLow = NLow + INT(Sample(DiagLow, I))
+           ENDDO
+        ENDIF
+C
+C Print fluxes
+C
+        WRITE(FluxFile,55)
+     &    (StartTime(i),i=1,3),
+     &    (StopTime(i),i=1,3),
+     &    M,(Mok(i),i=1,7), Mok(TTime),
+     &    NINT(QPhys(QPDirFrom)), NINT(dQPhys(QPDirFrom)),
+     &    QPhys(QPVectWind), dQPhys(QPVectWind),
+     &    Mean(TSonic),TolMean(TSonic),
+     &    Mean(TCouple),TolMean(TCouple),
+     &    Mean(SpecHum),TolMean(SpecHum),
+     &    Std(Tsonic), dStd(TSonic),
+     &    Std(Tcouple), dStd(Tcouple),
+     &    Std(SpecHum), dStd(SpecHum),
+     &    Std(U), dStd(U),
+     &    Std(V), dStd(V),
+     &    Std(W), dStd(W),
+     &    Cov(TSonic,SpecHum),TolCov(TSonic,SpecHum),
+     &    Cov(TCouple,SpecHum),TolCov(TCouple,SpecHum),
+     &    Cov(TSonic,U),TolCov(TSonic,U),
+     &    Cov(TCouple,U),TolCov(TCouple,U),
+     &    Cov(SpecHum,U),TolCov(SpecHum,U),
+     &    QPhys(QPHSonic),dQPhys(QPHSonic),
+     &    QPhys(QPHTc),dQPhys(QPHTc),
+     &    QPhys(QPLvE),dQPhys(QPLvE),
+     &    QPhys(QPLvEWebb),dQPhys(QPLvEWebb),
+     &    QPhys(QPSumLvE), dQPhys(QPSumLvE),
+     &    QPhys(QPUstar),dQPhys(QPUstar),
+     &    QPhys(QPTau),dQPhys(QPTau),
+     &    R,dR,
+     &    CTSon2,dCTSon2,CTCop2,dCTCop2,Cq2,dCq2,CTSonq,dCTSonq,
+     &    CTCopq,dCTCopq,
+     &    QPhys(QPMeanW),dQPhys(QPMeanW),
+     &    Mok(CO2),
+     &    Mean(CO2), TolMean(CO2),
+     &    Mean(specCO2), TolMean(specCO2),
+     &    Std(CO2), dStd(CO2),
+     &    Std(specCO2), dStd(specCO2),
+     &    QPhys(QPFCO2),dQPhys(QPFCO2),
+     &    QPhys(QPFCO2Webb),dQPhys(QPFCO2Webb),
+     &    QPhys(QPSumFCO2), dQPhys(QPSumFCO2),
+     &    NDelta, NLock, NHigh, NLow,
+     &    (Mean(I), I=1,3),
+     &    ((COV(I,J),I=1,3),J=1,3)  
+        
+  
+ 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),
+     &        29(2(G15.5:,1X)),
+     &        I13,  1X,
+     &        7(2(G15.5:,1X)), 4(I15,1X), 12(G15.5:,1X))
+      ELSE
+        WRITE(FluxFile,55)
+     &    (StartTime(i),i=1,3),
+     &    (StopTime(i),i=1,3),
+     &    M,(0,i=1,8), INT(DUMMY),INT(DUMMY),(DUMMY,i=1,58),
+     &    0, (DUMMY,i=1,14), (INT(DUMMY), i=1,4),
+     &    ((DUMMY,I=1,3),J=1,3), (DUMMY,I=1,3)
+      ENDIF
+
+      IF (DoPrint) CLOSE(OutFile)
+
+      GOTO 36
+
+ 37   CONTINUE
+C
+C######################################################################
+C######################################################################
+C
+C Here ends the loop over the files
+C
+C######################################################################
+C######################################################################
+C
+      CLOSE(IntervalFile)
+      CLOSE(FluxFile)
  56   FORMAT(
      &  'DOY Hr Mn  ',
      &  'DOY Hr Mn ',
@@ -273,457 +614,6 @@ C
      &  '[m/s]**2       [m/s]**2         ',     
      &  '[m/s]**2       [m/s]**2         ',
      &  '[m/s]**2       [m/s]**2         ')     
-C
-C Number of quantities involved in this experiment
-C
-      N = 9  ! Number of calibrated quantities you will follow
-C
-C Read parameters from file with name ParmName
-C
-      CALL EC_F_Params(ParmName,
-     &  Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
-     &  LLimit,ULimit,DoCrMean,DoDetren,DoSonic,
-     &  DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoStruct, DoPF,
-     &  DoPrint,
-     &  PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
-     &  PRoll,PSonic,PO2,PFreq,PWebb, PPF, PFValid, StructSep)
-C
-C Read calibration data from files :
-C
-      DO i=1,NNNMax
-        Delay( i) = 0
-        Gain(  i) = 1.D0
-        Offset(i) = 0.D0
-      ENDDO
-      IF (EC_T_STRLEN(SonName) .GT. 0) THEN
-           CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
-           IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
-     &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
-     &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
-     &         (CalSonic(QQType) .NE. ApKaijoTR61)) THEN
-               WRITE(*,*) 'ERROR: Calibration file ',SonName,
-     &                    'does not contain sonic info'
-               STOP 'Rewrite your calibration file'
-           ENDIF
-      ENDIF
-      IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
-           CALL EC_F_ReadAp(CoupName,CalTherm) ! A thermo-couple
-           IF (CalTherm(QQType) .NE. ApTCouple) THEN
-               WRITE(*,*) 'ERROR: Calibration file ', CoupName,
-     &                    'does not contain thermocouple info'
-               STOP 'Rewrite your calibration file'
-           ENDIF
-      ENDIF
-      IF (EC_T_STRLEN(HygName) .GT. 0) THEN
-           CALL EC_F_ReadAp(HygName,CalHyg) ! A hygrometer
-           IF ((CalHyg(QQType) .NE. ApCampKrypton) .AND.
-     &         (CalHyg(QQType) .NE. ApMierijLyma) .AND.
-     &         (CalHyg(QQType) .NE. ApLiCor7500)) THEN
-               WRITE(*,*) 'ERROR: Calibration file ', HygName,
-     &                    'does not contain hygrometer info'
-               STOP 'Rewrite your calibration file'
-           ENDIF
-      ENDIF
-      IF (EC_T_STRLEN(CO2Name) .GT. 0) THEN
-           CALL EC_F_ReadAp(CO2Name,CalCO2) ! A CO2 sensor 
-           IF (CalCO2(QQType) .NE. ApLiCor7500) THEN
-               WRITE(*,*) 'ERROR: Calibration file ', CO2Name,
-     &                    'does not contain CO2 sensor info'
-               STOP 'Rewrite your calibration file'
-           ENDIF
-      ENDIF
-C
-C Set delays, gains and offset of all channels in raw datafile
-C At reading time all channels are corrected by mapping:
-C                x --> (x/Gain) + Offset
-C
-
-      Delay(U)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
-      Delay(V)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
-      Delay(W)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
-      Delay(Humidity) = NINT(CalHyg(QQDelay)*0.001D0*Freq)
-      Delay(Tcouple)  = NINT(CalTherm(QQDelay)*0.001D0*Freq)
-      Delay(Tsonic)   = NINT(CalSonic(QQDelay)*0.001D0*Freq)
-      Delay(CO2)      = NINT(CalCO2(QQDelay)*0.001D0*Freq)
-
-      Gain(U)        = CalSonic(QQGain)
-      Gain(V)        = CalSonic(QQGain)
-      Gain(W)        = CalSonic(QQGain)
-      Gain(Humidity) = CalHyg(QQGain)
-      Gain(Tcouple)  = CalTherm(QQGain)
-      Gain(Tsonic)   = CalSonic(QQGain)
-      Gain(CO2)      = CalCO2(QQGain)
-
-      Offset(U)        = CalSonic(QQOffset)
-      Offset(V)        = CalSonic(QQOffset)
-      Offset(W)        = CalSonic(QQOffset)
-      Offset(Humidity) = CalHyg(QQOffset)
-      Offset(Tcouple)  = CalTherm(QQOffset)
-      Offset(Tsonic)   = CalSonic(QQOffset)
-      Offset(CO2)      = CalCO2(QQOffset)
-
-C
-C Get names of files
-C
-      OPEN(IntervalFile,FILE = InterName,IOSTAT=FOO,STATUS='OLD')
-      IF (FOO.NE.0) THEN
-        WRITE(*,*) 'Could not open interval-file ',InterName
-        STOP'- Fatal: no time info could be read -'
-      ENDIF
-C Read one line of comments (blindly, it is supposed to be a comment line)
-      READ(IntervalFile,*)
-C
-C######################################################################
-C######################################################################
-C
-C Here starts the loop over the different files
-C
-C######################################################################
-C######################################################################
-C
-C
-C Read time-interval from file, plus value of psychrometer RhoV and atm.  pressure
-C
- 36   READ(IntervalFile,*,END=37) (StartTime(i),i=1,3),
-     &  (StopTime(i),i=1,3),Psychro,p,DumName1,DumName2
-      FName   = DumName1
-      OutName = DumName2
-C
-      DUMSTRING=DatDir
-      CALL EC_T_STRCAT(DUMSTRING, '/')
-      CALL EC_T_STRCAT(DUMSTRING, Fname)
-      Fname=DUMSTRING
-
-      DUMSTRING=OutDir
-      CALL EC_T_STRCAT(DUMSTRING, '/')
-      CALL EC_T_STRCAT(DUMSTRING, OutName)
-      OutName=DUMSTRING
-
-C
-C Show which file is currently being analysed
-C
-      WRITE(*,951) FName(:EC_T_STRLEN(Fname)),(StartTime(i),i=1,3)
- 951  FORMAT(a,1X,3(I5,1X))
-C
-C If wanted, make a file for printing intermediate results
-C
-      IF (DoPrint) THEN
-        OPEN(OutFile,FILE=OutName,FORM='FORMATTED')
-        WRITE(OutFile,54) FName(:EC_T_STRLEN(Fname))
- 54     FORMAT('File = ',A)
-        WRITE(OutFile,*) 'From (day,hour,minute)',
-     &    (StartTime(i),' ',i=1,3),' to ',(StopTime(i),i=1,3)
-        WRITE(OutFile,*) 'At RhoV(slow) = ',Psychro,' [kg m^{-3}]',
-     &    ' and atm. pressure = ',p,' [Pascal]'
-      ENDIF
-C
-C For subroutine calibrat below find the first day; transfer via interface 
-C via EC_G_Main
-C 
-C
-      FirstDay = StartTime(1)
-C      
-C Set Number of uncalibrated signals
-C
-      Channels = NNNMax
-C      
-C Set Number of calibrated signals
-C
-      N = NNMax
-C
-C Reset Have_Uncal
-C
-      DO I=1,Channels
-          HAVE_UNCAL(I) = .FALSE.
-      ENDDO
-C
-C Read raw data from file
-C
-      CALL EC_F_ReadNCDF(FName,StartTime,StopTime,
-     &  Delay,Gain,Offset,RawSampl,NNNMax,MMMax,M,
-     &  NCVarName, HAVE_UNCAL)
-      IF (DoPrint.AND.PRaw) THEN
-        WRITE(OutFile,*)
-        WRITE(OutFile,*) 'Received number of samples = ',M
-        WRITE(OutFile,*)
-      ENDIF
-C
-C The mean humidity as given by psychrometer. Will be used to correct
-C krypton for drift and dirt. Replace this statement by a read-statement
-C or so.
-C
-      CorMean(Humidity) = Psychro ! [kg m^{-3}]
-C
-C If planar fit tilt correction , try to get rotation matrix from file
-C
-      IF (DoPF) THEN
-        CALL EC_F_GetPF(PlfName, StartTime, StopTime, 
-     &                  Alpha, Beta, Gamma, 
-     &                  WBias, Apf, AnglesFound)
-        IF (AnglesFound) THEN
-C Undo Yaw angle of planar fit untilt matrix
-           CosGamma = COS(GAMMA*pi/180)
-           SinGamma = SIN(GAMMA*pi/180)
-           Yaw(1,1) = CosGamma
-           Yaw(1,2) = SinGamma
-           Yaw(1,3) = 0.D0
-           Yaw(2,1) = -SinGamma
-           Yaw(2,2) = CosGamma
-           Yaw(2,3) = 0.D0
-           Yaw(3,1) = 0.D0
-           Yaw(3,2) = 0.D0
-           Yaw(3,3) = 1.D0
-	   CALL EC_M_InvM(Yaw,InvYaw)
-	   CALL EC_M_MMul(InvYaw, Apf, Apf)
-        ELSE
-           M = 0
-        ENDIF
-      ENDIF
-      
-      
-      IF (M.GT.0) THEN
-C
-C Call to main routine
-C
-        CALL EC_G_Main(OutFile,DoPrint,
-     &    RawSampl,NNNMax,Channels,NNMax,N,MMMax,M,
-     &    DoCrMean,PCal,PIndep,
-     &    Psychro,Freq,CalSonic,CalTherm,CalHyg,
-     &    CalCO2, P,
-     &    Calibrat,
-     &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &    DoDetren,PDetrend,
-     &    DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
-     &    DoYaw,PYaw,DirYaw,
-     &    DoPitch,PPitch,PitchLim,DirPitch,
-     &    DoRoll,PRoll,RollLim,DirRoll,
-     &    DoPF, PPF, Apf, 
-     &    DoSonic,PSonic,SonFactr,
-     &    DoO2,PO2,O2Factor,
-     &    DoFreq,PFreq,LLimit,ULimit,FrCor,
-     &    DoWebb,PWebb,
-     &    Mean,TolMean,Cov,TolCov,
-     &    HSonic,dHSonic,HTc,dHTc,
-     &    LvE,dLvE,LvEWebb,dLvEWebb,
-     &    UStar,dUStar,Tau,dTau,
-     &    FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-     &    MeanW, TolMeanW, VecTWind, dVectWind,
-     &    DirFrom, dDirFrom, HAVE_UNCAL, FirstDay)
-C
-C Calculate structure parameters
-C
-        IF (DoStruct) THEN
-          R = StructSep
-          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,TSonic ,
-     &      R,dR,Freq,CIndep,CTSon2,dCTSon2)
-          R = StructSep
-          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TCouple,TCouple,
-     &      R,dR,Freq,CIndep,CTCop2,dCTCop2)
-          R = StructSep
-          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,SpecHum,SpecHum,
-     &      R,dR,Freq,CIndep,Cq2   ,dCq2   )
-          R = StructSep
-          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,SpecHum,
-     &      R,dR,Freq,CIndep,CTSonq,dCTSonq)
-          R = StructSep
-          CALL EC_Ph_Struct(Sample,NNMax,N,MMMax,M,Flag,TCouple,SpecHum,
-     &      R,dR,Freq,CIndep,CTCopq,dCTCopq)
-        ELSE
-           CTSon2 = DUMMY
-          dCTSon2 = DUMMY
-           CTCop2 = DUMMY
-          dCTCop2 = DUMMY
-           Cq2    = DUMMY
-          dCq2    = DUMMY
-           CTSonq = DUMMY
-          dCTSonq = DUMMY
-           CTCopq = DUMMY
-          dCTCopq = DUMMY
-        ENDIF
-C
-C
-C Print fluxes
-C
-C
-	IF (Cov(Tsonic,TSonic) .EQ. DUMMY) THEN
-	   StdTs = DUMMY
-	   dStdTs = DUMMY
-	ELSE
-	   StdTs = SQRT(Cov(TSonic,TSonic))
-	   dStdTs = 0.5D0*TolCov(TSonic,TSonic)/
-     &              SQRT(Cov(TSonic,TSonic))
-        ENDIF
-	IF (Cov(TCouple,TCouple) .EQ. DUMMY) THEN
-	   StdTc = DUMMY
-	   dStdTc = DUMMY
-	ELSE
-	   StdTc = SQRT(Cov(TCouple,TCouple))
-	   dStdTc = 0.5D0*TolCov(TCouple,TCouple)/
-     &              SQRT(Cov(TCouple,TCouple))
-        ENDIF
-	IF (Cov(SpecHum,SpecHum) .EQ. DUMMY) THEN
-	   Stdq = DUMMY
-	   dStdq = DUMMY
-	ELSE
-	   Stdq = SQRT(Cov(SpecHum,SpecHum))
-	   dStdq = 0.5D0*TolCov(SpecHum,SpecHum)/
-     &              SQRT(Cov(SpecHum,SpecHum))
-        ENDIF
-	IF (Cov(U,U) .EQ. DUMMY) THEN
-	   StdU = DUMMY
-	   dStdU = DUMMY
-	ELSE
-	   StdU = SQRT(Cov(U,U))
-	   dStdU = 0.5D0*TolCov(U,U)/
-     &              SQRT(Cov(U,U))
-        ENDIF
-	IF (Cov(V,V) .EQ. DUMMY) THEN
-	   StdV = DUMMY
-	   dStdV = DUMMY
-	ELSE
-	   StdV = SQRT(Cov(V,V))
-	   dStdV = 0.5D0*TolCov(V,V)/
-     &              SQRT(Cov(V,V))
-        ENDIF
-	IF (Cov(W,W) .EQ. DUMMY) THEN
-	   StdW = DUMMY
-	   dStdW = DUMMY
-	ELSE
-	   StdW = SQRT(Cov(W,W))
-	   dStdW = 0.5D0*TolCov(W,W)/
-     &              SQRT(Cov(W,W))
-        ENDIF
-        IF (Cov(SpecCO2,SpecCO2) .EQ. DUMMY) THEN
-	   StdspecCO2 = DUMMY
-	   dStdspecCO2 = DUMMY
-	ELSE
-	   StdspecCO2 = SQRT(Cov(SpecCO2,SpecCO2))
-	   dStdspecCO2 = 0.5D0*TolCov(SpecCO2,SpecCO2)/
-     &              SQRT(Cov(SpecCO2,SpecCO2))
-        ENDIF
-        IF (Cov(CO2,CO2) .EQ. DUMMY) THEN
-	   StdCO2 = DUMMY
-	   dStdCO2 = DUMMY
-	ELSE
-	   StdCO2 = SQRT(Cov(CO2,CO2))
-	   dStdCO2 = 0.5D0*TolCov(CO2,CO2)/
-     &              SQRT(Cov(CO2,CO2))
-        ENDIF
-        IF ((LvE .EQ. DUMMY) .OR. (LvEWebb .EQ. DUMMY)) THEN
-           IF (.NOT. DoWebb) THEN
-	     SumLvE = LvE
-	     dSumLvE = dLvE
-	   ELSE
-	     SumLvE = DUMMY
-	     dSumLvE = DUMMY
-           ENDIF
-	ELSE
-	   SumLvE = LvE + LvEWebb
-           dSumLvE =  SQRT(dLvE**2.D0 + dLvEWebb**2.D0)
-	ENDIF
-        IF ((FCO2 .EQ. DUMMY) .OR. (FCO2Webb .EQ. DUMMY)) THEN
-          IF (.NOT. DoWebb) THEN
-	     SumFCO2 = FCO2
-	     dSumFCO2 = dFCO2
-          ELSE
-             SumFCO2 = DUMMY
-             dSumFCO2 = DUMMY
-          ENDIF
-	ELSE
-	   SumFCO2 = FCO2 + FCO2Webb
-           dSumFCO2 =  SQRT(dFCO2**2.D0 + dFCO2Webb**2.D0)
-	ENDIF
-C
-C Count error codes of CSAT sonic        
-C
-        IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
-           NDelta = 0
-           NLock = 0
-           NHigh = 0
-           NLow = 0
-           DO I=1,M
-              NDelta = NDelta + INT(Sample(DiagDelta, I))
-              NLock = NLock + INT(Sample(DiagLock, I))
-              NHigh = NHigh + INT(Sample(DiagHigh, I))
-              NLow = NLow + INT(Sample(DiagLow, I))
-           ENDDO
-        ENDIF
-        
-        WRITE(FluxFile,55)
-     &    (StartTime(i),i=1,3),
-     &    (StopTime(i),i=1,3),
-     &    M,(Mok(i),i=1,7), Mok(TTime),
-     &    NINT(DirFrom), NINT(dDirFrom),
-     &    VectWind, dVectWind,
-     &    Mean(TSonic),TolMean(TSonic),
-     &    Mean(TCouple),TolMean(TCouple),
-     &    Mean(SpecHum),TolMean(SpecHum),
-     &    StdTs,
-     &    dStdTs,
-     &    StdTc,
-     &    dStdTc,
-     &    Stdq,
-     &    dStdq,
-     &    StdU,
-     &    dStdU,
-     &    StdV,
-     &    dStdV,
-     &    StdW,
-     &    dStdW,
-     &    Cov(TSonic,SpecHum),TolCov(TSonic,SpecHum),
-     &    Cov(TCouple,SpecHum),TolCov(TCouple,SpecHum),
-     &    Cov(TSonic,U),TolCov(TSonic,U),
-     &    Cov(TCouple,U),TolCov(TCouple,U),
-     &    Cov(SpecHum,U),TolCov(SpecHum,U),
-     &    HSonic,dHSonic,HTc,dHTc,
-     &    LvE,dLvE,LvEWebb,dLvEWebb,
-     &    SumLvE, dSumLvE,
-     &    UStar,dUStar,Tau,dTau,
-     &    R,dR,
-     &    CTSon2,dCTSon2,CTCop2,dCTCop2,Cq2,dCq2,CTSonq,dCTSonq,
-     &    CTCopq,dCTCopq,
-     &    MeanW, TolMeanW,
-     &    Mok(CO2),
-     &    Mean(CO2), TolMean(CO2),
-     &    Mean(specCO2), TolMean(specCO2),
-     &    StdCO2, dStdCO2,
-     &    StdspecCO2, dStdspecCO2,
-     &    FCO2,dFCO2,FCO2Webb,dFCO2Webb,
-     &    SumFCO2, dSumFCO2,
-     &    NDelta, NLock, NHigh, NLow,
-     &    (Mean(I), I=1,3),
-     &    ((COV(I,J),I=1,3),J=1,3)  
-        
-  
- 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),
-     &        29(2(G15.5:,1X)),
-     &        I13,  1X,
-     &        7(2(G15.5:,1X)), 4(I15,1X), 12(G15.5:,1X))
-      ELSE
-        WRITE(FluxFile,55)
-     &    (StartTime(i),i=1,3),
-     &    (StopTime(i),i=1,3),
-     &    M,(0,i=1,8), INT(DUMMY),INT(DUMMY),(DUMMY,i=1,58),
-     &    0, (DUMMY,i=1,14), (INT(DUMMY), i=1,4),
-     &    ((DUMMY,I=1,3),J=1,3), (DUMMY,I=1,3)
-      ENDIF
-
-      IF (DoPrint) CLOSE(OutFile)
-
-      GOTO 36
-
- 37   CONTINUE
-C
-C######################################################################
-C######################################################################
-C
-C Here ends the loop over the files
-C
-C######################################################################
-C######################################################################
-C
-      CLOSE(IntervalFile)
-      CLOSE(FluxFile)
 
       END
 

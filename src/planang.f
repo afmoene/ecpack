@@ -42,44 +42,23 @@ C...........................................................................
       PARAMETER (MaxPF = 100000)
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
      &              ParmName,InterName, PlfName, PlfIntName
-      CHARACTER*255 OutName,DumName1,DumName2
-      LOGICAL PRaw,PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
-     &  DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
-     &  DoSonic,DoTilt,PTilt,DoPrint,Flag(NNMAx,MMMax),DoDetren,
-     &  PDetrend,DoStruct,BadTc, DoPF, PPF
+      CHARACTER*255 DumName1,DumName2
+      LOGICAL PRaw,PCal,PIndep,
+     &  DoPrint,Flag(NNMAx,MMMax),
+     &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr)
       INTEGER N,i,j,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
-     &  NDelta, NLock, NHigh, NLow,
      &  StartTime(3),StopTime(3),
      &  LStartTime(3),LStopTime(3)
 
-      REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
-     &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
-     &  TolCov(NNMax,NNMax),LLimit,ULimit,FrCor(NNMax,NNMax),
-     &  PitchLim,RollLim,DirYaw,RC(NNMax),O2Factor(NNMax),
-     &  Freq,DirPitch,DirRoll,
-     &  SonFactr(NNMax),PreYaw,PrePitch,PreRoll,
-     &  HSonic,dHSonic,HTc,dHTc,
-     &  LvE,dLvE,LvEWebb,dLvEWebb,
-     &  UStar,dUStar,Tau,dTau,CorMean(NNMax),DirFrom,
+      REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,
+     &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax), Psychro,
+     &  TolCov(NNMax,NNMax),
+     &  CorMean(NNMax),
      &  Gain(NNNMax),Offset(NNNMax),
-     &  StructSep,
-     &  FCO2,dFCO2, FCO2Webb, dFCO2Webb,
      &  Alpha, Beta, Gamma, WBias,
-     &  UMean(3, MaxPF), Apf(3,3), PFValid
-      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ),
-     &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
-     &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
-      REAL*8 StdTs, dStdTs,
-     &       StdTc, dStdTc,
-     &       Stdq, dStdq,
-     &       StdU, dStdU,
-     &       StdV, dStdV,
-     &       StdW, dStdW,
-     &       StdspecCO2, dStdspecCO2,
-     &       StdCO2, dStdCO2,
-     &       SumLvE, dSumLvE,
-     &       SumFCO2, dSumFCO2
+     &  UMean(3, MaxPF), Apf(3,3), ExpVar(NMaxExp)
+      REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
       CHARACTER*255 SonName,CoupName,HygName, CO2Name, DUMSTRING
       CHARACTER*255 NCvarname(NNNMax)
       LOGICAL       HAVE_UNCAL(NNNMax), EndInter, PastStart, BeforeEnd,
@@ -127,10 +106,10 @@ C Check which calibration files we have
 C
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
 C For now assume it is always a 3-D sonic
-         HAVE_UNCAL(U) = .TRUE.
-         HAVE_UNCAL(V) = .TRUE.
-         HAVE_UNCAL(W) = .TRUE.
-         HAVE_UNCAL(TSonic) = .TRUE.
+         HAVE_UNCAL(QUU) = .TRUE.
+         HAVE_UNCAL(QUV) = .TRUE.
+         HAVE_UNCAL(QUW) = .TRUE.
+         HAVE_UNCAL(QUTSonic) = .TRUE.
       ENDIF
 C
 C Number of quantities involved in this experiment
@@ -139,13 +118,9 @@ C
 C
 C Read parameters from file with name ParmName
 C
-      CALL EC_F_Params(ParmName,
-     &  Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
-     &  LLimit,ULimit,DoCrMean,DoDetren,DoSonic,
-     &  DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPF,
-     &  DoPrint,
-     &  PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
-     &  PRoll,PSonic,PO2,PFreq,PWebb, PPF, PFValid, StructSep)
+      CALL EC_F_Params(ParmName, ExpVar,
+     &  DoCorr, PCorr,
+     &  DoStruct, DoPrint, PRaw,PCal,PIndep)
 C
 C Read calibration data from files :
 C
@@ -171,17 +146,20 @@ C At reading time all channels are corrected by mapping:
 C                x --> (x/Gain) + Offset
 C
 
-      Delay(U)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
-      Delay(V)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
-      Delay(W)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
+      Delay(QUU)        = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUV)        = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
+      Delay(QUW)        = NINT(CalSonic(QQDelay)*
+     &                         0.001D0*ExpVar(QEFreq))
 
-      Gain(U)        = CalSonic(QQGain)
-      Gain(V)        = CalSonic(QQGain)
-      Gain(W)        = CalSonic(QQGain)
+      Gain(QUU)        = CalSonic(QQGain)
+      Gain(QUV)        = CalSonic(QQGain)
+      Gain(QUW)        = CalSonic(QQGain)
 
-      Offset(U)        = CalSonic(QQOffset)
-      Offset(V)        = CalSonic(QQOffset)
-      Offset(W)        = CalSonic(QQOffset)
+      Offset(QUU)        = CalSonic(QQOffset)
+      Offset(QUV)        = CalSonic(QQOffset)
+      Offset(QUW)        = CalSonic(QQOffset)
 
 C
 C Open interval file
@@ -223,9 +201,6 @@ C
  36   READ(PlfIntFile,*,END=37) (StartTime(i),i=1,3),
      &  (StopTime(i),i=1,3)
      
-      FName   = DumName1
-      OutName = DumName2
-
       EndInter = .FALSE.
       NPF = 0
 C
@@ -329,7 +304,8 @@ C
            N = 3
            DO i=1,M
                CALL Calibrat(RawSampl(1,i),Channels,P,CorMean,
-     &	          CalSonic,CalTherm,CalHyg,CalCO2, BadTc,Sample(1,i),N,Flag(1,i),
+     &	          CalSonic,CalTherm,CalHyg,CalCO2, 
+     &            BadTc,Sample(1,i),N,Flag(1,i),
      &            Have_Uncal, FirstDay)
            ENDDO
 C
@@ -338,13 +314,13 @@ C
     	   CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
      &                      Mean, TolMean, Cov, TolCov, MIndep, CIndep,
      &                      Mok, Cok)
-           IF ((DBLE(MOK(U))/DBLE(M) .LT. PFValid) .OR.
-     &         (DBLE(MOK(U))/DBLE(M) .LT. PFValid) .OR.
-     &         (DBLE(MOK(W))/DBLE(M) .LT. PFValid)) THEN
+           IF ((DBLE(MOK(U))/DBLE(M) .LT. ExpVar(QEPFValid)) .OR.
+     &         (DBLE(MOK(U))/DBLE(M) .LT. ExpVar(QEPFValid)) .OR.
+     &         (DBLE(MOK(W))/DBLE(M) .LT. ExpVar(QEPFValid))) THEN
                NPF = NPF - 1
                write(*,*) 'Interval rejected: ', 
      &             Min(DBLE(MOK(U))/DBLE(M), DBLE(MOK(U))/DBLE(M), 
-     &                 DBLE(MOK(W))/DBLE(M)), ' < ', PFValid
+     &                 DBLE(MOK(W))/DBLE(M)), ' < ', ExpVar(QEPFValid)
            ELSE
                UMean(U,NPF) = Mean(U)
                UMean(V,NPF) = Mean(V)
@@ -352,7 +328,7 @@ C
            ENDIF
         ENDIF
         IF (PastStart .AND. 
-     &      ((.NOT. BeforeEnd) .OR. (LastInter))) THEN
+     &      (.NOT. BeforeEnd .OR. LastInter)) THEN
            EndInter = .TRUE.
            SingleRun = (.FALSE.)
 	   DoWBias = (.FALSE.)

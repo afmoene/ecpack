@@ -15,6 +15,7 @@ C                    signal of dirty krypton hygrometer with psychrometer
 C         CalSonic : Calibration array REAL*8(NQQ) of the anemometer
 C         CalTherm : Calibration array REAL*8(NQQ) of the thermometer
 C         CalHyg   : Calibration array REAL*8(NQQ) of the hygrometer
+C         CalCO2   : Calibration array REAL*8(NQQ) of the CO2-sensor
 C         HAVE_TREF: do we have a reference temperature for thermocouple
 C                    (if so apply calibration curve and add reference
 C                    temperature)
@@ -65,10 +66,10 @@ C
 C
 C Calculate time from the columns in the raw data
 C
-      Days = RawSampl(Doy) - DBLE(FirstDay)
-      Hours = NINT(0.01D0*RawSampl(HourMin))
-      Minutes = RawSampl(HourMin) - 100.D0*Hours
-      Secnds = RawSampl(Sec)
+      Days = RawSampl(QUDoy) - DBLE(FirstDay)
+      Hours = NINT(0.01D0*RawSampl(QUHourMin))
+      Minutes = RawSampl(QUHourMin) - 100.D0*Hours
+      Secnds = RawSampl(QUSec)
       Sample(TTime) =
      &  Secnds + 60.D0*(Minutes +60.D0*(Hours + 24.D0*Days))
 
@@ -76,12 +77,12 @@ C
 C
 C Take the velocity from the raw data (again assume it's a 3D sonic)
 C
-      IF (HAVE_UNCAL(U) .AND. 
-     &    HAVE_UNCAL(V) .AND. 
-     &    HAVE_UNCAL(W)) THEN
-         UDum  =  RawSampl(U) ! U [m/s]
-         VDum  =  RawSampl(V) ! V [m/s]
-         Sample(W) = RawSampl(W) ! W [m/s]
+      IF (HAVE_UNCAL(QUU) .AND. 
+     &    HAVE_UNCAL(QUV) .AND. 
+     &    HAVE_UNCAL(QUW)) THEN
+         UDum  =  RawSampl(QUU) ! U [m/s]
+         VDum  =  RawSampl(QUV) ! V [m/s]
+         Sample(W) = RawSampl(QUW) ! W [m/s]
 
          Error(U) = (ABS(UDum).GT.40.D0)
          Error(V) = (ABS(VDum).GT.40.D0)
@@ -99,8 +100,8 @@ C
          ENDIF
 
 C This is the construction when we have a diagnostic variable
-         IF (Have_Uncal(Diagnost)) THEN
-            DIAG_WORD = INT(RawSampl(Diagnost)/4096)
+         IF (Have_Uncal(QUDiagnost)) THEN
+            DIAG_WORD = INT(RawSampl(QUDiagnost)/4096)
             Sample(DiagDelta) = MOD(INT(DIAG_WORD/8),2)
             Sample(DiagLock ) = MOD(INT(DIAG_WORD/4),2)
             Sample(DiagHigh) =  MOD(INT(DIAG_WORD/2),2)
@@ -146,7 +147,7 @@ C
                Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
            ENDIF
 
-           Sample(TSonic) = RawSampl(TSonic) + Kelvin
+           Sample(TSonic) = RawSampl(QUTSonic) + Kelvin
 C
 C Here the Schotanus et al. correction for sensitivity of the sonic for
 C lateral velocity is applied directly to the raw data. This is only
@@ -165,10 +166,11 @@ C
            Error(Tsonic) = ((Sample(TSonic).GT.(MaxT))
      &       .OR. (Sample(TSonic).LT.(MinT)))
          ENDIF
-	 Error(U) = (Error(U) .OR. (.NOT. Have_Uncal(U)))
-	 Error(V) = (Error(V) .OR. (.NOT. Have_Uncal(V)))
-	 Error(W) = (Error(W) .OR. (.NOT. Have_Uncal(W)))
-	 Error(TSonic) = (Error(TSonic) .OR. (.NOT. Have_Uncal(TSonic)))
+	 Error(U) = (Error(U) .OR. (.NOT. Have_Uncal(QUU)))
+	 Error(V) = (Error(V) .OR. (.NOT. Have_Uncal(QUV)))
+	 Error(W) = (Error(W) .OR. (.NOT. Have_Uncal(QUW)))
+	 Error(TSonic) = (Error(TSonic) .OR. 
+     &                    (.NOT. Have_Uncal(QUTSonic)))
       ELSE
          Error(U) = .TRUE.
          Error(V) = .TRUE.
@@ -178,8 +180,8 @@ C
 C
 C Calibrate thermocouple
 C
-      IF (HAVE_UNCAL(TCouple)) THEN
-         IF (HAVE_UNCAL(Tref)) THEN
+      IF (HAVE_UNCAL(QUTCouple)) THEN
+         IF (HAVE_UNCAL(QUTref)) THEN
 
 C
 C This is calibration according to Campbells P14 instruction
@@ -190,7 +192,7 @@ C
             DO i=0,NINT(CalTherm(QQOrder))
               c(i) = CalTherm(QQC0+i)
             ENDDO
-            Dum = RawSampl(Tref) 
+            Dum = RawSampl(QUTref) 
             Error(TCouple) =
      &           ((DUM .GT.(MaxT))
      &             .OR. (DUM .LT.(MinT)))
@@ -208,7 +210,7 @@ C
 	                ERROR(TCouple) = .TRUE.
 	            ENDIF
                Sample(Tcouple) = Kelvin +
-     &             EC_M_BaseF(DNLIMIT + RawSampl(Tcouple),
+     &             EC_M_BaseF(DNLIMIT + RawSampl(QUTcouple),
      &              NINT(CalTherm(QQFunc)),
      &              NINT(CalTherm(QQOrder)),c)
             ENDIF
@@ -216,21 +218,21 @@ C
 C
 C Suppose that sample is already temperature (now in Kelvin, Sept. 18, 2002!)
 C
-             Sample(TCouple) = RawSampl(TCouple) + Kelvin
+             Sample(TCouple) = RawSampl(QUTCouple) + Kelvin
          ENDIF
 
          Error(TCouple) = ((Sample(TCouple).GT.(MaxT))
      &     .OR. (Sample(TCouple).LT.(MinT)))
          Error(TCouple) = (Error(TCouple) .OR.
-     &                        (.NOT. Have_Uncal(TCouple)))
+     &                        (.NOT. Have_Uncal(QUTCouple)))
       ELSE
          Error(Tcouple) = .TRUE.
       ENDIF
 C
 C Calibrate hygrometer
 C
-      IF (HAVE_UNCAL(Humidity)) THEN
-         Dum = RawSampl(Humidity)
+      IF (HAVE_UNCAL(QUHumidity)) THEN
+         Dum = RawSampl(QUHumidity)
          IF (Dum .GE. Epsilon) THEN
 C
 C Add an optional correction to the krypton's humidity to compensate for
@@ -278,7 +280,7 @@ C
             ENDIF
          ENDIF
          Error(Humidity) = (Error(Humidity) .OR.
-     &                        (.NOT. Have_Uncal(Humidity)))
+     &                        (.NOT. Have_Uncal(QUHumidity)))
          Error(SpecHum) = (Error(SpecHum) .OR. Error(Humidity))
       ELSE
          Error(Humidity) = .TRUE.
@@ -287,12 +289,12 @@ C
 C
 C Get CO2 sample
 C
-      IF (HAVE_UNCAL(CO2)) THEN
-         DO i=0,CalCO2(QQOrder)
+      IF (HAVE_UNCAL(QUCO2)) THEN
+         DO i=0,INT(CalCO2(QQOrder))
               c(i) = CalCO2(QQC0+i)
          ENDDO
 	 Sample(CO2) = CorMean(CO2) + 
-     &         EC_M_BaseF(RawSampl(CO2),NINT(CalCO2(QQFunc)),
+     &         EC_M_BaseF(RawSampl(QUCO2),NINT(CalCO2(QQFunc)),
      &           NINT(CalCO2(QQOrder)),c)
          Error(CO2) = ((Sample(CO2).GT.MaxRhoCO2)
      &          .OR. (Sample(CO2).LT.MinRhoCO2))
@@ -335,7 +337,7 @@ C
               ENDIF
          ENDIF
          Error(CO2) = (Error(CO2) .OR.
-     &                        (.NOT. Have_Uncal(CO2)))
+     &                        (.NOT. Have_Uncal(QUCO2)))
          Error(SpecCO2) = (Error(SpecCO2) .OR. Error(CO2))
       ELSE
          Error(CO2) = .TRUE.

@@ -28,12 +28,12 @@ C
      &           SonName, CoupName, HygName, CO2Name,
      &           NCVarName,
      &           NCNameLen)
-
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
       
       
-      INTEGER         ConfUnit, NCNameLen
+      INTEGER         ConfUnit, NCNameLen, I
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
      &                InterName, SonName, CoupName, HygName, 
      &                CO2Name, PlfName, PlfIntName
@@ -41,7 +41,6 @@ C
 
       INTEGER         IOCODE, KINDEX
       CHARACTER*255   LINE, TOKLINE, VALLINE, DUMSTRING
-      CHARACTER       ONECHAR
       INTEGER         EC_T_STRLEN
       EXTERNAL        EC_T_STRLEN
 
@@ -113,29 +112,37 @@ C     See which token this is
                PlfName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
 C NetCdF variable names
             ELSE IF (INDEX(TOKLINE, 'U_VAR') .GT. 0) THEN
-               NCVarName(U) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUU) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'V_VAR') .GT. 0) THEN
-               NCVarName(V) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUV) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'W_VAR') .GT. 0) THEN
-               NCVarName(W) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUW) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'TSONIC_VAR') .GT. 0) THEN
-               NCVarName(TSonic) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUTSonic) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'TCOUPLE_VAR') .GT. 0) THEN
-               NCVarName(TCouple) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUTCouple) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'HUMIDITY_VAR') .GT. 0) THEN
-               NCVarName(HUMIDITY) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUHUMIDITY) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'CO2_VAR') .GT. 0) THEN
-               NCVarName(CO2) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUCO2) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'DOY_VAR') .GT. 0) THEN
-               NCVarName(Doy) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUDoy) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'HOURMIN_VAR') .GT. 0) THEN
-               NCVarName(HourMin) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUHourMin) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'SEC_VAR') .GT. 0) THEN
-               NCVarName(Sec) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUSec) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'DIAG_VAR') .GT. 0) THEN
-               NCVarName(Diagnost) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUDiagnost) = 
+     &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'TREF_VAR') .GT. 0) THEN
-               NCVarName(Tref) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(QUTref) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ENDIF
          ENDIF
  4000 CONTINUE
@@ -213,8 +220,6 @@ C NetCdF variable names
       ENDIF
       CO2Name = DUMSTRING
 
-
- 5000 FORMAT(A)
 
       END
 C###########################################################################
@@ -312,24 +317,21 @@ C ########################################################################
 C ########################################################################
 C ########################################################################
 
-      SUBROUTINE EC_F_Params(InName,
-     &	Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
-     &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoYaw,DoPitch,
-     &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct, DoPF, DoPrint,
-     &	PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
-     &	PRoll,PSonic,PO2,PFreq,PWebb, PPF, PFValid, StructSep)
+      SUBROUTINE EC_F_Params(InName, ExpVar,
+     &	DoCorr, PCorr,
+     &	DoStruct, DoPrint,
+     &	PRaw,PCal,PIndep)
 C
 C Purpose : Read settings for this particular session from file
 C
-
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
-      REAL*8 Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,LLimit,
-     &       ULimit, StructSep, PFValid
-      LOGICAL DoCrMean,DoSonic,DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,
-     &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PYaw,PPitch,PRoll,PSonic,
-     &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct, DoPF, PPF
+      REAL*8 ExpVar(NMaxExp)
+      LOGICAL 
+     &	DoPrint,PRaw,PCal,PIndep,
+     &	DoStruct, DoCorr(NMaxCorr), PCorr(NMaxCorr)
       CHARACTER*(*) InName
       INTEGER      IOCODE
 
@@ -341,53 +343,53 @@ C
 C
 C Default values for planar fit settings
 C
-      DoPF = .FALSE.
-      PPF = .FALSE.
-      PFValid = 0.0D0
-      READ(TempFile,*) Freq	  ! [Hz] Sample frequency datalogger
+      DoCorr(QCPF) = .FALSE.
+      PCorr(QCPF) = .FALSE.
+      ExpVar(QEPFValid) = 0.0D0
+      READ(TempFile,*) ExpVar(QEFreq)	  ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
-      READ(TempFile,*) PitchLim	  ! [degree] Limit when Mean(W) is turned to zero
-      READ(TempFile,*) RollLim	  ! [degree] Limit when Cov(V,W) is turned to zero
+      READ(TempFile,*) ExpVar(QEPitchLim)	  ! [degree] Limit when Mean(W) is turned to zero
+      READ(TempFile,*) ExpVar(QERollLim)	  ! [degree] Limit when Cov(V,W) is turned to zero
       READ(TempFile,*)
-      READ(TempFile,*) PreYaw   ! Fixed yaw angle for known tilt-correction
-      READ(TempFile,*) PrePitch	  ! Fixed pitch angle for known tilt-correction
-      READ(TempFile,*) PreRoll	  ! Fixed roll angle for known tilt-correction
+      READ(TempFile,*) ExpVar(QEPreYaw)   ! Fixed yaw angle for known tilt-correction
+      READ(TempFile,*) ExpVar(QEPrePitch)	  ! Fixed pitch angle for known tilt-correction
+      READ(TempFile,*) ExpVar(QEPreRoll)	  ! Fixed roll angle for known tilt-correction
       READ(TempFile,*)
-      READ(TempFile,*) LLimit	  ! Smallest acceptable frequency-response
+      READ(TempFile,*) ExpVar(QELLimit)	  ! Smallest acceptable frequency-response
 correction factor
-      READ(TempFile,*) ULimit	  ! Largest acceptable frequency-response
+      READ(TempFile,*) ExpVar(QEULimit)	  ! Largest acceptable frequency-response
 correction factor
       READ(TempFile,*)
-      READ(TempFile,*) DoCrMean   ! Replace mean quantities by better estimates
-      READ(TempFile,*) DoDetren   ! Correct data for linear trend
-      READ(TempFile,*) DoSonic	  ! Correct sonic temperature for humidity
-      READ(TempFile,*) DoTilt	  ! Perform true tilt-correction with known angles
-      READ(TempFile,*) DoYaw	  ! Turn system such that Mean(V) --> 0
-      READ(TempFile,*) DoPitch	  ! Turn system such that Mean(W) --> 0
-      READ(TempFile,*) DoRoll	  ! Turn System such that Cov(W,V) --> 0
-      READ(TempFile,*) DoFreq	  ! Correct for poor frequency response
-      READ(TempFile,*) DoO2	  ! Correct hygrometer for oxygen-sensitivity
-      READ(TempFile,*) DoWebb	  ! Calculate mean velocity according to Webb
+      READ(TempFile,*) DoCorr(QCMean)     ! Replace mean quantities by better estimates
+      READ(TempFile,*) DoCorr(QCDetrend)  ! Correct data for linear trend
+      READ(TempFile,*) DoCorr(QCSonic)	  ! Correct sonic temperature for humidity
+      READ(TempFile,*) DoCorr(QCTilt)	  ! Perform true tilt-correction with known angles
+      READ(TempFile,*) DoCorr(QCYaw)	  ! Turn system such that Mean(V) --> 0
+      READ(TempFile,*) DoCorr(QCPitch)	  ! Turn system such that Mean(W) --> 0
+      READ(TempFile,*) DoCorr(QCRoll)	  ! Turn System such that Cov(W,V) --> 0
+      READ(TempFile,*) DoCorr(QCFreq)	  ! Correct for poor frequency response
+      READ(TempFile,*) DoCorr(QCO2)	  ! Correct hygrometer for oxygen-sensitivity
+      READ(TempFile,*) DoCorr(QCWebb)	  ! Calculate mean velocity according to Webb
       READ(TempFile,*) DoStruct	  ! Calculate structure parameters
       READ(TempFile,*)
       READ(TempFile,*) DoPrint	  ! Skip printing intermediate results or not?
       READ(TempFile,*)
       READ(TempFile,*) PRaw	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PCal	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PDetrend   ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCDetrend)   ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PIndep	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PTilt	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PYaw	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PPitch	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PRoll	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PSonic	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PO2	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PFreq	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PWebb	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) StructSep! Separation (meter) for which to calculate structure parameter
-      READ(TempFile, *, END=5500) DoPF ! Do Planar fit ?
-      READ(TempFile, *, END=5500) PPF ! Print planar fit intermediate results ?
-      READ(TempFile, *, END=5500) PFValid ! Minimum part (<= 1) of samples that should be valid to incorporate interval in angle PF calculation
+      READ(TempFile,*) PCorr(QCTilt)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCYaw)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCPitch)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCRoll)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCSonic)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCO2)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCFreq)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCWebb)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) ExpVar(QEStructSep)! Separation (meter) for which to calculate structure parameter
+      READ(TempFile, *, END=5500) DoCorr(QCPF) ! Do Planar fit ?
+      READ(TempFile, *, END=5500) PCorr(QCPF) ! Print planar fit intermediate results ?
+      READ(TempFile, *, END=5500) ExpVar(QEPFValid) ! Minimum part (<= 1) of samples that should be valid to incorporate interval in angle PF calculation
       
 5500  CONTINUE
       CLOSE(TempFile)
@@ -419,6 +421,7 @@ C
 C
 C Read specifications of an apparatus from file
 C
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -439,7 +442,7 @@ C First get the type of apparatus
       READ(TempFile,*) CalSpec(1)
 
 C Now read the correct number of specs
-      DO i=2,ApNQQ(CalSpec(1))
+      DO i=2,ApNQQ(INT(CalSpec(1)))
        	READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
          IF (IOCODE .NE. 0) THEN
             WRITE(*,*) 'ERROR in reading of configuration file'
@@ -447,7 +450,7 @@ C Now read the correct number of specs
          ENDIF
       ENDDO
  9000 CONTINUE
-      IF ((I-1) .NE. ApNQQ(CalSpec(1))) THEN
+      IF ((I-1) .NE. ApNQQ(INT(CalSpec(1)))) THEN
          WRITE(*,*) 'ERROR: did not find correct number of specs in ',
      &               InName(:EC_T_STRLEN(InName))
       ENDIF
@@ -477,6 +480,7 @@ C			  counts samples. Only the first N quantities
 C			  and the first M samples are used.
 C	   M : Number of samples in file
 C
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -549,9 +553,8 @@ C
      &        NATTS,      ! # of attributes
      &        DIMLEN      ! length of a dimension   
       INTEGER I, J, K
-      INTEGER NMax,MMax,M,Delay(NMax),HMStart,HMStop,Counter
-      REAL Dum
-      LOGICAL ok,Ready,Started,NotStopped
+      INTEGER NMax,MMax,M,Delay(NMax),HMStart,HMStop
+      LOGICAL ok
       REAL*8 x(NMax,MMax),Gain(NMax),Offset(NMax)
       INTEGER StartTime(3), StopTime(3)
       CHARACTER*(*) NCVarName(NMax)
@@ -659,11 +662,11 @@ C
       DOYStop = StopTime(1)
 C For security: always use time search routine without seconds:
 C is more robust
-      CALL EC_NCDF_FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
-     +                 NCVarID(HourMin),
+      CALL EC_NCDF_FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(QUDoy),
+     +                 NCVarID(QUHourMin),
      +                 STARTIND)
-      CALL EC_NCDF_FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(Doy),
-     +                 NCVarID(HourMin),
+      CALL EC_NCDF_FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(QUDoy),
+     +                 NCVarID(QUHourMin),
      +                 STOPIND)
       NSAMPLE = STOPIND - STARTIND
       IF ((STARTIND .EQ. -1) .OR. (STOPIND .EQ. -1))  NSAMPLE = 0
@@ -694,7 +697,6 @@ C
      &                                  STARTIND+J-1+Delay(i),
      &                                  x(i,J))
               OK = (STATUS .EQ. NF_NOERR)
-              Ready = (STATUS .EQ. nf_einvalcoords)
            ENDDO
 C
 C If something went wrong, then abort further execution of the program
@@ -758,6 +760,7 @@ C			  counts samples. Only the first N quantities
 C			  and the first M samples are used.
 C	   M : Number of samples in file
 C
+      IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -864,6 +867,7 @@ C
       SUBROUTINE EC_F_GetPF(PlfName, StartTime, StopTime, 
      &                  Alpha, Beta, Gamma, 
      &                  WBias, Apf, AnglesFound)
+      IMPLICIT NONE     
       INCLUDE 'parcnst.inc'
       
       CHARACTER*(*) PlfName

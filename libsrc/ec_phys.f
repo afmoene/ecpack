@@ -54,18 +54,13 @@ C
 
 
       SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
-     &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel,
-     &  VectWind, dVectWind, DirFrom, dDirFrom, dirYaw)
+     & QPhys, dQPhys, WebVel, dirYaw)
 C     ****f* ec_phys.f/EC_Ph_Flux
 C NAME
 C     EC_Ph_Flux
 C SYNOPSIS
 C     CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
-C                     HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-C                     UStar,dUStar,Tau,dTau, 
-C                     FCO2, dFCO2, FCO2Webb, dFCO2Webb,
-C                     WebVel, VectWind, dVectWind, DirFrom, dDirFrom, dirYaw)
+C                     WebVel, dirYaw)
 C FUNCTION
 C     Construct estimates for surface fluxes from mean values and covariances
 C INPUTS
@@ -88,51 +83,17 @@ C              Webb velocity (m/s)
 C     DirYaw : [Real*8]
 C              Yaw rotation angle (degrees)
 C OUTPUT
-C     HSonic : [REAL*8]
-C              sensible heat flux with sonic temperature (W/m^2)
-C     dHSonic: [REAL*8]
+C     QPhys  : [REAL*8](NMaxPhys)
+C              array with physical quantities   
+C     dQPhys : [REAL*8](NMaxPhys)
+C              array with tolerances in physical quantities   
 C              tolerance in sensible heat flux with sonic temperature (W/m^2)
-C     HTc    : [REAL*8]
-C              sensible heat flux with thermocouple temperature (W/m^2)
-C     dHTc   : [REAL*8]
-C              tolerance in sensible heat flux with thermocouple temperature (W/m^2)
-C     LvE    : [REAL*8]
-C              wq-covariance latent heat flux (W/m^2)
-C     dLvE   : [REAL*8]
-C              tolerance in wq-covariance latent heat flux (W/m^2)
-C     LvEWebb: [REAL*8]
-C              Webb term for latent heat  flux (W/m^2)
-C     dLvEWebb: [REAL*8]
-C              tolerance in Webb term for latent heat  flux (W/m^2)
-C     UStar  : [REAL*8]
-C              friction velocity (m/s)
-C     dUStar : [REAL*8]
-C              tolerance in friction velocity (m/s)
-C     Tau    : [REAL*8]
-C              surface shear stress (N/m^2)
-C     dTau   : [REAL*8]
-C              tolerance in surface shear stress (N/m^2)
-C     FCO2   : [REAL*8]
-C              w CO2-covariance CO2 flux (kg/m^2 s)
-C     dFCO2  : [REAL*8]
-C              tolerance in w CO2-covariance CO2 flux (kg/m^2 s)
-C     FCO2Webb: [REAL*8]
-C              Webb term for CO2  flux (kg/m^2 s)
-C     dLvEWebb: [REAL*8]
-C              tolerance in Webb term for CO2 flux (kg/m^2 s)
-C     VectWind: [Real*8]
-C              vector wind velocity (m/s)
-C     dVectWind: [Real*8]
-C              tolerance in vector wind velocity (m/s)
-C     DirFrom : [Real*8]
-C              wind direction (degrees)
-C     dDirFrom : [Real*8]
-C              tolerance in wind direction (degrees)
 C AUTHOR
 C     Arjan van Dijk, Arnold Moene
 C HISTORY
 C     07-10-2002: added CO2 fluxes and WebVel to interface. Webb-term
 C                 is now computed with Webvel, rather than Mean(W)
+C     26-01-2003: replaced physical quantities by QPhys
 C     $Name$ 
 C     $Id$
 C USES
@@ -142,114 +103,191 @@ C     Cp
 C     Lv
 C     ***
       IMPLICIT NONE
-      REAL*8 x(3),b(3),a(3,3),aInv(3,3)
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
       LOGICAL BadTc
       INTEGER NMax
-      REAL*8 EC_Ph_RhoWet,Mean(NMax),Cov(NMax,NMax),HSonic,dHSonic,HTc,
-     &  dHTc,
-     &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
-     &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar,
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel, VectWind, dVectWind,
-     &  DirFrom, dDirFrom, DirYaw, LocalDir
+      REAL*8 EC_Ph_RhoWet,Mean(NMax),Cov(NMax,NMax),
+     &  RhoSon,RhoTc,Frac1,Frac2,
+     &  p,TolMean(NMax),TolCov(NMax,NMAx),
+     &  WebVel, 
+     &  DirYaw, LocalDir, QPhys(NMaxPhys), dQPhys(NMaxPhys)
 C
 C Sensible heat flux [W m^{-2}]
 C
-      RhoSon = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
-      HSonic = Cp*RhoSon*Cov(W,TSonic)
-      dHSonic = Cp*RhoSon*TolCov(W,TSonic)
-
-      IF (.NOT.BadTc) THEN
-        RhoTc = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
-        HTc = Cp*RhoTc*Cov(W,TCouple)
-        dHTc = Cp*RhoTc*TolCov(W,TCouple)
+      IF ((Mean(Humidity) .NE. DUMMY) .AND.
+     &    (Mean(TSonic) .NE. DUMMY) .AND.
+     &    (Cov(W,TSonic) .NE. DUMMY)) THEN
+        RhoSon = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
+        QPhys(QPHSonic) = Cp*RhoSon*Cov(W,TSonic)
+        dQPhys(QPHSonic) = Cp*RhoSon*TolCov(W,TSonic)
       ELSE
-        HTc = -9999.D0
-        dHTc = -9999.D0
+        QPhys(QPHSonic) = 0
+        dQPhys(QPHSonic) = 0
+      ENDIF        
+      
+      IF ((.NOT. BadTC) .AND.
+     &    (Mean(Humidity) .NE. DUMMY) .AND.
+     &    (Mean(TCouple) .NE. DUMMY) .AND.
+     &    (Cov(W,TCouple) .NE. DUMMY)) THEN
+        RhoTc = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
+        QPhys(QPHTc) = Cp*RhoTc*Cov(W,TCouple)
+        dQPhys(QPHTc) = Cp*RhoTc*TolCov(W,TCouple)
+      ELSE
+        QPhys(QPHTc) = DUMMY
+        dQPhys(QPHTc) = DUMMY
       ENDIF
 C
 C Latent heat flux [W m^{-2}]
 C
-      LvE = Lv*Cov(W,Humidity)
-      dLvE = Lv*TolCov(W,Humidity)
-      LvEWebb = Lv*WebVel*Mean(Humidity)
+      IF (Cov(W, Humidity) .NE. DUMMY) THEN
+        QPhys(QPLvE) = Lv*Cov(W,Humidity)
+        dQPhys(QPLvE) = Lv*TolCov(W,Humidity)
+      ELSE
+        QPhys(QPLvE) = DUMMY
+        dQPhys(QPLvE) = DUMMY
+      ENDIF   
+      IF ((WebVel .NE. DUMMY) .AND. 
+     &    (Mean(Humidity) .NE. DUMMY)) THEN
+           Qphys(QPLvEWebb) = Lv*WebVel*Mean(Humidity)
 C
 C These few statements are eliminated to make sure that the
 C error in the mean velocity is NOT YET taken into the error
 C of the sensible heat. By uncommenting the following four commented
 C statements, this is restored.
 C
-C      IF (ABS(Mean(W)).GT.1.D-10) THEN    ! statement 1
-C	Frac1 = ABS(TolMean(W)/Mean(W))    ! statement 2
-C      ELSE                                ! statement 3
-	Frac1 = 0.D0
-C      ENDIF                               ! statement 4
+C        IF (ABS(Mean(W)).GT.1.D-10) THEN    ! statement 1
+C	   Frac1 = ABS(TolMean(W)/Mean(W))    ! statement 2
+C        ELSE                                ! statement 3
+           Frac1 = 0.D0
+C        ENDIF                               ! statement 4
 
-      Frac2 = ABS(TolMean(Humidity)/Mean(Humidity))
+         Frac2 = ABS(TolMean(Humidity)/Mean(Humidity))
 
-      dLvEWebb = LvEWebb*(Frac1**2.D0+Frac2**2.D0)**0.5D0
+         dQPhys(QPLvEWebb) = QPhys(QPLvEWebb)*
+     &                    (Frac1**2.D0+Frac2**2.D0)**0.5D0
+      ELSE
+        QPhys(QPLvEWebb) = DUMMY
+        dQPhys(QPLvEWebb) = DUMMY
+      ENDIF
+      IF ((QPhys(QPLvE) .NE. DUMMY) .AND.
+     &    (QPhys(QPLvEWebb) .NE. DUMMY)) THEN  
+      	   QPhys(QPSumLvE) = QPhys(QPLvE) + QPhys(QPLvEWebb)
+           dQPhys(QPSumLvE) =  SQRT(dQPhys(QPLvE)**2.D0 +
+     &                        dQPhys(QPLvEWebb)**2.D0)
+      ELSE
+          QPhys(QPSumLvE) = DUMMY
+          dQPhys(QPSumLvE) = DUMMY
+      ENDIF
 C
 C Friction velocity (vector sum of two components
 C
       IF (.NOT. ((COV(W,U) .EQ. DUMMY) .AND.
-     &            (COV(W,V) .EQ. DUMMY))) THEN
-	  UStar = SQRT(SQRT(Cov(W,U)**2+Cov(W,U)**2))
-      ENDIF
+     &           (COV(W,V) .EQ. DUMMY))) THEN
+	  QPhys(QPUStar) = SQRT(SQRT(Cov(W,U)**2+Cov(W,V)**2))
 
-      dUStar = (0.25*(2*TolCov(W,U)*ABS(COV(W,U)) + 
-     &                 2*TolCov(W,V)*ABS(COV(W,V)))/UStar**2)*
-     &           UStar
+
+          dQPhys(QPUStar) = (0.25D0*(2D0*TolCov(W,U)*ABS(COV(W,U)) + 
+     &                  2D0*TolCov(W,V)*ABS(COV(W,V)))/
+     &                  QPhys(QPUStar)**2D0)*
+     &                  QPhys(QPUStar)
 C
 C Friction force [N m^{-2}]
 C
-      IF (.NOT.BadTc) THEN
-        Tau = 0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
+         IF (.NOT.BadTc) THEN
+           QPhys(QPTau) = 0.5D0*(RhoSon+RhoTc)*
+     &                          (ABS(QPhys(QPUStar)))**2.D0
+         ELSE
+           QPhys(QPTau) = RhoSon*(ABS(QPHys(QPUStar)))**2.D0
+         ENDIF
+         dQPhys(QPTau) = (0.5D0*(2D0*ABS(COV(W,U))*TolCov(W,U) + 
+     &             2D0*ABS(COV(W,V))*
+     &             TolCov(W,V))/QPhys(QPUStar)**2D0)*
+     &             QPhys(QPUstar)**2
       ELSE
-        Tau = (RhoSon)*(ABS(UStar))**2.D0
+        QPhys(QPUstar) = DUMMY
+        dQPhys(QPUstar) = DUMMY
+        QPhys(QPTau) = DUMMY
+        dQPhys(QPTau) = DUMMY
       ENDIF
-      dTau = (0.5*(2*ABS(COV(W,U))*TolCov(W,U) + 
-     &             2*ABS(COV(W,V))*TolCov(W,V))/UStar**2)*
-     &         Ustar**2
+      
+
 C
 C CO2 flux [kg m^{-2} s^{-1}]
 C
-      FCO2 = Cov(W,CO2)
-      dFCO2 = TolCov(W,CO2)
-      FCO2Webb = WebVel*Mean(CO2)
+      IF (COV(W,CO2) .NE. DUMMY) THEN
+        QPhys(QPFCO2) = Cov(W,CO2)
+        dQPhys(QPFCO2) = TolCov(W,CO2)
+      ELSE
+        QPhys(QPFCO2) = DUMMY
+        dQPhys(QPFCO2) = DUMMY
+      ENDIF      
+      IF ((WebVel .NE. DUMMY) .AND. 
+     &    (Mean(CO2) .NE. DUMMY)) THEN
+           QPhys(QPFCO2Webb) = WebVel*Mean(CO2)
 C Frac1 is set to zero, assuming no error in W (else error in 
 C Webb term would be enormous
-      Frac1 = 0.D0
-      Frac2 = ABS(TolMean(CO2)/Mean(CO2))
+           Frac1 = 0.D0
+           Frac2 = ABS(TolMean(CO2)/Mean(CO2))
 
-      dFCO2Webb = FCO2Webb*(Frac1**2.D0+Frac2**2.D0)**0.5D0   
+           dQPhys(QPFCO2Webb) = 
+     &          QPhys(QPFCO2Webb)*(Frac1**2.D0+Frac2**2.D0)**0.5D0   
+      ELSE
+        QPhys(QPFCO2Webb) = DUMMY
+        dQPhys(QPFCO2Webb) = DUMMY
+      ENDIF
+      IF ((QPhys(QPFCO2) .NE. DUMMY) .AND.
+     &    (QPhys(QPFCO2Webb) .NE. DUMMY)) THEN
+      	   QPhys(QPSumFCO2) = QPhys(QPFCO2) + QPhys(QPFCO2Webb)
+           dQPhys(QPSumFCO2) =  SQRT(dQPhys(QPFCO2)**2.D0 + 
+     &                      dQPhys(QPFCO2Webb)**2.D0)
+      ELSE
+          QPhys(QPSumFCO2) = DUMMY
+          dQPhys(QPSumFCO2) = DUMMY
+      ENDIF
+
 C 
 C Vector wind
-C
-      VectWind = SQRT(Mean(U)**2+Mean(V)**2)
-      dVectWind = 0.5 * (TolMean(U)*ABS(Mean(U)) + 
-     &                   TolMean(V)*ABS(Mean(V)))
+C 
+      IF ((Mean(U) .NE. DUMMY) .AND.
+     &    (Mean(V) .NE. DUMMY)) THEN
+        QPhys(QPVectWind) = SQRT(Mean(U)**2D0+Mean(V)**2D0)
+        dQPhys(QPVectWind) = 0.5D0 * (TolMean(U)*ABS(Mean(U)) + 
+     &                       TolMean(V)*ABS(Mean(V)))
+      ELSE
+        QPhys(QPVectWind) = DUMMY
+        dQPhys(QPVectWind) = DUMMY
+      ENDIF
 C      
 C Wind direction
 C
-      IF (DirYaw.LT.180.D0) THEN
-          DirFrom = DirYaw - 180.D0
-      ELSE
-          DirFrom = DirYaw + 180.D0
-      ENDIF
-      DirFrom = DirFrom - ATAN2(Mean(V), -Mean(U))*180/PI
-      IF (DirFrom .LT. 0) THEN
-         DirFrom = DirFrom + 360.0D0
-      ENDIF
-      IF (DirFrom .GT. 360.D0) THEN
-         DirFrom = DirFrom - 360.0D0
-      ENDIF
+      IF ((Mean(U) .NE. DUMMY) .AND.
+     &    (Mean(V) .NE. DUMMY) .AND.
+     &    (DirYaw .NE. DUMMY)) THEN
+
+         IF (DirYaw.LT.180.D0) THEN
+             QPhys(QPDirFrom) = DirYaw - 180.D0
+         ELSE
+             QPhys(QPDirFrom) = DirYaw + 180.D0
+         ENDIF
+         QPhys(QPDirFrom) = QPhys(QPDirFrom)
+     &                  - ATAN2(Mean(V), -Mean(U))*180/PI
+         IF (QPhys(QPDirFrom) .LT. 0) THEN
+            QPhys(QPDirFrom) = QPhys(QPDirFrom) + 360.0D0
+         ENDIF
+         IF (QPhys(QPDirFrom) .GT. 360.D0) THEN
+            QPhys(QPDirFrom) = QPhys(QPDirFrom) - 360.0D0
+         ENDIF
       
-      LocalDir = ATAN2(Mean(U), Mean(V))
-      dDirFrom = 2.D0*180.D0*ATAN(
+         LocalDir = ATAN2(Mean(U), Mean(V))
+         dQPhys(QPDirFrom) = 2.D0*180.D0*ATAN(
      &              SQRT(Cos(LocalDir)*Cov(V,V)+
-     &                   SIN(LocalDir)*Cov(U,U))/VectWind)/Pi
+     &                   SIN(LocalDir)*Cov(U,U))/QPhys(QPVectWind))/Pi
+      ELSE
+         QPhys(QPDirFrom) = DUMMY
+         dQPhys(QPDirFrom) = DUMMY         
+      ENDIF
       RETURN
       END
 
@@ -413,7 +451,7 @@ C     $Id$
 C USES
 C     EC_Ph_RhoDry
 C     ***
-
+      IMPLICIT NONE
       REAL*8 RhoV,T,P,EC_Ph_RhoDry
 
       EC_Ph_RhoWet = EC_Ph_RhoDry(RhoV,T,P) + RhoV ! [kg m^{-3}]
@@ -427,13 +465,13 @@ C
 C
 
 
-      SUBROUTINE EC_Ph_Struct(Sample,NMax,N,MMax,M,Flag,XIndex,YIndex,
+      SUBROUTINE EC_Ph_Struct(Sample,NMax,MMax,M,Flag,XIndex,YIndex,
      &  R,dR,Freq,CIndep,Cxy,dCxy)
 C     ****f* ec_phys.f/EC_Ph_Struct
 C NAME
 C     EC_Ph_Struct
 C SYNOPSIS
-C     CALL EC_Ph_Struct(Sample,NMax,N,MMax,M,Flag,
+C     CALL EC_Ph_Struct(Sample,NMax,MMax,M,Flag,
 C                       XIndex,YIndex,
 C                       R,dR,Freq,CIndep,Cxy,dCxy)
 C FUNCTION
@@ -444,8 +482,6 @@ C                Samples (quantities in first dimension, samples in
 C                second dimension)
 C     NMax     : [INTEGER]  
 C                physical first dimension of array Sample.
-C     N        : [INTEGER] 
-C                actual number of meaningful quantities in array Sample.
 C     MMax     : [INTEGER]  
 C                physical second dimension of array Sample.
 C     M        : [INTEGER]  
@@ -489,13 +525,14 @@ C     $Name$
 C     $Id$
 C     Revision:  20-9-2002: added implicit none and inclusion of
 C                           parcnst.inc (needed for constants U,V, and W)
+C     Revision:  27-01-2003: removed N from interface
 C USES
 C     parcnst.inc
 C     ***
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
 
-      INTEGER NMax,N,i,M,MMax,XIndex,YIndex,NOk,NSeparate,
+      INTEGER NMax,i,M,MMax,XIndex,YIndex,NOk,NSeparate,
      &  CIndep(NMax,NMax)
       LOGICAL Flag(NMax,MMax),ok
       REAL*8 R,Sample(NMax,MMax),UMean,Freq,TwoThird,Cxy,dCxy,Dum,
@@ -509,11 +546,13 @@ C
       UMean = 0.D0
       NOk = 0
       DO i=1,M
-        IF ( (.NOT.(Flag(U,i))).AND.
-     &      ((.NOT.(Flag(V,i))).AND.
-     &       (.NOT.(Flag(W,i))))) THEN
+        IF ( (.NOT. Flag(U,i)).AND.
+     &      ((.NOT. Flag(V,i)).AND.
+     &       (.NOT. Flag(W,i)))) THEN
           NOk = NOk + 1
-          UMean = UMean + Sample(U,i)**2+Sample(V,i)**2+Sample(W,i)**2
+          UMean = UMean + Sample(U,i)**2D0+
+     &                    Sample(V,i)**2D0+
+     &                    Sample(W,i)**2D0
         ENDIF
       ENDDO
       IF (NOk.GT.0) UMean = UMean/DBLE(NOk)

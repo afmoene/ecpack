@@ -51,19 +51,43 @@ C else a file named 'ecconf' is opened
 C
 C Constants used for maximum array dimensions
 C
-      INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder
+      INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder, NMaxPhys, 
+     &        NMaxCorr, NMaxExp
 
       PARAMETER(MMMax = 100000) ! Maximum number of samples allowed
-      PARAMETER(NNNMax	  = 19) ! Maximum number of uncalibrated quantities in 1 sample
-      PARAMETER(NNMax	  =  14) ! Maximum number of calibrated quantities in 1 sample
       PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]
       PARAMETER(NMaxOrder =  6) ! Maximum order of calibration polynomial
 C
-C These constants are used to indicate quantities
+C These constants are used to indicate *un*calibrated quantities
+C If you add a variable here, increase NNNMax as well!
+C
+     
+      INTEGER QUU,QUV,QUW,QUTSonic,QUTcouple,QUHumidity,
+     &        QUDoy, QUHourMin, QUSec, QUDiagnost, 
+     &        QUTref, QUCO2
+      PARAMETER(NNNMax	  = 12) ! Maximum number of uncalibrated quantities in 1 sample
+
+      PARAMETER(QUU	  = 1)
+      PARAMETER(QUV	  = 2)
+      PARAMETER(QUW	  = 3)
+      PARAMETER(QUTSonic  = 4)
+      PARAMETER(QUTcouple = 5)
+      PARAMETER(QUHumidity= 6)
+      PARAMETER(QUCO2     = 7)
+      PARAMETER(QUDoy     = 8)
+      PARAMETER(QUHourMin = 9)
+      PARAMETER(QUSec     = 10)
+      PARAMETER(QUDiagnost= 11)
+      PARAMETER(QUTref    = 12)
+C
+C These constants are used to indicate calibrated quantities
+C If you add a variable here, increase NNMax as well!
 C
       INTEGER U,V,W,TSonic,Tcouple,Humidity,SpecHum,TTime,
      &        Doy, HourMin, Sec, Diagnost, Tref, CO2, SpecCO2,
      &        DiagLock, DiagDelta, DiagLow, DiagHigh
+
+      PARAMETER(NNMax	  = 19) ! Maximum number of calibrated quantities in 1 sample
 
       PARAMETER(U	 = 1)
       PARAMETER(V	 = 2)
@@ -86,7 +110,8 @@ C
       PARAMETER(Tref     = 19)
 
 
-      CHARACTER*6 QName(NNNMax) 
+      CHARACTER*6 QName(NNMax) 
+      DATA QName
      &                  /'     u',
      &                   '     v',
      &                   '     w',
@@ -107,7 +132,8 @@ C
      &                   ' diagn',
      &                   '  Tref'/
 
-      CHARACTER*9 UName(NNNMax) 
+      CHARACTER*9 UName(NNMax) 
+      DATA UName
      &                  /'    [m/s]',
      &                   '    [m/s]',
      &                   '    [m/s]',
@@ -127,6 +153,64 @@ C
      &                   '      [-]',
      &                   '      [-]',
      &                   '      [K]'/
+      INTEGER QPHSonic, QPHTc, QPLvE, QPLvEWebb,
+     &        QPUstar, QPTau, QPFCO2, QPFCO2Webb,
+     &        QPMeanW, QPVectWind, QPDirFrom, QPSumLvE,
+     &        QPSumFCO2
+      PARAMETER(NMaxPhys  = 13) ! Maximum number of physical quantities
+
+      PARAMETER (QPHSonic   = 1)
+      PARAMETER (QPHTc      = 2)
+      PARAMETER (QPLvE      = 3)
+      PARAMETER (QPLvEWebb  = 4)
+      PARAMETER (QPUstar    = 5)
+      PARAMETER (QPTau      = 6)
+      PARAMETER (QPFCO2     = 7)
+      PARAMETER (QPFCO2Webb = 8)
+      PARAMETER (QPMeanW    = 9)
+      PARAMETER (QPVectWind = 10)
+      PARAMETER (QPDirFrom  = 11)
+      PARAMETER (QPSumLvE   = 12)
+      PARAMETER (QPSumFCO2  = 13)
+      
+C
+C Constants used to indicate corrections
+C
+      INTEGER QCDetrend, QCTilt, QCYaw, QCPitch, QCRoll,
+     &        QCPF, QCSonic, QCO2,QCFreq,
+     &        QCWebb, QCMean, QCPlanF
+      PARAMETER(NMaxCorr   = 11)
+      
+      PARAMETER(QCDetrend  = 1)
+      PARAMETER(QCTilt     = 2) 
+      PARAMETER(QCYaw      = 3) 
+      PARAMETER(QCPitch    = 4) 
+      PARAMETER(QCRoll     = 5)
+      PARAMETER(QCPF       = 6)
+      PARAMETER(QCSonic    = 7)
+      PARAMETER(QCO2       = 8)
+      PARAMETER(QCFreq     = 9)
+      PARAMETER(QCWebb     = 10)
+      PARAMETER(QCMean     = 11)
+
+C
+C Constants to indicate settings for this experiment
+C
+      INTEGER QEFreq, QEPitchLim, QERollLim, QEPreYaw,
+     &        QEPrePitch, QEPreRoll, QELLimit, QEULimit,
+     &        QEStructSep, QEPFValid
+      PARAMETER(NMaxExp   = 10)
+
+      PARAMETER(QEFreq      = 1)
+      PARAMETER(QEPitchLim  = 2) 
+      PARAMETER(QERollLim   = 3) 
+      PARAMETER(QEPreYaw    = 4)
+      PARAMETER(QEPrePitch  = 5)
+      PARAMETER(QEPreRoll   = 6) 
+      PARAMETER(QELLimit    = 7)
+      PARAMETER(QEULimit    = 8)
+      PARAMETER(QEStructSep = 9) 
+      PARAMETER(QEPFValid   = 10)
       
 C
 C
@@ -158,7 +242,8 @@ C
 C
 C Number of calibration data for each apparatus type
 C
-      INTEGER  ApNQQ(8) /27,27,27,27,27,33,27,27/
+      INTEGER  ApNQQ(8) 
+      DATA ApNQQ /27,27,27,27,27,33,27,27/
 C
 C Constants to indicate calibration data, all starting with QQ
 C
