@@ -37,7 +37,7 @@ C...........................................................................
       INCLUDE 'version.inc'
 
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
-     &              ParmName,InterName
+     &              ParmName,InterName, PlfName
       CHARACTER*40 OutName,DumName1,DumName2
       LOGICAL PRaw,PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
      &  DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
@@ -100,6 +100,7 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
       CALL GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName,
+     &             PlfName, 
      &             SonName, CoupName, HygName,
      &             NCVarname, NNNMax)
 C
