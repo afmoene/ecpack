@@ -1063,6 +1063,11 @@ C Get time difference between start and requested point
       TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
       ATTEMPTS = 0
       IND2 = TIMED*SAMPF+1
+      IF (IND2 .LT. 1) THEN
+         IND2 = 1
+      ELSE IF (IND2 .GT. MAXIND) THEN
+         IND2 = MAXIND
+      ENDIF
       CURCH = IND2
 
       DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
@@ -1074,7 +1079,6 @@ C Determine time difference between current sample and required time
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2+1, SEC4)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2+1, DOY4)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2+1, HM4)
-
 C Get local sample rate
          DOYD = DOY4 - DOY2
          HOURD = CSI2HOUR(HM4) - CSI2HOUR(HM2)
@@ -1088,16 +1092,27 @@ C Get distance between current point and requested point
          SECD = 0D0 - SEC2
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
          CURCH = ANINT(TIMED*SAMPF)
+C We're there
 	 IF (CURCH .EQ. 0) THEN
 	    IND = IND2
 	    RETURN
+C Shift forward, but not beyond end of file
 	 ELSE IF (TIMED .GT. 0) THEN 
+	     IF (IND2 .EQ. MAXIND) THEN
+	        IND = IND2
+		RETURN
+	     ENDIF
 	     IND1 = IND2
 	     HM1 = HM2
 	     SEC1 = SEC2
 	     DOY1 = DOY2
              IND2 = IND2 + ANINT(TIMED*SAMPF)
+C Shift backward, but not beyond start of file
 	 ELSE IF  (TIMED .LT. 0) THEN
+	     IF (IND2 .EQ. 1) THEN
+	        IND = IND2
+		RETURN
+	     ENDIF
 	     IND3 = IND2
 	     HM3 = HM2
 	     SEC3 = SEC2
@@ -1136,7 +1151,7 @@ C...........................................................................
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
       IND1 = 1
       IND3 = MAXIND
-      IND2 = ANINT((IND3+IND2)/2.0)
+      IND2 = ANINT((IND3+IND1)/2.0)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
       STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
@@ -1183,7 +1198,6 @@ C Determine time difference between current sample and required time
 	    IND4=IND2-1
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND4, DOY4)
             STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND4, HM4)
-	    write(*,*) IND1, IND2, IND3, HM1, HM2, HM3, HM4
 	    IF (ABS(ANINT(HM2 - HM4)) .GT. 0) THEN
 	      IND = IND2
 	      RETURN
@@ -3730,9 +3744,9 @@ C
       CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       DO I=1,N
-        write(OUTF,*) Qname(I), MEAN(I)
+        WRITE(OUTF,*) Qname(I), MEAN(I)
 	DO J=1,N
-	  write(OUTF,*) Qname(I), Qname(J), COV(i,j)
+	  WRITE(OUTF,*) Qname(I), Qname(J), COV(i,j)
 	ENDDO
       ENDDO
 

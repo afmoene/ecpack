@@ -59,6 +59,11 @@ Revision 1.16: Jun 11, 2001
           - now unkown values should appear in output as dummies (-9999)
 	  - search for interval in data file now also can handle files 
 	    without a 'seconds' variable.
+Revision 1.17: June 11, 2001
+          - fixed bug in search for interval when no seconds info is present
+	    in file
+          - in search for interval: sometimes first period of data was
+	    erroneously assumed to be not present: fixed.
 
 
 

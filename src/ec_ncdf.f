@@ -94,6 +94,7 @@ C
      &             FluxName, ParmName, InterName,
      &             SonName, CoupName, HygName,
      &             NCVarname, NNNMax)
+      write(*,*) 'Got conf'
 C
 C Check whether we have a reference temperature for a thermocouple
       IF (STRLEN(NCVarName(Tref)) .GT. 0) THEN
