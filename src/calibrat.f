@@ -156,12 +156,9 @@ C Here the Schotanus et al. correction for sensitivity of the sonic for
 C lateral velocity is applied directly to the raw data. This is only
 C half of the Schotanus-correction. Humidity-correction comes later.
 C
-	   IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
-               Sample(TSonic) = Sample(TSonic) +
-     &         ((7./8.)*(Sample(U)**2 + Sample(V)**2) +
-     &          (1./4.)* Sample(W)**2
-     &         )/GammaR
-           ELSE IF (CalSonic(QQType) .EQ. ApGillSolent) THEN
+C Only in the spring of 2004 we found out that CSAT3 does this side-wind
+C correction online (see CSAT  manual, page 1, section 2, 3rd sentence).
+           IF (CalSonic(QQType) .EQ. ApGillSolent) THEN
            Sample(TSonic) = Sample(TSonic) +
      &         ((3./4.)*(Sample(U)**2 + Sample(V)**2) +
      &          (1./2.)* Sample(W)**2

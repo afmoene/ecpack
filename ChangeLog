@@ -349,3 +349,8 @@ Revision : 2.5.9: February 10, 2004 (Arnold.moene@wur.nl)
       - removed transfer function in frequency correction that corrected
         for pre-filtering, since we know of no one that applies pre-filtering
       - updated main readme file to reflect new directory structure
+Revision : 2.5.10: April 21, 2004 (Arnold.moene@wur.nl)
+      - removed sidewind correction (Schotanus) in calibrat.f for CSAT3. We
+        have overlooked that the CSAT does this correction online (see CSAT
+        manual, page 1, section 2, sentence 3). Thanks to Ed Swiatek for the
+        detailed information.
