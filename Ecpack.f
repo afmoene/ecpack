@@ -101,7 +101,7 @@ C###########################################################################
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,
-     &   MEANW, TOLMEANW)
+     &  MEANW, TOLMEANW, HAVE_UNCAL)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECMain
@@ -129,6 +129,8 @@ C    fluxes with tolerances.
 C
 C Revision: 03-04-2001: get mean W and its tolerance before tilt
 C                       correction; export via interface (AM)
+C Revision: 28-05-2001: added passing of info on whether uncalibrated
+C                       data are available (AM)
 
       INCLUDE 'physcnst.for'
       INCLUDE 'calcomm.inc'
@@ -154,6 +156,7 @@ C                       correction; export via interface (AM)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
       LOGICAL HAVE_CAL(NMax)
+      LOGICAL HAVE_UNCAL(NMax)
 C
 C Check whether we have the needed calibration info
 C
@@ -216,14 +219,16 @@ C
       BadTc = (.FALSE.)
       DO i=1,M
          CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
+     &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
+     &    Have_Uncal)
         IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
       ENDDO
       BadTc = (NTcOut.GE.(M/2))
       IF (BadTc) THEN
         DO i=1,M
           CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
+     &      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
+     &      Have_Uncal)
         ENDDO
       ENDIF
 C
@@ -249,14 +254,15 @@ C
 
 	DO i=1,M
 	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	    CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
+     &	    CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
+     &      Have_Uncal)
 	ENDDO
       ENDIF
 
       IF (DoPrint.AND.PCal) THEN
 	DO i=1,M
 	  DO j=1,N
-	    IF (Flag(j,i) .AND. HAVE_CAL(j))
+	    IF (Flag(j,i) .AND. HAVE_CAL(j) .AND. HAVE_UNCAL(J))
      &       WRITE(OutF,*) 'Error in sample ',i,' = ',
      &	      QName(j),' = ',Sample(j,i)
 	  ENDDO
@@ -315,6 +321,11 @@ C
 	ENDIF
       ENDIF
 C
+C Get the mean W before we do tilt correction
+C
+      MEANW = MEAN(W)
+      TOLMEANW = TolMean(W)
+C
 C Correct mean values and covariances for all thinkable effects
 C
       CALL ECCorrec(OutF,
@@ -330,12 +341,7 @@ C
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
-     &	DoWebb,PWebb,P)
-C
-C Get the mean W before we do tilt correction
-C
-      MEANW = MEAN(W)
-      TOLMEANW = TolMean(W)
+     &	DoWebb,PWebb,P,Have_Uncal)
 C
 C If any transformation of coordinates was required (one of the options
 C DoTilt, DoPitch, DoYaw or DoRoll was selected), then the numbers
@@ -418,7 +424,7 @@ C
      &	  DoO2,PO2,O2Factor,
      &	  DoFreq,PFreq,LLimit,ULimit,Freq,
      &    CalSonic,CalTherm,CalHyg,FrCor,
-     &	  DoWebb,PWebb,P)
+     &	  DoWebb,PWebb,P, Have_Uncal)
 
       ENDIF
 C
@@ -543,7 +549,7 @@ C
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
-     &	DoWebb,PWebb,P)
+     &	DoWebb,PWebb,P, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECCorrec
@@ -567,13 +573,18 @@ C	    All intermediate results can be output to a file.
 C	    Moreover they are returned to the calling routine in
 C	    respective variables.
 C
+C Revision 28-05-2001: added info on whether uncalibrated data are
+C                      available for a given variable (mainly important
+C                      for sonic and/or Couple temperature since that
+C                      is used for various corrections)
       INCLUDE 'physcnst.for'
 
-      INTEGER N,NInt,NMAx,OutF
+      INTEGER N,NInt,NMAx,OutF, WhichTemp
       LOGICAL PPitch,PYaw,PRoll,PFreq,PO2,PWebb,
      &	DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
-     &	QPitch,QYaw,QRoll,QFreq,QO2,QWebb,QSonic,QTilt
+     &	QPitch,QYaw,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
+     &  Have_Uncal(NMax)
       REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
      &	YawLim,RollLim,DirPitch,O2Factor(NMax),
@@ -633,16 +644,33 @@ C Correct sonic temperature and all covariances with sonic temperature
 C for humidity. This is half the Schotanus-correction. Side-wind
 C correction is done at calibration time directly after reading raw data.
 C
+C Now we need to know if and which temperature we have. Default to
+C Sonic temperature
 C
+      IF (HAVE_UNCAL(TSonic)) THEN
+         WhichTemp = Tsonic
+      ELSE IF (Have_UNCAL(TCouple)) THEN
+         WhichTemp = TCouple
+      ELSE
+         WhichTemp = -1
+      ENDIF
+
       IF (DoSonic) CALL ECPSchot(QSonic,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,SonFactr)
+     &	   NMax,N,Cov,TolCov,QName,UName,SonFactr)
 C
 C
 C Perform correction for oxygen-sensitivity of hygrometer
 C
 C
-      IF (DoO2) CALL ECPO2(QO2,OutF,Mean,TolMean,NMax,N,
-     &	Cov,TolCov,QName,UName,P,O2Factor)
+      IF (DoO2) THEN
+        IF (WhichTemp .GT. 0) THEN
+            CALL ECPO2(QO2,OutF,Mean,TolMean,NMax,N,
+     &	        Cov,TolCov,QName,UName,P,O2Factor, WhichTemp)
+        ELSE
+	    WRITE(*,*) 'ERROR: can not perform O2 correction without ',
+     &                 'a temperature'
+        ENDIF
+      ENDIF
 C
 C
 C Perform correction for poor frequency response and large paths
@@ -658,16 +686,30 @@ C
       TAUV   = 0.D0	 ! [?] Low pass filter time constant
       TauD   = 0.D0	 ! [?] interval length for running mean
 
-      IF (DoFreq) CALL ECPFreq(QFreq,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,
-     &	NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor)
+      IF (DoFreq) THEN
+        IF (WhichTemp .GT. 0) THEN
+          CALL ECPFreq(QFreq,OutF,Mean,TolMean,
+     &    NMax,N,Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,
+     &    NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
+        ELSE
+	    WRITE(*,*) 'ERROR: can not perform freq. response correction',
+     &                 ' without a temperature'
+	ENDIF
+      ENDIF
 C
 C
 C Calculate mean vertical velocity according to Webb
 C
 C
-      IF (DoWebb) CALL ECPWebb(QWebb,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,P,QName,UName)
+      IF (DoWebb) THEN
+         IF (WhichTemp .GT. 0) THEN
+	    CALL ECPWebb(QWebb,OutF,Mean,TolMean,
+     &	        NMax,N,Cov,TolCov,P,QName,UName, WhichTemp)
+         ELSE
+	    WRITE(*,*) 'ERROR: can not perform Webb correction',
+     &                 ' without a temperature'
+	 ENDIF
+      ENDIF
 
       RETURN
       END
@@ -799,9 +841,116 @@ C
       END
 
 
+C...........................................................................
+C FUNCTION:  CSI2HOUR
+C PURPOSE:   To convert Campbell hour/min to decimal hours
+C INTERFACE: HOURMIN    IN     Campbell hour/minutes (REAL)
+C            return value      decimal hours (REAL)
+C AUTHOR:    Arnold Moene
+C DATE:      May 28, 2001
+C...........................................................................
+      REAL FUNCTION CSI2HOUR(HOURMIN)
+
+      REAL HOURMIN
+      INTEGER HOUR, MIN
+
+      HOUR = INT(HOURMIN/100.0)
+      MIN = INT(HOURMIN-HOUR*100)
+      
+      CSI2HOUR = HOUR + MIN/60.0
+      END
+      
+C...........................................................................
+C SUBROUTINE:  FINDTIME
+C PURPOSE   :  To find the index in a NetCDF File for a given DOY and time
+C...........................................................................
+      SUBROUTINE FINDTIME(FDOY, FHOURMIN, NCID,
+     +                    NCdoyID, NChmID, NCsecID,IND)
+      INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, NCsecID, IND,
+     +        DIMID, MAXIND, ATTEMPTS, PREVCH
+      REAL SEC1, SEC2, DOY1, DOY2, HM1, HM2, SAMPF, TIME1, TIME2,
+     +     DOYD, HOURD, SECD, TIMED
+
+      STATUS = NF_INQ_VARDIMID(NCID,NCsecID,DIMID)
+      STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
+      STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, 1, SEC1)
+      STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, 2, SEC2)
+      STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, 1, DOY1)
+      STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, 2, DOY2)
+      STATUS = NF_GET_VAR1_REAL(NCID,NChmID, 1, HM1)
+      STATUS = NF_GET_VAR1_REAL(NCID,NChmID, 2, HM2)
+      IF ((DOY1 .EQ. DOY2) .AND. (HM1 .EQ. HM2)) THEN
+          SAMPF = SEC2-SEC1
+      ELSE IF (DOY1 .EQ. DOY2) THEN
+          TIME1 = CSI2HOUR(HM1)
+          TIME2 = CSI2HOUR(HM2)
+          SAMPF = (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
+      ELSE
+          TIME1 = CSI2HOUR(HM1)
+          TIME2 = CSI2HOUR(HM2)
+          SAMPF = (DOY2-DOY1)*3600*24 +
+     +         (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
+      ENDIF
 
 
-
+      DOYD = FDOY - DOY1
+      HOURD = CSI2HOUR(REAL(FHOURMIN)) - CSI2HOUR(HM1)
+      SECD = 0 - SEC1
+      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+      ATTEMPTS = 0
+      PREVCH = TIMED/SAMPF+1
+      CURCH = TIMED/SAMPF
+      IND = 0
+      DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
+C Determine time difference between current sample and required time
+         IF (ABS(CURCH) .GT. ABS(PREVCH)) THEN
+             CURCH = CURCH*0.8
+         ENDIF
+         IND = IND + CURCH
+         PREVCH = CURCH
+         IF ((IND .LT. 1) .OR. (IND .GT. MAXIND)) THEN
+             WRITE(*,*)
+     +         'ERROR: requested data appear to be not in this file'
+             IND = -1
+             RETURN
+         ENDIF
+         STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, IND, SEC1)
+         STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, IND, DOY1)
+         STATUS = NF_GET_VAR1_REAL(NCID,NChmID, IND, HM1)
+         STATUS = NF_GET_VAR1_REAL(NCID,NCsecID, IND+1, SEC2)
+         STATUS = NF_GET_VAR1_REAL(NCID,NCdoyID, IND+1, DOY2)
+         STATUS = NF_GET_VAR1_REAL(NCID,NChmID, IND+1, HM2)
+         IF ((DOY1 .EQ. DOY2) .AND. (HM1 .EQ. HM2)) THEN
+             SAMPF = SEC2-SEC1
+         ELSE IF (DOY1 .EQ. DOY2) THEN
+             TIME1 = CSI2HOUR(HM1)
+             TIME2 = CSI2HOUR(HM2)
+             SAMPF = (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
+         ELSE
+             TIME1 = CSI2HOUR(HM1)
+             TIME2 = CSI2HOUR(HM2)
+             SAMPF = (DOY2-DOY1)*3600*24+
+     +         (TIME2*3600+SEC2) - (TIME1*3600 + SEC1)
+         ENDIF
+         DOYD = FDOY - DOY1
+         HOURD = CSI2HOUR(REAL(FHOURMIN)) - CSI2HOUR(HM1)
+         SECD = 0 - SEC1
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         ATTEMPTS = ATTEMPTS + 1
+         CURCH = TIMED/SAMPF
+C
+C A fix to get the right sample (needed in some cases)
+         IF ((SECD .LT. 0) .AND. 
+     +       ((INT(FHOURMIN) - INT(HM1)) .EQ. 1)) THEN
+            CURCH = CURCH + 1
+	 ENDIF
+      ENDDO
+      IF (ATTEMPTS .EQ. 20) THEN
+         WRITE(*,*) 'ERROR: Gave up on searching time in file'
+         IND = -1
+      ENDIF
+      END
+      
       SUBROUTINE ECReadNCDF(InName,StartTime,StopTime,
      &  Delay,Gain,Offset,x,NMax,N,MMax,M, NCVarName,
      &  Have_Uncal)
@@ -818,6 +967,10 @@ C			  First index counts quantities; second counter
 C			  counts samples. Only the first N quantities
 C			  and the first M samples are used.
 C	   M : Number of samples in file
+C Revision 28-05-2001: added info on whether uncalibrated data are
+C                      available for a given variable (mainly important
+C                      for sonic and/or Couple temperature since that
+C                      is used for various corrections)
 C
       INCLUDE 'physcnst.for'
       INCLUDE 'netcdf.inc'
@@ -832,7 +985,7 @@ C
      &        UNLIMITED,  ! ID of unlimited dimension
      &        XTYPE,      ! number type of variable
      &        VARDIMS,    ! # of dimensions for variable
-     &        DIMIDS(NF_MAX_VAR_DIMS), ! ID's of dimensions
+     &        DIMIDS(NF_MAX_VAR_DIMS), ! IDs of dimensions
      &        NATTS       ! # of attributes
       INTEGER I, J, K
       INTEGER NMax,N,MMax,M,Delay(NMax),HMStart,HMStop,Counter
@@ -844,7 +997,8 @@ C
       LOGICAL       Have_Uncal(NMax)
 
       CHARACTER*255 ATT_NAME
-      INTEGER       NCVarID(NNNMax)
+      INTEGER       NCVarID(NNNMax), DoyStart, DoyStop,
+     +              STARTIND, STOPIND, NSAMPLE
       LOGICAL       HAS_SCALE(NMax), HAS_OFFSET(NMax)
       REAL*8        NC_SCALE(NMax), NC_OFFSET(NMax)
       INTEGER       STRLEN
@@ -864,6 +1018,7 @@ C
       IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
 
       N = NVars
+      M = 0
 C
 C Inquire about variables
 C
@@ -871,6 +1026,7 @@ C
          NCVarID(I) = 0
          HAS_SCALE(I) = .FALSE.
          HAS_OFFSET(I) = .FALSE.
+	 Have_Uncal(I) = .FALSE.
       ENDDO
       DO I=1,NVARS
         STATUS = NF_INQ_VAR(NCID,I,NAME,XTYPE,VARDIMS,DIMIDS,NATTS)
@@ -914,27 +1070,49 @@ C
       ENDDO
  5110 FORMAT('ERROR: variable ',A,' not found')
       IF (.NOT. OK) STOP
+
+C
+C Find start and stop index in file
+C
+      DOYStart = ANINT(StartTime(1))
+      DOYStop = ANINT(StopTime(1))
+      CALL FINDTIME(DoyStart, HMSTART, NCID, NCVarID(Doy),
+     +             NCVarID(HourMin),
+     +             NCVarID(Sec),
+     +             STARTIND)
+      CALL FINDTIME(DoyStop, HMSTOP, NCID, NCVarID(Doy),
+     +             NCVarID(HourMin),
+     +             NCVarID(Sec),
+     +             STOPIND)
+      IF (((STARTIND .LE. 0) .OR. (STOPIND .LE. 0)) .OR.
+     +    (STOPIND .LT. STARTIND)) THEN
+          WRITE(*,*) 'ERROR: No data found for given interval'
+          STATUS = NF_CLOSE(NCID)
+          IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
+          RETURN
+      ENDIF
+      NSAMPLE = STOPIND - STARTIND 
+      IF ((STOPIND - STARTIND) .GT. MMMAX) THEN
+         WRITE(*,5500) MMMAX, NSAMPLE
+      ENDIF
 C
 C Read all data from file
 C
       OK = (.TRUE.)
-      Counter = 1
-      M = 1
- 81   CONTINUE
 C
+      M = NSAMPLE
       DO i=1,NMax
 C
-C Try to read one channel of one sample from file
+C Try to read one channel at a time
 C
         IF (NCVarID(I) .GT. 0) THEN
-           STATUS = NF_GET_VAR1_REAL(NCID,NCVarID(I),
-     &                               (Counter+Delay(i)),Dum)
-           OK = (STATUS .EQ. NF_NOERR)
-           Ready = (STATUS .EQ. nf_einvalcoords)
-C
-C If there is no more data, then jump out of this data-reading loop
-C
-           IF (Ready) GOTO 82
+           DO J=1,NSAMPLE
+              STATUS = NF_GET_VAR1_DOUBLE(NCID,NCVarID(I),
+     &                                  STARTIND+J-1+Delay(i),
+     &                                  x(i,J))
+              OK = (STATUS .EQ. NF_NOERR)
+              Ready = (STATUS .EQ. nf_einvalcoords)
+           ENDDO
 C
 C If something went wrong, then abort further execution of the program
 C
@@ -945,51 +1123,30 @@ C
 C
 C Apply NetCDF gain and offset first, if present
 C
-           IF (HAS_SCALE(I)) DUM = DUM * NC_SCALE(I)
-           IF (HAS_OFFSET(I)) DUM =  DUM + NC_OFFSET(I)
+           IF (HAS_SCALE(I)) THEN
+              DO J=1,NSAMPLE
+                 X(I,J) = X(I,J) * NC_SCALE(I)
+              ENDDO
+           ENDIF
+           
+           IF (HAS_OFFSET(I)) THEN
+              DO J=1,NSAMPLE
+                 X(I,J) = X(I,J) +  NC_OFFSET(I)
+              ENDDO
+           ENDIF
 C
 C Apply gain and offset given in calibration file
 C
-           x(i,M) = DBLE(Dum)/Gain(i) + Offset(i)
+           DO J=1,NSAMPLE
+             x(i,J) = x(i,J)/Gain(i) + Offset(i)
+           ENDDO
         ENDIF
       ENDDO
-C
-C Either the sample has the correct day and the requested start
-C time is less than the time of the sample, or the sample has a
-C day that is past the requested start time.
-C
-      Started = (((ANINT(StartTime(1)).EQ.
-     &             ANINT(x(Doy,M))).AND.
-     &            (HMStart.LE.ANINT(x(HourMin,M))))
-     &  .OR.
-     &            (ANINT(StartTime(1)).LT.
-     &             ANINT(x(Doy,M))))
-C
-C Either the sample has correct day and the requested stop time is
-C larger than the time of the sample, or the sample has a day
-C that is before the day of the requested stop time.
-C
-      NotStopped = (((ANINT(StopTime(1)).EQ.ANINT(x(Doy,M))).AND.
-     &  (HMStop.GT.ANINT(x(HourMin,M))))
-     &  .OR.
-     &  (ANINT(StopTime(1)).GT.ANINT(x(Doy,M))))
      
-      IF (Started) M = M + 1
-      Counter = Counter + 1
       
-      IF (NotStopped .AND. M.GT. MMMax) THEN
-         WRITE(*,5500)
-      ENDIF
  5500 FORMAT('WARNING: stopped reading data because compiled ',
-     &              ' size of storage is unsufficient')
-C
-C Continue reading
-C
-      IF ((M.LE.MMMax).AND.(NotStopped)) GOTO 81
-C
-C Or exit and adjust counter M
-C
- 82   M = M-1
+     &              ' size of storage (',I4,') is unsufficient ',
+     &              ' for requested data (',I4,')')
 C
 C Close file again
 C
@@ -2479,7 +2636,8 @@ C
 
 
       SUBROUTINE ECFrResp(Mean,Cov,TolCov,NMax,NSize,Lower,Upper,
-     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,WXT)
+     &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,WXT,
+     & WhichTemp)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECFrResp
@@ -2513,9 +2671,11 @@ C	Leuning, R. and K.M. King (1991): 'Comparison of Eddy-Covariance
 C	Measurements of CO2 Fluxes by open- and closed-path CO2 analysers'
 C	(unpublished)
 C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
-      INTEGER I1,I2,I3,I4,I,J,NINT,NMax,NSize
+      INTEGER I1,I2,I3,I4,I,J,NINT,NMax,NSize, WhichTemp
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &	GAIND,GAINV,GAINT1,GAINT2,GAINUV,GAINW,GAINQ1,
      &	TRANA,TRANQ1,TRANUV,TRANW,TRANT1,TRANT2,TRANWT1,TRANWT2,TRANWQ1,
@@ -2537,8 +2697,8 @@ C
       ENDDO
 
       Ustar = ((Cov(U,W))**2.D0)**0.25D0
-      ZL = (CalSonic(QQZ)*Karman*GG*Cov(W,TSonic))/
-     &	(-Mean(TSonic)*Ustar**3.D0)
+      ZL = (CalSonic(QQZ)*Karman*GG*Cov(W,WhichTemp))/
+     &	(-Mean(WhichTemp)*Ustar**3.D0)
 
       IF(ZL.GE.0.D0) THEN
 C
@@ -2807,7 +2967,7 @@ C
 
 
 
-      SUBROUTINE ECOxygen(Mean,NMax,N,Cov,P,Factor)
+      SUBROUTINE ECOxygen(Mean,NMax,N,Cov,P,Factor, WhichTemp)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECOxygen
@@ -2830,15 +2990,17 @@ C Contribution of other gases especially oxygen absorb
 C some of the radiation at the wavelengths at which the
 C Krypton works.
 C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax,N,i
+      INTEGER NMax,N,i, WhichTemp
       REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax),OXC,P
 
-      OXC = FracO2*MO2*P*KoK/(RGas*(Mean(TSonic))**2.D0*KwK)
+      OXC = FracO2*MO2*P*KoK/(RGas*(Mean(WhichTemp))**2.D0*KwK)
 
       DO i = 1,N
-	Factor(i) = 1.D0 + OXC*Cov(i,TSonic)/Cov(i,Humidity)
+	Factor(i) = 1.D0 + OXC*Cov(i,WhichTemp)/Cov(i,Humidity)
 	IF ((i.EQ.Humidity).OR.(i.EQ.SpecHum))
      &	  Factor(i) = Factor(i)**2.D0
 	Cov(i,Humidity) = Factor(i)*Cov(i,Humidity)
@@ -2945,7 +3107,7 @@ C Dit convergeert dus helemaal niet !!!
 
 
 
-      SUBROUTINE ECWebb(Mean,NMax,Cov,P)
+      SUBROUTINE ECWebb(Mean,NMax,Cov,P, WhichTemp)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECWebb
@@ -2966,15 +3128,17 @@ C
 C Purpose :
 C Mean vertical velocity according to Webb, Pearman and Leuning
 C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
-      INTEGER NMax
+      INTEGER NMax, WhichTemp
       REAL*8 Mean(NMax),Cov(NMax,NMax),Sigma,ECRhoDry,P
 C
 C Ratio of mean densities of water vapour and dry air
 C
-      Sigma = Mean(Humidity)/ECRhoDry(Mean(Humidity),Mean(TSonic),P)
-      Mean(W) = (1.D0+Mu*Sigma)*Cov(W,TSonic)/Mean(TSonic) +
+      Sigma = Mean(Humidity)/ECRhoDry(Mean(Humidity),Mean(WhichTemp),P)
+      Mean(W) = (1.D0+Mu*Sigma)*Cov(W,WhichTemp)/Mean(WhichTemp) +
      &	Mu*Sigma*Cov(W,Humidity)/Mean(Humidity)
 
       RETURN
@@ -3255,7 +3419,7 @@ C
 
 
       SUBROUTINE ECPO2(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,P,O2Factor)
+     &	TolCov,QName,UName,P,O2Factor, WhichTemp)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPO2
@@ -3277,16 +3441,18 @@ C Purpose :
 C All-in procedure to correct for oxygen sensitivity of hygrometer
 C and print results
 C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
-      INTEGER NMax,OutF,N,i
+      INTEGER NMax,OutF,N,i, WhichTemp
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),O2Factor(NMax),P
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECOxygen(Mean,NMax,N,Cov,P,O2Factor)
+      CALL ECOxygen(Mean,NMax,N,Cov,P,O2Factor, WhichTemp)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
@@ -3310,7 +3476,7 @@ C
 
       SUBROUTINE ECPFreq(DoPrint,OutF,Mean,TolMean,NMax,N,
      &	Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,NInt,Freq,
-     &	TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor)
+     &	TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPFreq
@@ -3369,10 +3535,12 @@ C           hygrometer.
 C
 C output : FrCor [REAL*8(NMax,NMax)] : Correction factors for covariances.
 C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
-      INTEGER NMax,OutF,N,NInt
+      INTEGER NMax,OutF,N,NInt, WhichTemp
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),TolCov(NMax,NMax)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
@@ -3381,7 +3549,7 @@ C
 
       CALL ECFrResp(Mean,Cov,TolCov,NMax,N,
      &	LLimit,ULimit,NSta,NEnd,NInt,Freq,TauD,TauV,
-     &	CalSonic,CalTherm,CalHyg,FrCor)
+     &	CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
 
       IF (DoPrint) THEN
 	CALL ECShwFrq(OutF,QName,FrCor,NMax,N)
@@ -3401,7 +3569,7 @@ C
 
 
       SUBROUTINE ECPWebb(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,TolCov,
-     &	P,QName,UName)
+     &	P,QName,UName, WhichTemp)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPWebb
@@ -3440,16 +3608,18 @@ C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
 C output : This routine sets the mean vertical velocity "Mean(w)" to the
 C         Webb-velocity.
 C
+C Revision 28-05-2001: added info on which temperature should be used
+C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
-      INTEGER NMax,OutF,N
+      INTEGER NMax,OutF,N, WhichTemp
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),P,
      &	TolCov(NMax,NMax)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECWebb(Mean,NMax,Cov,P)
+      CALL ECWebb(Mean,NMax,Cov,P, WhichTemp)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
@@ -3457,7 +3627,8 @@ C
 	WRITE(OutF,*)
 	WRITE(OutF,*) 'After addition of Webb-term : '
 	WRITE(OutF,*)
-	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,
+     &              NMax,N)
       ENDIF
 
       RETURN

@@ -22,7 +22,14 @@ Revision: February 28, 2001: fixed an error in computation of density
 Revision: April 3, 2001: added output of mean W and its tolerance (as
           obtained before tilt correction. Data are written to additional
 	  column in flux file
-Current version: 1.11
+Revision: May 28, 2001:
+          - reading of NetCDF data speeded up considerably, especially at
+	    end of file: now seek in file where data should be read (rather
+	    than crawling through it, sample by sample)
+          - now we can deal with files without sonic temperatures. In those
+	    calibrations where temperature is needed, sonic temperature
+	    is automatically replaced by thermocouple temperature.
+Current version: 1.12
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html

@@ -70,7 +70,6 @@ C
 C Number of calibration data for each apparatus type
 C
       INTEGER  ApNQQ(6) /27,27,27,27,27,33/
-            
 C
 C Constants to indicate calibration data, all starting with QQ
 C

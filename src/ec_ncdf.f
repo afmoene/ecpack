@@ -308,7 +308,7 @@ C
      &    HSonic,dHSonic,HTc,dHTc,
      &    LvE,dLvE,LvEWebb,dLvEWebb,
      &    UStar,dUStar,Tau,dTau,
-     &    MeanW, TolMeanW)
+     &    MeanW, TolMeanW, HAVE_UNCAL)
 C
 C Calculate structure parameters
 C
@@ -436,10 +436,13 @@ C OutPut: Sample   : REAL*8(N) : Calibrated sample
 C         Error    : LOGICAL(N) : Indicator if quantities are valid
 C                    after calibration
 C
+C Revision 28-05-2001: added info on which variables are available
+C                      (mainly important for either sonic or
+C                      thermocouple temperature)
 C ########################################################################
 C
       SUBROUTINE Calibrat(RawSampl,Channels,P,CorMean,
-     &  CalSonic,CalTherm,CalHyg,BadTc,Sample,N,Error)
+     &  CalSonic,CalTherm,CalHyg,BadTc,Sample,N,Error, Have_Uncal)
 
       IMPLICIT NONE
       
@@ -449,7 +452,7 @@ C
 
       INTEGER N,i,ColU,ColV,ColW,ColTSonic,ColTCple,ColHum,
      &  ColDay,Channels,ColHrMin,ColScnds,ColDiagnostic, ColTref
-      LOGICAL Error(N),BadTc
+      LOGICAL Error(N),BadTc, Have_Uncal(N)
       REAL*8 RawSampl(Channels),Sample(N),P,UDum,VDum,Hook,Dum,
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CorMean(N),
      &  Hours,Minutes,Days,Secnds, TsCorr, WDum
@@ -559,6 +562,10 @@ C
            Error(Tsonic) = ((Sample(TSonic).GT.(Kelvin+MaxT))
      &       .OR. (Sample(TSonic).LT.(Kelvin+MinT)))
          ENDIF
+	 Error(U) = (Error(U) .OR. (.NOT. Have_Uncal(U)))
+	 Error(V) = (Error(V) .OR. (.NOT. Have_Uncal(V)))
+	 Error(W) = (Error(W) .OR. (.NOT. Have_Uncal(W)))
+	 Error(TSonic) = (Error(TSonic) .OR. (.NOT. Have_Uncal(TSonic)))
       ELSE
          Error(U) = .TRUE.
          Error(V) = .TRUE.
@@ -611,6 +618,8 @@ C
         
          Error(TCouple) = ((Sample(TCouple).GT.(Kelvin+MaxT))
      &     .OR. (Sample(TCouple).LT.(Kelvin+MinT)))
+         Error(TCouple) = (Error(TCouple) .OR. 
+     &                        (.NOT. Have_Uncal(TCouple)))
       ELSE
          Error(Tcouple) = .TRUE.
       ENDIF
@@ -665,6 +674,9 @@ C
               ENDIF
             ENDIF
          ENDIF
+         Error(Humidity) = (Error(Humidity) .OR. 
+     &                        (.NOT. Have_Uncal(Humidity)))
+         Error(SpecHum) = (Error(SpecHum) .OR. Error(Humidity))
       ELSE
          Error(Humidity) = .TRUE.
          Error(SpecHum) = .TRUE.

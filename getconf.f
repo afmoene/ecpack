@@ -97,7 +97,7 @@ C NetCdF variable names
             ELSE IF (INDEX(TOKLINE, 'SEC_VAR') .GT. 0) THEN
                NCVarName(Sec) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'DIAG_VAR') .GT. 0) THEN
-               NCVarName(Diag) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               NCVarName(Diagnost) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'TREF_VAR') .GT. 0) THEN
                NCVarName(Tref) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ENDIF
