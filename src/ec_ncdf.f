@@ -590,8 +590,6 @@ C
                 ELSE IF (.NOT.Error(TSonic)) THEN
                   TsCorr = ECRawSchot(Sample(TSonic),
      &                                Sample(Humidity), P)
-                  write(*,*) 'applied schot corr: ',
-     &                        Sample(TSonic), TsCorr
                   Sample(SpecHum)=ECQ(Sample(Humidity),
      &                                TsCorr,P)
                 ELSE
