@@ -57,7 +57,7 @@ C Constants to characterize types of measurement apparatus, all starting
 C with ''Ap''
 C
       INTEGER ApGillSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro,
-     &        ApSon3Dcal
+     &        ApSon3Dcal, ApMierijLyma
 
       PARAMETER(ApGillSonic   = 1)
       PARAMETER(ApTCouple     = 2)
@@ -65,11 +65,12 @@ C
       PARAMETER(ApPt100       = 4)
       PARAMETER(ApPsychro     = 5)
       PARAMETER(ApSon3Dcal    = 6)
+      PARAMETER(ApMierijLyma  = 7)
 
 C
 C Number of calibration data for each apparatus type
 C
-      INTEGER  ApNQQ(6) /27,27,27,27,27,33/
+      INTEGER  ApNQQ(7) /27,27,27,27,27,33,27/
 C
 C Constants to indicate calibration data, all starting with QQ
 C

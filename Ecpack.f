@@ -45,8 +45,8 @@ C  - Correction of sonic-temperature for presence of humidity.
 C  - Correction of sonic path length to make mean sonic temperature match
 C    mean temperature according to a different device (e.g. thermocouple).
 C  - Time-delay in the datafile between the different columns
-C  - Pitch-correction to make Mean(V) --> 0
-C  - Yaw-correction to make Mean(W) --> 0
+C  - Yaw-correction to make Mean(V) --> 0
+C  - Pitch-correction to make Mean(W) --> 0
 C  - Roll-correction to make Cov(W,V) --> 0
 C  - Frequency-reponse corrections for slow apparatus and path length
 C    integration.
@@ -89,9 +89,9 @@ C###########################################################################
      &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
      &	QName,UName,
      &	DoDetren,PDetrend,
-     &	DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
-     &	DoPitch,PPitch,DirPitch,
-     &	DoYaw,PYaw,YawLim,DirYaw,
+     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	DoYaw,PYaw,DirYaw,
+     &	DoPitch,PPitch,PitchLim,DirPitch,
      &	DoRoll,PRoll,RollLim,DirRoll,
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
@@ -136,23 +136,25 @@ C                       data are available (AM)
       INCLUDE 'calcomm.inc'
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
-     &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut
-      LOGICAL PPitch,PYaw,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
-     &	DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
+     &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
+     & WhichTemp
+      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
+     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,Flag(NMAx,MMax),DoDetren,
-     &	PDetrend,AnyTilt,DumPitch,DumYaw,DumRoll,DumTilt,BadTc
+     &	PDetrend,AnyTilt,DumYaw,DumPitch,DumRoll,DumTilt,BadTc
       REAL*8 RawSampl(MaxChan,MMax)
       REAL*8 P,Psychro,Sample(NMax,MMax),
      &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
-     &	YawLim,RollLim,DirPitch,RC(NMax),O2Factor(NMax),
-     &	Freq,DirYaw,DirRoll,
-     &	SonFactr(NMax),CorMean(NNMax),PrePitch,PreYaw,PreRoll,
+     &	PitchLim,RollLim,DirYaw,RC(NMax),O2Factor(NMax),
+     &	Freq,DirPitch,DirRoll,
+     &	SonFactr(NMax),CorMean(NNMax),PreYaw,PrePitch,PreRoll,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
       REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
+      REAL*8 ECQ
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
       LOGICAL HAVE_CAL(NMax)
@@ -168,6 +170,7 @@ C
          HAVE_CAL(V) = .TRUE.
          HAVE_CAL(W) = .TRUE.
          HAVE_CAL(TSonic) = .TRUE.
+	 WhichTemp = TSonic
       ENDIF
       IF (HAVE_HYGCAL) THEN
          HAVE_CAL(Humidity) = .TRUE.
@@ -175,6 +178,7 @@ C
       ENDIF
       IF (HAVE_TCCAL) THEN
          HAVE_CAL(TCouple) = .TRUE.
+	 WhichTemp = TCouple
       ENDIF
 
 C
@@ -246,6 +250,11 @@ C Find the shift/drift in humidity of the krypton hygrometer
 C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Uncal(Humidity)) THEN
+	   Mean(Humidity) = Psychro
+	   MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
+	ENDIF
         CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
 	IF (DoPrint) THEN
 	   WRITE(OUTF,*) 'Min/max of samples'
@@ -287,7 +296,11 @@ C
 C
       CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      IF (.NOT. Have_Uncal(Humidity)) THEN
+        Mean(Humidity) = Psychro
+        MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
+      ENDIF
       CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
       IF (DoPrint) THEN
 	   WRITE(OUTF,*) 'Min/max of samples'
@@ -328,8 +341,12 @@ C
 C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
-
-      CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
+        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Uncal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
+        ENDIF
+        CALL ECMinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
 
 	IF (DoPrint.AND.PDetrend) THEN
 	  WRITE(OutF,*)
@@ -362,17 +379,18 @@ C
      &	Cov,TolCov,
      &	QName,UName,
      &  BadTc,
-     &	DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
-     &	DoPitch,PPitch,DirPitch,
-     &	DoYaw,PYaw,YawLim,DirYaw,
+     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	DoYaw,PYaw,DirYaw,
+     &	DoPitch,PPitch,PitchLim,DirPitch,
      &	DoRoll,PRoll,RollLim,DirRoll,
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
      &	DoWebb,PWebb,P,Have_Uncal)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 C
 C If any transformation of coordinates was required (one of the options
-C DoTilt, DoPitch, DoYaw or DoRoll was selected), then the numbers
+C DoTilt, DoYaw, DoPitch or DoRoll was selected), then the numbers
 C of independent samples of the respective quantities has to be
 C re-estimated. It is not possible to "tilt the error-bars" on basis of
 C the quantities which have been calculated until here.
@@ -380,7 +398,7 @@ C Therefore we return to the calibrated time series and
 C make the transformations BEFORE averaging. Then averaging and corrections
 C are repeated all over again.
 C
-      AnyTilt = ((DoTilt.OR.DoPitch).OR.(DoYaw.OR.DoRoll))
+      AnyTilt = ((DoTilt.OR.DoYaw).OR.(DoPitch.OR.DoRoll))
 
       IF (AnyTilt) THEN
 
@@ -399,13 +417,13 @@ C
           Speed(3) = Sample(W,i)
 
           IF (DoTilt) THEN
-            CALL ECKPitch(Speed,NMax,N,DumCov,PrePitch)
-            CALL ECKYaw(  Speed,NMax,N,DumCov,PreYaw  )
+            CALL ECKYaw(Speed,NMax,N,DumCov,PreYaw)
+            CALL ECKPitch(  Speed,NMax,N,DumCov,PrePitch  )
             CALL ECKRoll( Speed,NMax,N,DumCov,PreRoll )
           ENDIF
 
-          IF (DoPitch) CALL ECKPitch(Speed,3,3,DumCov,DirPitch)
-          IF (DoYaw  ) CALL ECKYaw(  Speed,3,3,DumCov,DirYaw  )
+          IF (DoYaw) CALL ECKYaw(Speed,3,3,DumCov,DirYaw)
+          IF (DoPitch  ) CALL ECKPitch(  Speed,3,3,DumCov,DirPitch  )
           IF (DoRoll ) CALL ECKRoll( Speed,3,3,DumCov,DirRoll )
 
           Sample(U,i) = Speed(1)
@@ -418,6 +436,11 @@ C Reestablish the averages and covariances in the correct frame of reference.
 C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
      &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
+        IF (.NOT. Have_Uncal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = ECQ(Mean(Humidity), Mean(WhichTemp), P)
+        ENDIF
 
 	IF (DoPrint) THEN
 	  WRITE(OutF,*)
@@ -432,8 +455,8 @@ C
 	ENDIF
 
         DumTilt  = (.FALSE.)
-        DumPitch = (.FALSE.)
-        DumYaw   = (.FALSE.)
+        DumYaw = (.FALSE.)
+        DumPitch   = (.FALSE.)
         DumRoll  = (.FALSE.)
 C
 C Perform all necessary corrections on the mean values and (co-)variances.
@@ -444,16 +467,16 @@ C
      &	  Cov,TolCov,
      &	  QName,UName,
      &    BadTc,
-     &	  DumTilt,PTilt,PrePitch,PreYaw,PreRoll,
-     &	  DumPitch,PPitch,DirPitch,
-     &	  DumYaw,PYaw,YawLim,DirYaw,
+     &	  DumTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	  DumYaw,PYaw,DirYaw,
+     &	  DumPitch,PPitch,PitchLim,DirPitch,
      &	  DumRoll,PRoll,RollLim,DirRoll,
      &	  DoSonic,PSonic,SonFactr,
      &	  DoO2,PO2,O2Factor,
      &	  DoFreq,PFreq,LLimit,ULimit,Freq,
      &    CalSonic,CalTherm,CalHyg,FrCor,
      &	  DoWebb,PWebb,P, Have_Uncal)
-
+        CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
       ENDIF
 C
 C
@@ -465,18 +488,99 @@ C
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau)
 
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
+
+      IF ((.NOT. HAVE_Uncal(U)) .OR. 
+     +    (.NOT. HAVE_Uncal(V)) .OR.
+     +    (.NOT. HAVE_Uncal(W))) THEN
+         Ustar = DUMMY
+         dUstar = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(TSonic)) THEN
+	  HSonic = DUMMY
+	  dHSonic = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(TCouple)) THEN
+	  HTc = DUMMY
+	  dHTc = DUMMY
+      ENDIF
+      IF ((.NOT. HAVE_Uncal(TSonic)) .AND. 
+     +    (.NOT. HAVE_Uncal(Tcouple))) THEN
+        LvEWebb  = DUMMY
+        dLvEWebb  = DUMMY
+      ENDIF
+      IF (.NOT. HAVE_Uncal(Humidity)) THEN
+	  Lve = DUMMY
+	  dLvE = DUMMY
+	  LveWebb = DUMMY
+	  dLvEWebb = DUMMY
+      ENDIF
+
       RETURN
       END
 
+C.........................................................................
+C Routine to reset means and covariances
+C.........................................................................
+      SUBROUTINE RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
+      INCLUDE 'parcnst.inc'
 
+      LOGICAL Have_Uncal(NNMax)
+      REAL*8  Mean(NNmax), TolMean(NNMax), Cov(NNMax, NNMax),
+     +        TolCov(NNMax, NNMax)
+      INTEGER I,J
 
-
+      IF ((.NOT. HAVE_Uncal(U)) .OR. 
+     +    (.NOT. HAVE_Uncal(V)) .OR.
+     +    (.NOT. HAVE_Uncal(W))) THEN
+         DO I=U,W
+	    MEAN(I) = DUMMY
+	    TolMean(I) = DUMMY
+	    DO J=1,NNMax
+	        COV(I,J) = DUMMY
+		TolCOV(I,J) = DUMMY
+	        COV(J,I) = DUMMY
+		TolCOV(J,I) = DUMMY
+	    ENDDO
+	 ENDDO
+      ENDIF
+      IF (.NOT. HAVE_Uncal(TSonic)) THEN
+          Mean(TSonic) = DUMMY
+          TolMean(TSonic) = DUMMY
+	  DO I=1,NNMax
+	     Cov(Tsonic,I) = DUMMY
+	     Cov(I,Tsonic) = DUMMY
+	     TolCov(Tsonic,I) = DUMMY
+	     TolCov(I,Tsonic) = DUMMY
+	  ENDDO
+      ENDIF
+      IF (.NOT. HAVE_Uncal(TCouple)) THEN
+          Mean(TCouple) = DUMMY
+          TolMean(TCouple) = DUMMY
+	  DO I=1,NNMax
+	     Cov(TCouple,I) = DUMMY
+	     Cov(I,TCouple) = DUMMY
+	     TolCov(TCouple,I) = DUMMY
+	     TolCov(I,TCouple) = DUMMY
+	  ENDDO
+      ENDIF
+      IF (.NOT. HAVE_Uncal(Humidity)) THEN
+	  DO I=1,NNMax
+	    DO J=Humidity, SpecHum
+	      Cov(J,I) = DUMMY
+	      Cov(I,J) = DUMMY
+	      TolCov(J,I) = DUMMY
+	      TolCov(I,J) = DUMMY
+	    ENDDO
+	  ENDDO
+      ENDIF
+      END
 
       SUBROUTINE ECParams(InName,
-     &	Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,
-     &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoPitch,DoYaw,
+     &	Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
+     &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoYaw,DoPitch,
      &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
-     &	PRaw,PCal,PDetrend,PIndep,PTilt,PPitch,PYaw,
+     &	PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
      &	PRoll,PSonic,PO2,PFreq,PWebb, StructSep)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
@@ -500,10 +604,10 @@ C
 
       INCLUDE 'physcnst.for'
 
-      REAL*8 Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,LLimit,ULimit,
-     &       StructSep
-      LOGICAL DoCrMean,DoSonic,DoTilt,DoPitch,DoYaw,DoRoll,DoFreq,DoO2,
-     &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PPitch,PYaw,PRoll,PSonic,
+      REAL*8 Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,LLimit,
+     &       ULimit, StructSep
+      LOGICAL DoCrMean,DoSonic,DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,
+     &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PYaw,PPitch,PRoll,PSonic,
      &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct
       CHARACTER*(*) InName
       INTEGER      IOCODE
@@ -516,11 +620,11 @@ C
 
       READ(TempFile,*) Freq	  ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
-      READ(TempFile,*) YawLim	  ! [degree] Limit when Mean(W) is turned to zero
+      READ(TempFile,*) PitchLim	  ! [degree] Limit when Mean(W) is turned to zero
       READ(TempFile,*) RollLim	  ! [degree] Limit when Cov(V,W) is turned to zero
       READ(TempFile,*)
-      READ(TempFile,*) PrePitch   ! Fixed pitch angle for known tilt-correction
-      READ(TempFile,*) PreYaw	  ! Fixed yaw angle for known tilt-correction
+      READ(TempFile,*) PreYaw   ! Fixed yaw angle for known tilt-correction
+      READ(TempFile,*) PrePitch	  ! Fixed pitch angle for known tilt-correction
       READ(TempFile,*) PreRoll	  ! Fixed roll angle for known tilt-correction
       READ(TempFile,*)
       READ(TempFile,*) LLimit	  ! Smallest acceptable frequency-response correction factor
@@ -530,8 +634,8 @@ C
       READ(TempFile,*) DoDetren   ! Correct data for linear trend
       READ(TempFile,*) DoSonic	  ! Correct sonic temperature for humidity
       READ(TempFile,*) DoTilt	  ! Perform true tilt-correction with known angles
-      READ(TempFile,*) DoPitch	  ! Turn system such that Mean(V) --> 0
-      READ(TempFile,*) DoYaw	  ! Turn system such that Mean(W) --> 0
+      READ(TempFile,*) DoYaw	  ! Turn system such that Mean(V) --> 0
+      READ(TempFile,*) DoPitch	  ! Turn system such that Mean(W) --> 0
       READ(TempFile,*) DoRoll	  ! Turn System such that Cov(W,V) --> 0
       READ(TempFile,*) DoFreq	  ! Correct for poor frequency response
       READ(TempFile,*) DoO2	  ! Correct hygrometer for oxygen-sensitivity
@@ -545,8 +649,8 @@ C
       READ(TempFile,*) PDetrend   ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PIndep	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PTilt	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PPitch	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PYaw	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PPitch	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PRoll	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PSonic	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PO2	  ! Indicator if these intermediate results are wanted
@@ -570,9 +674,9 @@ C
      &	Cov,TolCov,
      &	QName,UName,
      &  BadTc,
-     &	DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
-     &	DoPitch,PPitch,DirPitch,
-     &	DoYaw,PYaw,YawLim,DirYaw,
+     &	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &	DoYaw,PYaw,DirYaw,
+     &	DoPitch,PPitch,PitchLim,DirPitch,
      &	DoRoll,PRoll,RollLim,DirRoll,
      &	DoSonic,PSonic,SonFactr,
      &	DoO2,PO2,O2Factor,
@@ -608,16 +712,16 @@ C                      is used for various corrections)
       INCLUDE 'physcnst.for'
 
       INTEGER N,NInt,NMAx,OutF, WhichTemp, I, J
-      LOGICAL PPitch,PYaw,PRoll,PFreq,PO2,PWebb,
-     &	DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
+      LOGICAL PYaw,PPitch,PRoll,PFreq,PO2,PWebb,
+     &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
-     &	QPitch,QYaw,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
+     &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
      &  Have_Uncal(NMax)
       REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
-     &	YawLim,RollLim,DirPitch,O2Factor(NMax),
-     &	NSTA,NEND,TAUV,TauD,Freq,DirYaw,DirRoll,
-     &	SonFactr(NMax),PrePitch,PreYaw,PreRoll
+     &	PitchLim,RollLim,DirYaw,O2Factor(NMax),
+     &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
+     &	SonFactr(NMax),PreYaw,PrePitch,PreRoll
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
@@ -627,8 +731,8 @@ C Only print intermediate results if desired
 C
 C
       QTilt  = (PTilt  .AND. DoPrint)
-      QPitch = (PPitch .AND. DoPrint)
-      QYaw   = (PYaw   .AND. DoPrint)
+      QYaw = (PYaw .AND. DoPrint)
+      QPitch   = (PPitch   .AND. DoPrint)
       QRoll  = (PRoll  .AND. DoPrint)
       QSonic = (PSonic .AND. DoPrint)
       QO2    = (PO2    .AND. DoPrint)
@@ -644,28 +748,28 @@ C If no fixed tilt-angles are known, this subroutine may be skipped.
 C
 C
       IF (DoTilt) CALL ECPTilt(QTilt,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,PrePitch,PreYaw,PreRoll)
+     &	NMax,N,Cov,TolCov,QName,UName,PreYaw,PrePitch,PreRoll, Have_Uncal)
 C
 C
-C Perform classic pitch-correction : Mean(V) --> 0
+C Perform classic yaw-correction : Mean(V) --> 0
 C
 C
-      IF (DoPitch) CALL ECPPitch(QPitch,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,DirPitch)
+      IF (DoYaw) CALL ECPYaw(QYaw,OutF,Mean,TolMean,
+     &	NMax,N,Cov,TolCov,QName,UName,DirYaw, Have_Uncal)
 C
 C
-C Perform classic yaw-correction : Mean(W) --> 0
+C Perform classic pitch-correction : Mean(W) --> 0
 C
 C
-      IF (DoYaw) CALL ECPYaw(QYaw,OutF,Mean,TolMean,NMax,
-     &	N,Cov,TolCov,YawLim,QName,UName,DirYaw)
+      IF (DoPitch) CALL ECPPitch(QPitch,OutF,Mean,TolMean,NMax,
+     &	N,Cov,TolCov,PitchLim,QName,UName,DirPitch, Have_Uncal)
 C
 C
 C Perform classic roll-correction : Cov(W,V) --> 0
 C
 C
       IF (DoRoll) CALL ECPRoll(QRoll,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,RollLim,QName,UName,DirRoll)
+     &	NMax,N,Cov,TolCov,RollLim,QName,UName,DirRoll, Have_Uncal)
 C
 C Reset the coveriances for which no data available
 C
@@ -673,9 +777,6 @@ C
           DO J=1,NMax
 	     IF ((.NOT. HAVE_UNCAL(I)) .OR.
      +           (.NOT. HAVE_UNCAL(J))) THEN
-                write(OUTF,*) 'Reset ', Qname(I), Qname(J),
-     +                                  Have_UNcal(I), Have_UNcal(J),
-     +                                 Cov(I,j)
                 COV(I,J) = DUMMY
 	     ENDIF
 	  ENDDO
@@ -700,7 +801,7 @@ C
       ENDIF
 
       IF (DoSonic) CALL ECPSchot(QSonic,OutF,Mean,TolMean,
-     &	   NMax,N,Cov,TolCov,QName,UName,SonFactr)
+     &	   NMax,N,Cov,TolCov,QName,UName,SonFactr, Have_Uncal)
 C
 C
 C Perform correction for oxygen-sensitivity of hygrometer
@@ -709,7 +810,8 @@ C
       IF (DoO2) THEN
         IF (WhichTemp .GT. 0) THEN
             CALL ECPO2(QO2,OutF,Mean,TolMean,NMax,N,
-     &	        Cov,TolCov,QName,UName,P,O2Factor, WhichTemp)
+     &	        Cov,TolCov,QName,UName,P,O2Factor,WhichTemp,
+     &          CalHyg(QQType), Have_Uncal)
         ELSE
 	    WRITE(*,*) 'ERROR: can not perform O2 correction without ',
      &                 'a temperature'
@@ -734,7 +836,8 @@ C
         IF (WhichTemp .GT. 0) THEN
           CALL ECPFreq(QFreq,OutF,Mean,TolMean,
      &    NMax,N,Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,
-     &    NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
+     &    NInt,Freq,TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp,
+     &    Have_Uncal)
         ELSE
 	    WRITE(*,*) 'ERROR: can not perform freq. response correction',
      &                 ' without a temperature'
@@ -748,7 +851,7 @@ C
       IF (DoWebb) THEN
          IF (WhichTemp .GT. 0) THEN
 	    CALL ECPWebb(QWebb,OutF,Mean,TolMean,
-     &	        NMax,N,Cov,TolCov,P,QName,UName, WhichTemp)
+     &	        NMax,N,Cov,TolCov,P,QName,UName, WhichTemp, Have_Uncal)
          ELSE
 	    WRITE(*,*) 'ERROR: can not perform Webb correction',
      &                 ' without a temperature'
@@ -987,7 +1090,6 @@ C Get distance between current point and requested point
          CURCH = ANINT(TIMED*SAMPF)
 	 IF (CURCH .EQ. 0) THEN
 	    IND = IND2
-            write(*,*) DOY2, HM2, SEC2, IND2, SAMPF
 	    RETURN
 	 ELSE IF (TIMED .GT. 0) THEN 
 	     IND1 = IND2
@@ -1012,7 +1114,102 @@ C Get time difference between start of interval and requested point
       IF (IND2 .LT. 1) IND2 = 1
       IF (IND2 .GT. MAXIND) IND2 = MAXIND
       IF (ABS(TIMED) .GT. 1./60D0) IND2 = -1
-      write(*,*) DOY2, HM2, SEC2, IND2, SAMPF
+      IND = IND2
+      END
+C...........................................................................
+C SUBROUTINE:  FINDNOSEC
+C PURPOSE   :  To find the index in a NetCDF File for a given DOY and 
+C               time without having seconds
+C...........................................................................
+      SUBROUTINE FINDNOSEC(FDOY, FHOURMIN, NCID,
+     +                    NCdoyID, NChmID, IND)
+      INTEGER FDOY, FHOURMIN, NCID, NCdoyID, NChmID, IND,
+     +        DIMID, MAXIND, ATTEMPTS, PREVCH, IND1, IND2, IND3,
+     +        CURCH
+      REAL*8 DOY1, DOY2, DOY3, HM1, HM2, HM3,
+     +     SAMPF, TIME1, TIME2, TIME3, HM4, DOY4,
+     +     DOYD, HOURD, TIMED
+
+      REAL*8 CSI2HOUR
+
+      STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
+      STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
+      IND1 = 1
+      IND3 = MAXIND
+      IND2 = ANINT((IND3+IND2)/2.0)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+
+C Check whether point is before start or beyond end of file
+      DOYD = FDOY - DOY1
+      HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+      TIMED = 3600.0*24*DOYD + HOURD*3600.0 
+      IF (TIMED .LT. 0) THEN
+         FDOY = DOY1
+	 FHOURMIN = HM1
+      ENDIF
+      DOYD = DOY3 - FDOY
+      HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
+      TIMED = 3600.0*24*DOYD + HOURD*3600.0
+      IF (TIMED .LT. 0) THEN
+         FDOY = DOY3
+	 FHOURMIN = HM3
+      ENDIF
+
+      CURCH = IND2
+      ATTEMPTS = 0
+
+      DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 50))
+C Determine time difference between current sample and required time
+         PREVCH = CURCH
+         DOYD = FDOY - DOY2
+         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0 
+         IF (ANINT(TIMED) .LT. 0) THEN
+	    CURCH = IND3 - IND2
+            IND3 = IND2
+	    HM3 = HM2
+	    DOY3 = DOY2
+	 ELSE IF (ANINT(TIMED) .GT. 0) THEN
+	    CURCH = IND1 - IND2
+            IND1 = IND2
+	    HM1 = HM2
+	    DOY1= DOY2
+	 ELSE
+	    IND4=IND2-1
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND4, DOY4)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND4, HM4)
+	    write(*,*) IND1, IND2, IND3, HM1, HM2, HM3, HM4
+	    IF (ABS(ANINT(HM2 - HM4)) .GT. 0) THEN
+	      IND = IND2
+	      RETURN
+	    ELSE
+	      CURCH = IND2 - IND3
+              IND3 = IND2
+	      HM3 = HM2
+	      DOY3 = DOY2
+	    ENDIF
+         ENDIF
+         IND2 = ANINT((IND3+IND1)/2.0)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+
+	 IF (CURCH .EQ. 0) THEN
+	    IND = IND2
+	    RETURN
+	 ENDIF
+         ATTEMPTS = ATTEMPTS + 1
+      ENDDO
+      IF (ATTEMPTS .EQ. 50) THEN
+         IND = -1
+      ENDIF
+      IF (IND2 .LT. 1) IND2 = 1
+      IF (IND2 .GT. MAXIND) IND2 = MAXIND
+      IF (ABS(TIMED) .GT. 1.5/60D0) IND2 = -1
       IND = IND2
       END
       
@@ -1141,14 +1338,23 @@ C Find start and stop index in file
 C
       DOYStart = ANINT(StartTime(1))
       DOYStop = ANINT(StopTime(1))
-      CALL FINDTIME(DoyStart, HMSTART, NCID, NCVarID(Doy),
-     +             NCVarID(HourMin),
-     +             NCVarID(Sec),
-     +             STARTIND)
-      CALL FINDTIME(DoyStop, HMSTOP, NCID, NCVarID(Doy),
-     +             NCVarID(HourMin),
-     +             NCVarID(Sec),
-     +             STOPIND)
+      IF (NCVarID(Sec) .GT. 0) THEN
+         CALL FINDTIME(DoyStart, HMSTART, NCID, NCVarID(Doy),
+     +                 NCVarID(HourMin),
+     +                 NCVarID(Sec),
+     +                 STARTIND)
+         CALL FINDTIME(DoyStop, HMSTOP, NCID, NCVarID(Doy),
+     +                 NCVarID(HourMin),
+     +                 NCVarID(Sec),
+     +                 STOPIND)
+      ELSE
+         CALL FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
+     +                 NCVarID(HourMin),
+     +                 STARTIND)
+         CALL FINDNOSEC(DoyStop, HMSTOP, NCID, NCVarID(Doy),
+     +                 NCVarID(HourMin),
+     +                 STOPIND)
+      ENDIF
       NSAMPLE = STOPIND - STARTIND 
       IF ((STARTIND .EQ. -1) .OR. (STOPIND .EQ. -1))  NSAMPLE = 0
       IF ((NSAMPLE .EQ. 0) .OR.
@@ -1521,18 +1727,21 @@ C
       WRITE(OutF,*)
 
       WRITE(OutF,40) '      ',(QName(i),i=1,N)
- 40   FORMAT(a6,20(a8:,1X))
+ 40   FORMAT(a6,20(a10:,1X))
 
       DO i=1,N
 	DO j=1,N
-	  IF (ABS(Cov(i,i)*Cov(j,j)).GT.Epsilon) THEN
+	  IF ((ABS(Cov(i,i)*Cov(j,j)).GT.Epsilon) .AND.
+     +        (ABS(Cov(i,i)-DUMMY) .GT. Epsilon) .AND. 
+     +        (ABS(Cov(j,j)-DUMMY) .GT. Epsilon) .AND.
+     +        (ABS(Cov(i,j)-DUMMY) .GT. Epsilon)) THEN
 	    Dum(j) = Cov(i,j)/SQRT(Cov(i,i)*Cov(j,j))
 	  ELSE
-	    Dum(j) = 0.D0
+	    Dum(j) = DUMMY
 	  ENDIF
 	ENDDO
 	WRITE(OutF,50) QName(i),(Dum(j),j=1,N)
- 50	FORMAT(a6,20(F8.4:,1X))
+ 50	FORMAT(a6,20(F10.4:,1X))
       ENDDO
 
       WRITE(OutF,*)
@@ -1810,8 +2019,6 @@ C
 	IF (Mok(j).GT.0) THEN 
 	  Mean(j) = Mean(j)/DBLE(Mok(j))
 	  Mean(j) = Mean(j) + RawMean(j)
-	ELSE
-	  Mean(j) = DUMMY
 	ENDIF
       ENDDO
 C
@@ -1852,9 +2059,6 @@ C
 	DO k=j,N
 	  IF (Cok(j,k).GT.0) THEN
 	     Cov(j,k) = Cov(j,k)/DBLE(Cok(j,k))
-	  ELSE
-	     Cov(j,k) = DUMMY
-	     Cov(k,j) = DUMMY
 	  ENDIF
 	ENDDO
       ENDDO
@@ -1872,8 +2076,6 @@ C
 	MIndep(j) = MAX(MIndep(j),1)
 	IF (Cok(j,j) .GT. 0) THEN
 	   TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
-	ELSE
-	   TolMean(j) = DUMMY
 	ENDIF
       ENDDO
 C
@@ -1914,9 +2116,6 @@ C
 C Tolerance is defined as 2*sigma, where sigma is standard deviation
 C
 	     TolCov(j,k) = 2.D0*(TolCov(j,k))**0.5
-	  ELSE
-	     TolCov(j,k) = DUMMY
-	     CIndep(j,k) = DUMMY
 	  ENDIF
 	ENDDO
       ENDDO
@@ -2469,10 +2668,10 @@ C
 
 
 
-      SUBROUTINE ECKPitch(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE ECKYaw(Mean,NMax,N,Cov,Direction)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECKPitch
+C Subroutine		: ECKYaw
 C Version of subroutine : 1.02
 C Date			: 27 August 1999
 C Author		: Arjan van Dijk
@@ -2488,28 +2687,28 @@ C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
 C Purpose :
-C Rotate coordinate system about a KNOWN pitch-angle around the vertical
+C Rotate coordinate system about a KNOWN yaw-angle around the vertical
 C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N
-      REAL*8 SinPhi,CosPhi,Pitch(3,3),Mean(NMax),Cov(NMax,NMax),
+      REAL*8 SinPhi,CosPhi,Yaw(3,3),Mean(NMax),Cov(NMax,NMax),
      &	Direction
 
       SinPhi = SIN(PI*Direction/180.D0)
       CosPhi = COS(PI*Direction/180.D0)
 
-      Pitch(1,1) = CosPhi
-      Pitch(1,2) = -SinPhi
-      Pitch(1,3) = 0.D0
-      Pitch(2,1) = SinPhi
-      Pitch(2,2) = CosPhi
-      Pitch(2,3) = 0.D0
-      Pitch(3,1) = 0.D0
-      Pitch(3,2) = 0.D0
-      Pitch(3,3) = 1.D0
+      Yaw(1,1) = CosPhi
+      Yaw(1,2) = -SinPhi
+      Yaw(1,3) = 0.D0
+      Yaw(2,1) = SinPhi
+      Yaw(2,2) = CosPhi
+      Yaw(2,3) = 0.D0
+      Yaw(3,1) = 0.D0
+      Yaw(3,2) = 0.D0
+      Yaw(3,3) = 1.D0
 
-      CALL ECRotate(Mean,NMax,N,Cov,Pitch)
+      CALL ECRotate(Mean,NMax,N,Cov,Yaw)
 
       RETURN
       END
@@ -2518,10 +2717,10 @@ C
 
 
 
-      SUBROUTINE ECPitch(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE ECYaw(Mean,NMax,N,Cov,Direction, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPitch
+C Subroutine		: ECYaw
 C Version of subroutine : 1.02
 C Date			: 27 August 1999
 C Author		: Arjan van Dijk
@@ -2543,6 +2742,7 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N
+      LOGICAL Have_Uncal(NNMax)
       REAL*8 UHor,SinPhi,CosPhi,Mean(NMax),Cov(NMax,NMax),Direction
 
       UHor = ((Mean(U))**2+(Mean(V))**2)**0.5
@@ -2551,7 +2751,7 @@ C
       Direction = 180.D0*ACOS(CosPhi)/PI
       IF (SinPhi.LT.0.D0) Direction = 360.D0-Direction
 
-      CALL ECKPitch(Mean,NMax,N,Cov,Direction)
+      CALL ECKYaw(Mean,NMax,N,Cov,Direction)
 
       RETURN
       END
@@ -2560,10 +2760,10 @@ C
 
 
 
-      SUBROUTINE ECKYaw(Mean,NMax,N,Cov,Direction)
+      SUBROUTINE ECKPitch(Mean,NMax,N,Cov,Direction)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECKYaw
+C Subroutine		: ECKPitch
 C Version of subroutine : 1.02
 C Date			: 27 August 1999
 C Author		: Arjan van Dijk
@@ -2579,28 +2779,28 @@ C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
 C Purpose :
-C Rotate coordinate system about a KNOWN yaw-angle around vector (0,1,0).
+C Rotate coordinate system about a KNOWN pitch-angle around vector (0,1,0).
 C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N
-      REAL*8 SinTheta,CosTheta,Yaw(3,3),Mean(NMax),Cov(NMax,NMax),
+      REAL*8 SinTheta,CosTheta,Pitch(3,3),Mean(NMax),Cov(NMax,NMax),
      &	Direction
 
       SinTheta = SIN(PI*Direction/180.D0)
       CosTheta = COS(PI*Direction/180.D0)
 
-      Yaw(1,1) = CosTheta
-      Yaw(1,2) = 0.D0
-      Yaw(1,3) = -SinTheta
-      Yaw(2,1) = 0.D0
-      Yaw(2,2) = 1.D0
-      Yaw(2,3) = 0.D0
-      Yaw(3,1) = SinTheta
-      Yaw(3,2) = 0.D0
-      Yaw(3,3) = CosTheta
+      Pitch(1,1) = CosTheta
+      Pitch(1,2) = 0.D0
+      Pitch(1,3) = -SinTheta
+      Pitch(2,1) = 0.D0
+      Pitch(2,2) = 1.D0
+      Pitch(2,3) = 0.D0
+      Pitch(3,1) = SinTheta
+      Pitch(3,2) = 0.D0
+      Pitch(3,3) = CosTheta
 
-      CALL ECRotate(Mean,NMax,N,Cov,Yaw)
+      CALL ECRotate(Mean,NMax,N,Cov,Pitch)
 
       RETURN
       END
@@ -2609,10 +2809,10 @@ C
 
 
 
-      SUBROUTINE ECYaw(Mean,NMax,N,Cov,YawLim,Direction)
+      SUBROUTINE ECPitch(Mean,NMax,N,Cov,PitchLim,Direction)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECYaw
+C Subroutine		: ECPitch
 C Version of subroutine : 1.02
 C Date			: 27 August 1999
 C Author		: Arjan van Dijk
@@ -2634,14 +2834,14 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N
-      REAL*8 SinTheta,Mean(NMax),Cov(NMax,NMax),Direction,UTot,YawLim
+      REAL*8 SinTheta,Mean(NMax),Cov(NMax,NMax),Direction,UTot,PitchLim
 
       UTot = ((Mean(U))**2+(Mean(W))**2)**0.5
       SinTheta = Mean(W)/UTot
       Direction = 180.D0*ASIN(SinTheta)/PI
 
-      IF (ABS(Direction) .LE. YawLim)
-     &	CALL ECKYaw(Mean,NMax,N,Cov,Direction)
+      IF (ABS(Direction) .LE. PitchLim)
+     &	CALL ECKPitch(Mean,NMax,N,Cov,Direction)
 
       RETURN
       END
@@ -3080,7 +3280,8 @@ C
 
 
 
-      SUBROUTINE ECOxygen(Mean,NMax,N,Cov,P,Factor, WhichTemp)
+      SUBROUTINE ECOxygen(Mean,NMax,N,Cov,P,Factor, WhichTemp, 
+     +                    HygType)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECOxygen
@@ -3108,9 +3309,17 @@ C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N,i, WhichTemp
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax),OXC,P
+      REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax),OXC,P, HygType,
+     +       GenKo, GenKw
 
-      OXC = FracO2*MO2*P*KoK/(RGas*(Mean(WhichTemp))**2.D0*KwK)
+      IF (HygType .EQ. ApCampKrypton) THEN
+          GenKo = KoK
+          GenKw = KwK
+      ELSE IF (HygType .EQ. ApMierijLyma) THEN
+          GenKo = KoLa
+          GenKw = KwLa
+      ENDIF
+      OXC = FracO2*MO2*P*GenKo/(RGas*(Mean(WhichTemp))**2.D0*GenKw)
 
       DO i = 1,N
 	Factor(i) = 1.D0 + OXC*Cov(i,WhichTemp)/Cov(i,Humidity)
@@ -3276,7 +3485,7 @@ C
 
 
        SUBROUTINE ECPTilt(DoPrint,OutF,Mean,TolMean,
-     &	NMax,N,Cov,TolCov,QName,UName,PrePitch,PreYaw,PreRoll)
+     &	NMax,N,Cov,TolCov,QName,UName,PreYaw,PrePitch,PreRoll, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPTilt
@@ -3295,21 +3504,23 @@ C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
 C Purpose :
-C All-in procedure to tilt the system using KNOWN pitch, yaw and roll angles
+C All-in procedure to tilt the system using KNOWN yaw, pitch and roll angles
 C and print results
 C
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),PrePitch,PreYaw,PreRoll
+     &	TolCov(NMax,NMax),PreYaw,PrePitch,PreRoll
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECKPitch(Mean,NMax,N,Cov,PrePitch)
-      CALL ECKYaw(  Mean,NMax,N,Cov,PreYaw  )
+      CALL ECKYaw(Mean,NMax,N,Cov,PreYaw)
+      CALL ECKPitch(  Mean,NMax,N,Cov,PrePitch  )
       CALL ECKRoll( Mean,NMax,N,Cov,PreRoll )
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
@@ -3326,11 +3537,11 @@ C
 
 
 
-      SUBROUTINE ECPPitch(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,Dirs)
+      SUBROUTINE ECPYaw(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
+     &	TolCov,QName,UName,Dirs, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPPitch
+C Subroutine		: ECPYaw
 C Version of subroutine : 1.02
 C Date			: 27 August 1999
 C Author		: Arjan van Dijk
@@ -3352,19 +3563,21 @@ C
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),Dirs
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECPitch(Mean,NMax,N,Cov,Dirs)
+      CALL ECYaw(Mean,NMax,N,Cov,Dirs, Have_Uncal)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
-	WRITE(OutF,*) 'Pitch angle = ',Dirs,' degrees'
+	WRITE(OutF,*) 'Yaw angle = ',Dirs,' degrees'
 	WRITE(OutF,*)
-	WRITE(OutF,*) 'After pitch-correction (Mean(V) -> 0) : '
+	WRITE(OutF,*) 'After yaw-correction (Mean(V) -> 0) : '
 	WRITE(OutF,*)
 	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
       ENDIF
@@ -3376,11 +3589,11 @@ C
 
 
 
-      SUBROUTINE ECPYaw(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,YawLim,QName,UName,Dirs)
+      SUBROUTINE ECPPitch(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
+     &	TolCov,PitchLim,QName,UName,Dirs, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
-C Subroutine		: ECPYaw
+C Subroutine		: ECPPitch
 C Version of subroutine : 1.02
 C Date			: 27 August 1999
 C Author		: Arjan van Dijk
@@ -3402,19 +3615,21 @@ C
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),Dirs,YawLim
+     &	TolCov(NMax,NMax),Dirs,PitchLim
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECYaw(Mean,NMax,N,Cov,YawLim,Dirs)
+      CALL ECPitch(Mean,NMax,N,Cov,PitchLim,Dirs)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
-	WRITE(OutF,*) 'Yaw angle = ',Dirs,' degrees'
+	WRITE(OutF,*) 'Pitch angle = ',Dirs,' degrees'
 	WRITE(OutF,*)
-	WRITE(OutF,*) 'After yaw-correction (Mean(W) -> 0) : '
+	WRITE(OutF,*) 'After pitch-correction (Mean(W) -> 0) : '
 	WRITE(OutF,*)
 	CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
       ENDIF
@@ -3427,7 +3642,7 @@ C
 
 
       SUBROUTINE ECPRoll(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,RollLim,QName,UName,Dirs)
+     &	TolCov,RollLim,QName,UName,Dirs, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPRoll
@@ -3452,6 +3667,7 @@ C
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),Dirs,RollLim
@@ -3459,6 +3675,7 @@ C
       CHARACTER*9 UName(NMax)
 
       CALL ECRoll(Mean,NMax,N,Cov,RollLim,Dirs)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
@@ -3477,7 +3694,7 @@ C
 
 
       SUBROUTINE ECPSchot(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,SonFactr)
+     &	TolCov,QName,UName,SonFactr, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPSchot
@@ -3502,6 +3719,7 @@ C
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N,i,j
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),SonFactr(NMax)
@@ -3509,6 +3727,7 @@ C
       CHARACTER*9 UName(NMax)
 
       CALL ECSchot(Mean,NMax,N,Cov,SonFactr)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       DO I=1,N
         write(OUTF,*) Qname(I), MEAN(I)
@@ -3539,7 +3758,7 @@ C
 
 
       SUBROUTINE ECPO2(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,
-     &	TolCov,QName,UName,P,O2Factor, WhichTemp)
+     &	TolCov,QName,UName,P,O2Factor, WhichTemp, HygType, Have_uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPO2
@@ -3566,13 +3785,15 @@ C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N,i, WhichTemp
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),O2Factor(NMax),P
+     &	TolCov(NMax,NMax),O2Factor(NMax),P, HygType
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECOxygen(Mean,NMax,N,Cov,P,O2Factor, WhichTemp)
+      CALL ECOxygen(Mean,NMax,N,Cov,P,O2Factor,WhichTemp,HygType)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
@@ -3596,7 +3817,7 @@ C                      in corrections (Sonic or thermocouple)
 
       SUBROUTINE ECPFreq(DoPrint,OutF,Mean,TolMean,NMax,N,
      &	Cov,TolCov,QName,UName,LLimit,ULimit,NSta,NEnd,NInt,Freq,
-     &	TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
+     &	TauD,TauV,CalSonic,CalTherm,CalHyg,FrCor, WhichTemp, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPFreq
@@ -3660,6 +3881,7 @@ C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N,NInt, WhichTemp
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),TolCov(NMax,NMax)
       CHARACTER*6 QName(NMax)
@@ -3670,6 +3892,7 @@ C                      in corrections (Sonic or thermocouple)
       CALL ECFrResp(Mean,Cov,TolCov,NMax,N,
      &	LLimit,ULimit,NSta,NEnd,NInt,Freq,TauD,TauV,
      &	CalSonic,CalTherm,CalHyg,FrCor, WhichTemp)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	CALL ECShwFrq(OutF,QName,FrCor,NMax,N)
@@ -3689,7 +3912,7 @@ C                      in corrections (Sonic or thermocouple)
 
 
       SUBROUTINE ECPWebb(DoPrint,OutF,Mean,TolMean,NMax,N,Cov,TolCov,
-     &	P,QName,UName, WhichTemp)
+     &	P,QName,UName, WhichTemp, Have_Uncal)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPWebb
@@ -3733,6 +3956,7 @@ C                      in corrections (Sonic or thermocouple)
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
+      LOGICAL Have_Uncal(NNMax)
       INTEGER NMax,OutF,N, WhichTemp
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),P,
      &	TolCov(NMax,NMax)
@@ -3740,6 +3964,7 @@ C                      in corrections (Sonic or thermocouple)
       CHARACTER*9 UName(NMax)
 
       CALL ECWebb(Mean,NMax,Cov,P, WhichTemp)
+      CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
@@ -3895,6 +4120,10 @@ C
 C We use the number of independent samples found earlier in the estimation
 C of the covariances
 C
+      IF (Nok .EQ. 0) THEN
+         Cxy = DUMMY
+	 dCxy = DUMMY
+      ENDIF
       RETURN
       END
 

@@ -38,8 +38,8 @@ C...........................................................................
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
      &              ParmName,InterName
       CHARACTER*40 OutName,DumName1,DumName2
-      LOGICAL PRaw,PPitch,PYaw,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
-     &  DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
+      LOGICAL PRaw,PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
+     &  DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &  DoSonic,DoTilt,PTilt,DoPrint,Flag(NNMAx,MMMax),DoDetren,
      &  PDetrend,DoStruct,BadTc
       INTEGER N,i,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
@@ -47,9 +47,9 @@ C...........................................................................
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
      &  TolCov(NNMax,NNMax),LLimit,ULimit,FrCor(NNMax,NNMax),
-     &  YawLim,RollLim,DirPitch,RC(NNMax),O2Factor(NNMax),
-     &  Freq,DirYaw,DirRoll,
-     &  SonFactr(NNMax),PrePitch,PreYaw,PreRoll,
+     &  PitchLim,RollLim,DirYaw,RC(NNMax),O2Factor(NNMax),
+     &  Freq,DirPitch,DirRoll,
+     &  SonFactr(NNMax),PreYaw,PrePitch,PreRoll,
      &  HSonic,dHSonic,HTc,dHTc,
      &  LvE,dLvE,LvEWebb,dLvEWebb,
      &  UStar,dUStar,Tau,dTau,CorMean(NNMax),DirFrom,
@@ -58,7 +58,14 @@ C...........................................................................
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
-      REAL*8 MeanW, TolMeanW
+      REAL*8 MeanW, TolMeanW, 
+     &       StdTs, dStdTs,
+     &       StdTc, dStdTc,
+     &       Stdq, dStdq,
+     &       StdU, dStdU,
+     &       StdV, dStdV,
+     &       StdW, dStdW,
+     &       SumLvE, dSumLvE
       CHARACTER*6 QName(NNMax)
       CHARACTER*9 UName(NNMax)
       CHARACTER*255 SonName,CoupName,HygName, DUMSTRING
@@ -162,10 +169,10 @@ C
 C Read parameters from file with name ParmName
 C
       CALL ECParams(ParmName,
-     &  Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,
+     &  Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
      &  LLimit,ULimit,DoCrMean,DoDetren,DoSonic,
-     &  DoTilt,DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
-     &  PRaw,PCal,PDetrend,PIndep,PTilt,PPitch,PYaw,
+     &  DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
+     &  PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
      &  PRoll,PSonic,PO2,PFreq,PWebb, StructSep)
 C
 C Read calibration data from files :
@@ -296,9 +303,9 @@ C
      &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
      &    QName,UName,
      &    DoDetren,PDetrend,
-     &    DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
-     &    DoPitch,PPitch,DirPitch,
-     &    DoYaw,PYaw,YawLim,DirYaw,
+     &    DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+     &    DoYaw,PYaw,DirYaw,
+     &    DoPitch,PPitch,PitchLim,DirPitch,
      &    DoRoll,PRoll,RollLim,DirRoll,
      &    DoSonic,PSonic,SonFactr,
      &    DoO2,PO2,O2Factor,
@@ -341,11 +348,66 @@ C
 C Print fluxes
 C
 C
-        IF (DirPitch.GE.180.D0) THEN
-          DirFrom = DirPitch-180.D0
+        IF (DirYaw.GE.180.D0) THEN
+          DirFrom = DirYaw-180.D0
         ELSE
-          DirFrom = DirPitch+180.D0
+          DirFrom = DirYaw+180.D0
         ENDIF
+	IF (Cov(Tsonic,TSonic) .EQ. DUMMY) THEN
+	   StdTs = DUMMY
+	   dStdTs = DUMMY
+	ELSE
+	   StdTs = SQRT(Cov(TSonic,TSonic))
+	   dStdTs = 0.5D0*TolCov(TSonic,TSonic)/
+     &              SQRT(Cov(TSonic,TSonic))
+        ENDIF
+	IF (Cov(TCouple,TCouple) .EQ. DUMMY) THEN
+	   StdTc = DUMMY
+	   dStdTc = DUMMY
+	ELSE
+	   StdTc = SQRT(Cov(TCouple,TCouple))
+	   dStdTc = 0.5D0*TolCov(TCouple,TCouple)/
+     &              SQRT(Cov(TCouple,TCouple))
+        ENDIF
+	IF (Cov(SpecHum,SpecHum) .EQ. DUMMY) THEN
+	   Stdq = DUMMY
+	   dStdq = DUMMY
+	ELSE
+	   Stdq = SQRT(Cov(SpecHum,SpecHum))
+	   dStdq = 0.5D0*TolCov(SpecHum,SpecHum)/
+     &              SQRT(Cov(SpecHum,SpecHum))
+        ENDIF
+	IF (Cov(U,U) .EQ. DUMMY) THEN
+	   StdU = DUMMY
+	   dStdU = DUMMY
+	ELSE
+	   StdU = SQRT(Cov(U,U))
+	   dStdU = 0.5D0*TolCov(U,U)/
+     &              SQRT(Cov(U,U))
+        ENDIF
+	IF (Cov(V,V) .EQ. DUMMY) THEN
+	   StdV = DUMMY
+	   dStdV = DUMMY
+	ELSE
+	   StdV = SQRT(Cov(V,V))
+	   dStdV = 0.5D0*TolCov(V,V)/
+     &              SQRT(Cov(V,V))
+        ENDIF
+	IF (Cov(W,W) .EQ. DUMMY) THEN
+	   StdW = DUMMY
+	   dStdW = DUMMY
+	ELSE
+	   StdW = SQRT(Cov(W,W))
+	   dStdW = 0.5D0*TolCov(W,W)/
+     &              SQRT(Cov(W,W))
+        ENDIF
+	IF ((LvE .EQ. DUMMY) .OR. (LvEWebb .EQ. DUMMY)) THEN
+	   SumLvE = DUMMY
+	   dSumLvE = DUMMY
+	ELSE
+	   SumLvE = LvE + LvEWebb
+           dSumLvE =  SQRT(dLvE**2.D0 + dLvEWebb**2.D0)
+	ENDIF
         WRITE(FluxFile,55)
      &    (NINT(StartTime(i)),i=1,3),
      &    (NINT(StopTime(i)),i=1,3),
@@ -356,18 +418,18 @@ C
      &    Mean(TSonic),TolMean(TSonic),
      &    Mean(TCouple),TolMean(TCouple),
      &    Mean(SpecHum),TolMean(SpecHum),
-     &    SQRT(Cov(TSonic,TSonic)),
-     &    0.5D0*TolCov(TSonic,TSonic)/SQRT(Cov(TSonic,TSonic)),
-     &    SQRT(Cov(TCouple,TCouple)),
-     &    0.5D0*TolCov(TCouple,TCouple)/SQRT(Cov(TCouple,TCouple)),
-     &    SQRT(Cov(SpecHum,SpecHum)),
-     &    0.5D0*TolCov(SpecHum,SpecHum)/SQRT(Cov(SpecHum,SpecHum)),
-     &    SQRT(Cov(U,U)),
-     &    0.5D0*TolCov(U,U)/SQRT(Cov(U,U)),
-     &    SQRT(Cov(V,V)),
-     &    0.5D0*TolCov(V,V)/SQRT(Cov(V,V)),
-     &    SQRT(Cov(W,W)),
-     &    0.5D0*TolCov(W,W)/SQRT(Cov(W,W)),
+     &    StdTs, 
+     &    dStdTs,
+     &    StdTc, 
+     &    dStdTc,
+     &    Stdq, 
+     &    dStdq, 
+     &    StdU,
+     &    dStdU,
+     &    StdV,
+     &    dStdV,
+     &    StdW,
+     &    dStdW,
      &    Cov(TSonic,SpecHum),TolCov(TSonic,SpecHum),
      &    Cov(TCouple,SpecHum),TolCov(TCouple,SpecHum),
      &    Cov(TSonic,U),TolCov(TSonic,U),
@@ -375,8 +437,7 @@ C
      &    Cov(SpecHum,U),TolCov(SpecHum,U),
      &    HSonic,dHSonic,HTc,dHTc,
      &    LvE,dLvE,LvEWebb,dLvEWebb,
-     &    LvE+LvEWebb,
-     &    SQRT(dLvE**2.D0 + dLvEWebb**2.D0),
+     &    SumLvE, dSumLvE,
      &    UStar,dUStar,Tau,dTau,
      &    R,dR,
      &    CTSon2,dCTSon2,CTCop2,dCTCop2,Cq2,dCq2,CTSonq,dCTSonq,
@@ -538,7 +599,7 @@ C     &   (RawSampl(ColDiagnostic).GT.100.D0))) THEN
 C
 C Rotate velocity according to angle of setup's north relative real north
 C
-           Hook = PI*CalSonic(QQPitch)/180.D0
+           Hook = PI*CalSonic(QQYaw)/180.D0
            Sample(U) =  COS(Hook)*UDum + SIN(Hook)*VDum
            Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
 

@@ -37,8 +37,15 @@ C First value is from work of Webb, 1980
 c     PARAMETER(KoK = 0.0085D0)    ! [m^{3} g^{-1} cm^{-1}]
 C This value is due to Arjan van Dijk, 1999
       PARAMETER(KoK = 0.0038)      ! [m^{3} g^{-1} cm^{-1}]
+
       REAL*8 KwK		   ! extinction for water vapour Krypton
       PARAMETER(KwK = 0.143D0)	   ! [m^{3} g^{-1} cm^{-1}]
+
+      REAL*8 KoLa		   ! extinction for oxygen for Lymann-alpha
+      PARAMETER(KoLa = 0.001085D0)      ! [m^{3} g^{-1} cm^{-1}]
+      REAL*8 KwLa		   ! extinction for water vapour Lymann-alpha
+      PARAMETER(KwLa = 0.09125D0)	   ! [m^{3} g^{-1} cm^{-1}]
+
       REAL*8 FracO2		   ! fraction of O2 molecules in air
       PARAMETER(FracO2 = 0.21D0)   ! [1]
       REAL*8 Cp 		   ! Specific heat of air

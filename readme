@@ -5,49 +5,8 @@ Purpose : to process eddy-correlation data stored in NetCDF files
 Author  : Arjan van Dijk (presently at IMAU: A.vanDijk@phys.uu.nl)
           Arnold Moene (afmoene@hp1.met.wau.nl)
 Date    : August 1, 2000
-Revision: September 18, 2000: changed in physconst.inc the sensitivity
-          of Krypton to O2 from old 'Webb' value (0.0085) to  
-	  Arjan van Dijk's value (0.0038 m^3 g^-1 cm^-1)
-Revision: September 26, 2000: added support for wind tunnel calibrated
-          sonic anemometer (see description at end of this readme)
-Revision: October 18, 2000: in calibration of wind tunnel calibrated
-          sonic: check for valid wind direction before interation
-Revision: October 30, 2000: check for validity of Tref (for thermocouple
-          calibration) -> Tref is in Celcius, not Kelvin !
-Revision: November 1, 2000:  fixed error in sonic calibration (azimuth
-	  angle replaced elevation angle)
-Revision: February 28, 2001: fixed an error in computation of density
-          of dry air (it was correct in the original version of ECpack
-	  but incorrectly changed by me (AM).
-Revision: April 3, 2001: added output of mean W and its tolerance (as
-          obtained before tilt correction. Data are written to additional
-	  column in flux file
-Revision: May 28, 2001:
-          - reading of NetCDF data speeded up considerably, especially at
-	    end of file: now seek in file where data should be read (rather
-	    than crawling through it, sample by sample)
-          - now we can deal with files without sonic temperatures. In those
-	    calibrations where temperature is needed, sonic temperature
-	    is automatically replaced by thermocouple temperature.
-Revision: May 30, 2001:
-          - Made search for time interval more robust (also works if sample
-	    at start of interval is not present.
-	  - Now take care that some quantities derived with missing data
-	    (i.e. variances etc.) are flagged in the output as dummy (-9999).
-	    This is not yet finished.
-	  - Now also dump min/max of samples to intermediate results file
-	    (not to flux file !)
-Revision: May 31, 2001:
-          - Search for time interval even more robust. If interval starts
-	    before start of file, first sample in the file is supposed to
-	    be the start of the interval. If the interval ends beyond end 
-	    of file, the interval is now supposed to run until the last
-	    sample in the file.
-          - Fixed a bug that erroneously flagged some covariances as invalid
-	    after axis rotation (bug appeared in previsou revision)
 
-
-Current version: 1.15
+Current version: 1.16  (see Changelog for revisions)
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
@@ -83,8 +42,8 @@ C  - Correction of sonic-temperature for presence of humidity.
 C  - Correction of sonic path length to make mean sonic temperature match
 C    mean temperature according to a different device (e.g. thermocouple).
 C  - Time-delay in the datafile between the different columns
-C  - Pitch-correction to make Mean(V) --> 0
-C  - Yaw-correction to make Mean(W) --> 0
+C  - Yaw-correction to make Mean(V) --> 0
+C  - Pitch-correction to make Mean(W) --> 0
 C  - Roll-correction to make Cov(W,V) --> 0
 C  - Frequency-reponse corrections for slow apparatus and path length
 C    integration.
@@ -196,8 +155,8 @@ Below you will find an example of a parameter file
 30	YawLim	  = ! [degree] Limit when Mean(W) is turned to zero
 30	RollLim   = ! [degree] Limit when Cov(V,W) is turned to zero	
 
-0	PrePitch  = Fixed pitch angle for known tilt-correction	
-0	PreYaw	  = Fixed yaw angle for known tilt-correction
+0	PreYaw  = Fixed pitch angle for known tilt-correction	
+0	PrePitch  = Fixed yaw angle for known tilt-correction
 0	PreRoll   = Fixed roll angle for known tilt-correction	
 
 0.85	LLimit	  = ! Smallest acceptable freq-response corr. factor	
@@ -207,8 +166,8 @@ T	DoCrMean  = ! Replace mean quantities by better estimates
 T	DoDetren  = ! Correct data for linear trend	
 T	DoSonic   = ! Correct sonic temperature for humidity	
 F	DoTilt	  = ! Perform true tilt-correction with known angles
-T	DoPitch   = ! Turn system such that Mean(V) --> 0	
-T	DoYaw	  = ! Turn system such that Mean(W) --> 0
+T	DoYaw   = ! Turn system such that Mean(V) --> 0	
+T	DoPitch	  = ! Turn system such that Mean(W) --> 0
 T	DoRoll	  = ! Turn System such that Cov(W,V) --> 0
 T	DoFreq	  = ! Correct for poor frequency response
 T	DoO2	  = ! Correct hygrometer for oxygen-sensitivity
@@ -222,8 +181,8 @@ T	PCal	  = Indicator if these intermediate results are wanted
 T	PDetrend  = Indicator if these intermediate results are wanted	
 T	PIndep	  = Indicator if these intermediate results are wanted
 T	PTilt	  = Indicator if these intermediate results are wanted
-T	PPitch	  = Indicator if these intermediate results are wanted
 T	PYaw	  = Indicator if these intermediate results are wanted
+T	PPitch	  = Indicator if these intermediate results are wanted
 T	PRoll	  = Indicator if these intermediate results are wanted
 T	PSonic	  = Indicator if these intermediate results are wanted
 T	PO2	  = Indicator if these intermediate results are wanted
@@ -255,14 +214,12 @@ following columns:
 
 Note that the program determines the time interval such that the datapoint
 should have a time that corresponds a doy,hour,minute combination within
-the interval specified, including the given limits. This implies that e.g.
+the interval specified, including the start time, but excluding the end time
+This implies that e.g.
 the interval 
   255 13 00 255 13 30 
-corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:59.99
-So when the interval file contains two lines like
-  255 13 00 255 13 30 
-  255 13 30 255 14 00 
-The intervals will overlap by one minute (viz. 255,13:30:00 to 255,13:30:59.99).
+corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:00
+(this different from the behaviour before version has changed as of 
 
 Calibration files
 -----------------
@@ -287,8 +244,8 @@ some parameters follows after the example file.
 0	  QQC4	   ! Fourth order coefficient of calibration
 0	  QQC5	   ! Fifth order coefficient of calibration
 0	  QQC6	   ! Sixth order coefficient of calibration
-287  	  QQPitch  ! [degree] Pitch angle of apparatus relative to north
-0	  QQYaw    ! Yaw angle
+287  	  QQYaw  ! [degree] Yaw angle of apparatus relative to north
+0	  QQPitch    ! Pitch angle
 0	  QQRoll   ! Roll angle
 0	  QQOrder  ! Order of the calibration model
 0	  QQFunc   ! Type of fitfunction
@@ -309,6 +266,7 @@ QQType:    now 5 types of sensors are known:
 	   4 : PT100 thermometer
 	   5 : Psychrometer
 	   6 : wind tunnel calibrated sonic anemometer
+	   7 : Mierij Lymann-alpha
 QQX, QQY and QQZ:
            are used for frequency response corrections
 QQFunc:    Two types of fit functions are available
