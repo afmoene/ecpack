@@ -341,7 +341,7 @@ Revision : 2.5.8: January 7, 2003 (Arnold.Moene@wur.nl)
       - EC_G_Reset now also resets MIndep and CIndep; this has changed the
         interface and all calls have been changed accordingly
       - fixed formats in ec_file for writing as CSV
-Revision : 2.5.9: 
+Revision : 2.5.9: February 10, 2004 (Arnold.moene@wur.nl)
       - changed directory structure to make separation between library and
         programs clearer
       - changed makefile structure (now build both linux and win32 binaries on
