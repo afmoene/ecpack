@@ -172,7 +172,7 @@ C
       WRITE(FluxFile,56)
       WRITE(FluxFile,57)
  56   FORMAT(
-     &  ' DOY Hr Mn ',
+     &  'DOY Hr Mn  ',
      &  'DOY Hr Mn ',
      &  '#samples',
      &  '  #U     #V     #W  #TSon  #TCop  #RhoV     #q  #time   ',
@@ -223,7 +223,7 @@ C
      &  'Cov(V,W)       Cov(W,U)         ',
      &  'Cov(W,V)       Cov(W,W)         ')
   57   FORMAT(     
-     &  '  -  -  - ',
+     &  ' -  -  -  ',
      &  ' -  -  - ',    
      &  '[-]     ',
      &  '  [-]    [-]    [-] [-]    [-]    [-]       [-] [-]     ',
