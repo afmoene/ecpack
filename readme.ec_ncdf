@@ -151,7 +151,10 @@ W_var         name of w-velocity variable in NetCDF file
 TSonic_var    name of sonic temperature variable in NetCDF file
 TCouple_var   name of thermocouple temperature variable in NetCDF file
 Tref_var      name of thermocouple reference temperature variable in NetCDF file
-Humidity_var  name of humidity variable in NetCDF file
+Humidity_var  name of humidity variable in NetCDF file (H2O concentration should be
+              in kg/m^3 or the calibdation file should take care of that)
+CO2_var       name of CO2 variables (CO2 concentration should be in kg/m^3 or the 
+              calibration file should take care of that
 HourMin_var   name of hour/minute variable in NetCDF file (presently this
               should be a la the Campbell hour/minutes: e.g. 1845 means
 	      18:45

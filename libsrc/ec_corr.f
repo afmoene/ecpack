@@ -700,7 +700,7 @@ C
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
      &  CalCo2, FrCor,
-     &	DoWebb,PWebb,P, Have_Uncal)
+     &	DoWebb,PWebb, WebVel,P, Have_Uncal)
 C     ****f* ec_corr.f/EC_C_Main
 C NAME
 C     EC_C_MAIN
@@ -846,11 +846,15 @@ C               covariance of humidity with each calibrated
 C     FrCor   : [REAL*8(NMax,NMax)] (out)
 C               Correction factors for covariances for frequency
 C               response
+C     WebVel  : [REAL*8] (out)
+C               Webb velocity
 C HISTORY
 C     28-05-2001: added info on whether uncalibrated data are
 C                 available for a given variable (mainly important
 C                 for sonic and/or Couple temperature since that
 C                 is used for various corrections)  
+C     07-10-2002: added WebVel to interface to pass
+C                 Webb velocity independent from Mean(W)
 C     $Name$ 
 C     $Id$
 C USES
@@ -887,7 +891,7 @@ C     ***
      &	PitchLim,RollLim,DirYaw,O2Factor(NMax),
      &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
      &	SonFactr(NMax),PreYaw,PrePitch,PreRoll,TSonFact,
-     &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs
+     &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs, WebVel
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
 C
 C
@@ -1110,12 +1114,12 @@ C
 C
       IF (DoWebb) THEN
          IF (WhichTemp .GT. 0) THEN
-	   CALL EC_C_Webb(Mean,NMax,Cov,P, WhichTemp)
+	   CALL EC_C_Webb(Mean,NMax,Cov,P, WhichTemp, WebVel)
 	   CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
 	   IF (QWebb) THEN
 	     WRITE(OutF,*)
-	     WRITE(OutF,*) 'Webb-velocity (vertical) = ',Mean(W),' m/s'
+	     WRITE(OutF,*) 'Webb-velocity (vertical) = ',WebVel,' m/s'
 	     WRITE(OutF,*)
 	     WRITE(OutF,*) 'After addition of Webb-term : '
 	     WRITE(OutF,*)
@@ -2374,12 +2378,12 @@ C     ***
 
 
 
-      SUBROUTINE EC_C_Webb(Mean,NMax,Cov,P,WhichTemp)
+      SUBROUTINE EC_C_Webb(Mean,NMax,Cov,P,WhichTemp, WebVel)
 C     ****f* ec_corr.f/EC_C_Webb
 C NAME
 C     EC_C_Webb
 C SYNOPSIS
-C     CALL EC_C_Webb(Mean,NMax,Cov,P,WhichTemp)
+C     CALL EC_C_Webb(Mean,NMax,Cov,P,WhichTemp, WebVel)
 C INPUTS
 C     Mean     : [REAL*8(NMax)]
 C                mean of all variables
@@ -2392,10 +2396,11 @@ C                atmospheric pressure
 C     WhichTemp: [INTEGER]
 C                Use thermocouple temperature or sonic temperature ?
 C                (Tcouple or TSonic, codes in parcnst.inc)
-C OUTPUT
 C     Mean     : [REAL*8(NMax)]
-C                mean of all variables, with Mean(W) set to Webb
-C                velocity
+C                mean of all variables 
+C OUTPUT
+C     WebVel    : [REAL*8]
+C                Webb velocity (m/s)
 C FUNCTION
 C     Mean vertical velocity according to Webb, Pearman and Leuning
 C AUTHOR
@@ -2403,6 +2408,8 @@ C     Arjan van Dijk
 C HISTORY
 C     28-05-2001: added info on which temperature should be used
 C                 in corrections (Sonic or thermocouple)
+C     07-10-2002: Webb velocity no longer passed through Mean(W). Now
+C                 separate variable, WebVel is used for this.
 C     $Name$ 
 C     $Id$
 C USES
@@ -2415,12 +2422,12 @@ C     ***
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax, WhichTemp
-      REAL*8 Mean(NMax),Cov(NMax,NMax),Sigma,EC_Ph_RhoDry,P
+      REAL*8 Mean(NMax),Cov(NMax,NMax),Sigma,EC_Ph_RhoDry,P, WebVel
 C
 C Ratio of mean densities of water vapour and dry air
 C
       Sigma = Mean(Humidity)/EC_Ph_RhoDry(Mean(Humidity),Mean(WhichTemp),P)
-      Mean(W) = (1.D0+Mu*Sigma)*Cov(W,WhichTemp)/Mean(WhichTemp) +
+      WebVel = (1.D0+Mu*Sigma)*Cov(W,WhichTemp)/Mean(WhichTemp) +
      &	Mu*Sigma*Cov(W,Humidity)/Mean(Humidity)
 
       RETURN

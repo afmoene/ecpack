@@ -55,14 +55,16 @@ C
 
       SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb)
+     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel)
 C     ****f* ec_phys.f/EC_Ph_Flux
 C NAME
 C     EC_Ph_Flux
 C SYNOPSIS
 C     CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
 C                     HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
-C                     UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb)
+C                     UStar,dUStar,Tau,dTau, 
+C                     FCO2, dFCO2, FCO2Webb, dFCO2Webb,
+C                     WebVel)
 C FUNCTION
 C     Construct estimates for surface fluxes from mean values and covariances
 C INPUTS
@@ -80,6 +82,8 @@ C     p      : [REAL*8]
 C              atmosperic pressure (Pa)
 C     BadTc  : [LOGICAL]
 C              indicator whether thermocouple temperature is corrupt
+C     WebVel : [REAL*8]
+C              Webb velocity (m/s)
 C OUTPUT
 C     HSonic : [REAL*8]
 C              sensible heat flux with sonic temperature (W/m^2)
@@ -116,6 +120,8 @@ C              tolerance in Webb term for CO2 flux (kg/m^2 s)
 C AUTHOR
 C     Arjan van Dijk, Arnold Moene
 C HISTORY
+C     07-10-2002: added CO2 fluxes and WebVel to interface. Webb-term
+C                 is now computed with Webvel, rather than Mean(W)
 C     $Name$ 
 C     $Id$
 C USES
@@ -135,7 +141,7 @@ C     ***
      &  dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
      &	p,TolMean(NMax),TolCov(NMax,NMAx),UStar,dUStar,
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb
+     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel
 C
 C Sensible heat flux [W m^{-2}]
 C
@@ -156,7 +162,7 @@ C Latent heat flux [W m^{-2}]
 C
       LvE = Lv*Cov(W,Humidity)
       dLvE = Lv*TolCov(W,Humidity)
-      LvEWebb = Lv*Mean(W)*Mean(Humidity)
+      LvEWebb = Lv*WebVel*Mean(Humidity)
 C
 C These few statements are eliminated to make sure that the
 C error in the mean velocity is NOT YET taken into the error
@@ -199,7 +205,7 @@ C CO2 flux [kg m^{-2} s^{-1}]
 C
       FCO2 = Cov(W,CO2)
       dFCO2 = TolCov(W,CO2)
-      FCO2Webb = Mean(W)*Mean(CO2)
+      FCO2Webb = WebVel*Mean(CO2)
 C Frac1 is set to zero, assuming no error in W (else error in 
 C Webb term would be enormous
       Frac1 = 0.D0

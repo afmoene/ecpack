@@ -321,7 +321,7 @@ C     ***
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3),
-     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb
+     &  FCO2, dFCO2, FCO2Webb, dFCO2Webb, WebVel
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
       REAL*8 MEANW, TOLMEANW, MINS(NNMax), MAXS(NNMAX)
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3)
@@ -549,7 +549,7 @@ C
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
      &  CalCO2, FrCor,
-     &	DoWebb,PWebb,P,Have_Uncal)
+     &	DoWebb,PWebb, WebVel, P,Have_Uncal)
       CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 C
 C If any transformation of coordinates was required (one of the options
@@ -648,7 +648,7 @@ C
      &	  DoO2,PO2,O2Factor,
      &	  DoFreq,PFreq,LLimit,ULimit,Freq,
      &    CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
-     &	  DoWebb,PWebb,P, Have_Uncal)
+     &	  DoWebb,PWebb,P, WebVel, Have_Uncal)
         CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
       ENDIF
 C
@@ -659,7 +659,8 @@ C
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb)
+     &	UStar,dUStar,Tau,dTau, FCO2, dFCO2, FCO2Webb, dFCO2Webb,
+     &  WebVel)
 
       CALL EC_G_Reset(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
@@ -677,10 +678,13 @@ C
 	  HTc = DUMMY
 	  dHTc = DUMMY
       ENDIF
-      IF ((.NOT. HAVE_Uncal(TSonic)) .AND.
-     +    (.NOT. HAVE_Uncal(Tcouple))) THEN
+      IF (((.NOT. HAVE_Uncal(TSonic)) .AND.
+     +     (.NOT. HAVE_Uncal(Tcouple))) .OR.
+     +     (.NOT. DoWebb)) THEN
         LvEWebb  = DUMMY
         dLvEWebb  = DUMMY
+        FCO2Webb  = DUMMY
+        dFCO2Webb  = DUMMY
       ENDIF
       IF (.NOT. HAVE_Uncal(Humidity)) THEN
 	  Lve = DUMMY

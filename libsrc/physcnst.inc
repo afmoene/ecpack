@@ -123,7 +123,7 @@ C FUNCTION
 C     Von Karman constant
 C SOURCE
       REAL*8 Karman		   ! Von Karman constant
-      PARAMETER(Karman = 0.4)	   ! [1]
+      PARAMETER(Karman = 0.4D0)	   ! [1]
 C     ***
 
 C     ****d* physcnst.inc/GG
@@ -133,7 +133,7 @@ C FUNCTION
 C     Gravitational acceleration
 C SOURCE
       REAL*8 GG 		   ! Gravitation constant
-      PARAMETER(GG = 9.81)	   ! [m s^{-2}]
+      PARAMETER(GG = 9.81D0)	   ! [m s^{-2}]
 C     ***
 
 C     ****d* physcnst.inc/MO2
@@ -189,7 +189,7 @@ C     This constant may disappear from the library and may become
 C     part of the user-supplied instrument specifications
 C SOURCE
       REAL*8 KoK		   ! extinction for oxygen for Krypton
-      PARAMETER(KoK = 0.0038)      ! [m^{3} g^{-1} cm^{-1}]
+      PARAMETER(KoK = 0.0038D0)      ! [m^{3} g^{-1} cm^{-1}]
 C     ***
 
 C     ****d* physcnst.inc/Kwk

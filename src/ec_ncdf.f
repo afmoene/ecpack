@@ -64,7 +64,7 @@ C...........................................................................
 
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
      &              ParmName,InterName, PlfName
-      CHARACTER*40 OutName,DumName1,DumName2
+      CHARACTER*255 OutName,DumName1,DumName2
       LOGICAL PRaw,PYaw,PPitch,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
      &  DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &  DoSonic,DoTilt,PTilt,DoPrint,Flag(NNMAx,MMMax),DoDetren,
@@ -357,7 +357,7 @@ C For subroutine calibrat below find the first day; transfer via interface
 C via EC_G_Main
 C 
 C
-      FirstDay = StartTime(1)
+      FirstDay = Nint(StartTime(1))
 C      
 C Set Number of uncalibrated signals
 C
@@ -520,16 +520,26 @@ C
 	   dStdCO2 = 0.5D0*TolCov(CO2,CO2)/
      &              SQRT(Cov(CO2,CO2))
         ENDIF
-	IF ((LvE .EQ. DUMMY) .OR. (LvEWebb .EQ. DUMMY)) THEN
-	   SumLvE = DUMMY
-	   dSumLvE = DUMMY
+        IF ((LvE .EQ. DUMMY) .OR. (LvEWebb .EQ. DUMMY)) THEN
+           IF (.NOT. DoWebb) THEN
+	     SumLvE = LvE
+	     dSumLvE = dLvE
+	   ELSE
+	     SumLvE = DUMMY
+	     dSumLvE = DUMMY
+           ENDIF
 	ELSE
 	   SumLvE = LvE + LvEWebb
            dSumLvE =  SQRT(dLvE**2.D0 + dLvEWebb**2.D0)
 	ENDIF
-	IF ((FCO2 .EQ. DUMMY) .OR. (FCO2Webb .EQ. DUMMY)) THEN
-	   SumFCO2 = DUMMY
-	   dSumFCO2 = DUMMY
+        IF ((FCO2 .EQ. DUMMY) .OR. (FCO2Webb .EQ. DUMMY)) THEN
+          IF (.NOT. DoWebb) THEN
+	     SumFCO2 = FCO2
+	     dSumFCO2 = dFCO2
+          ELSE
+             SumFCO2 = DUMMY
+             dSumFCO2 = DUMMY
+          ENDIF
 	ELSE
 	   SumFCO2 = FCO2 + FCO2Webb
            dSumFCO2 =  SQRT(dFCO2**2.D0 + dFCO2Webb**2.D0)
@@ -678,7 +688,7 @@ C
 C Calculate time from the columns in the raw data
 C
       Days = RawSampl(Doy) - DBLE(FirstDay)
-      Hours = INT(0.01D0*RawSampl(HourMin))
+      Hours = NINT(0.01D0*RawSampl(HourMin))
       Minutes = RawSampl(HourMin) - 100.D0*Hours
       Secnds = RawSampl(Sec)
       Sample(TTime) =
@@ -727,7 +737,6 @@ C This is the construction when we do not have a diagnostic variable
                Error(W) = (.TRUE.)
              ENDIF
 	 ENDIF
-
          IF (.NOT.((Error(U).OR.Error(V)).OR.Error(W))) THEN
 
 C
@@ -761,7 +770,7 @@ C lateral velocity is applied directly to the raw data. This is only
 C half of the Schotanus-correction. Humidity-correction comes later.
 C
            Sample(TSonic) = Sample(TSonic)
-     &         + ((Sample(U))**2 + (Sample(V))**2)/GammaR
+     &         + (Sample(U)**2 + Sample(V)**2)/GammaR
 C
 C Following correction is implemented to correct for the true length of the
 C sonic, which is estimated from the ratio of mean sonic temperatures and
@@ -795,21 +804,21 @@ C      T =  Calibration(voltage +
 C                       inverse calibration(reference temperature))
 C Reference temperature is supposed to be in Celcius !!
 C
-            DO i=0,CalTherm(QQOrder)
+            DO i=0,NINT(CalTherm(QQOrder))
               c(i) = CalTherm(QQC0+i)
             ENDDO
             Dum = RawSampl(Tref) 
             Error(TCouple) =
-     &           (((DUM) .GT.(MaxT))
-     &             .OR. ((DUM) .LT.(MinT)))
+     &           ((DUM .GT.(MaxT))
+     &             .OR. (DUM .LT.(MinT)))
             IF (.NOT. Error(TCouple)) THEN
-               UPLIMIT = (DUM + 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
-               DNLIMIT = (DUM - 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
+               UPLIMIT = (DUM + 3.0D0 - CalTherm(QQC0))/CalTherm(QQC1)
+               DNLIMIT = (DUM - 3.0D0 - CalTherm(QQC0))/CalTherm(QQC1)
                ESTIM = (Dum - CalTherm(QQC0))/CalTherm(QQC1)
-               RELERROR = 1e-4
-               ABSERROR = (0.001)/CalTherm(QQC1)
-               DUMORDER = CalTherm(QQOrder)
-               DUMTYP = CalTherm(QQFunc)
+               RELERROR = 1D-4
+               ABSERROR = 0.001D0/CalTherm(QQC1)
+               DUMORDER = NINT(CalTherm(QQOrder))
+               DUMTYP = NINT(CalTherm(QQFunc))
                CALL DFZERO(DUMFUNC, DNLIMIT, UPLIMIT, ESTIM, RELERROR,
      &                    ABSERROR, IFLG)
                IF (IFLG .GT. 3) THEN
@@ -846,7 +855,7 @@ C drift in the hygrometer (e.g. dirt). Compensation may be provided by
 C the difference between the mean humidity by a (slow) psychrometer's
 C output and the mean of the humidity estimated by the hygrometer.
 C
-            DO i=0,CalHyg(QQOrder)
+            DO i=0,NINT(CalHyg(QQOrder))
               c(i) = CalHyg(QQC0+i)
             ENDDO
 C Now in kg/m^3 (Sept. 18, 2002)
