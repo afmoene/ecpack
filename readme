@@ -5,6 +5,9 @@ Purpose : to process eddy-correlation data stored in NetCDF files
 Author  : Arjan van Dijk (presently at IMAU: A.vanDijk@phys.uu.nl)
           Arnold Moene (afmoene@hp1.met.wau.nl)
 Date    : August 1, 2000
+Revision: September 18, 2000: changed in physconst.inc the sensitivity
+          of Krypton to O2 from old 'Webb' value (0.0085) to  
+	  Arjan van Dijk's value (0.0038 m^3 g^-1 cm^-1)
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
