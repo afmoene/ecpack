@@ -103,7 +103,7 @@ C
       ENDIF
 
 C Report version number (VERSION is defined in version.inc)
-      WRITE(*,*) 'PLANFIT Version: ', VERSION
+      WRITE(*,*) 'PLANANG Version: ', VERSION
 C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Name$'
       WRITE(*,*) '$Date$'

@@ -220,7 +220,7 @@ Revision 2.4.1: October 9, 2002 (arnold.moene@wur.nl)
 Revision 2.4.2: October 10, 2002 (arnold.moene@wur.nl)
           - fixed bug in call to EC_C_Main in EC_G_Main (pressure and
 	    web velocity were interchanged -> wrong density in EC_Ph_Flux
-Revision 2.4.3:
+Revision 2.4.3: January 7, 2003 (arnold.moene@wur.nl)
           - added 4 columns in output of ec_ncdf: counters for occurrence of CSAT diagnostic
             flags
           - added extra line in output of ec_ncdf: units per column
