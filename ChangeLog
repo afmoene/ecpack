@@ -92,5 +92,17 @@ Reivision 1.22: August 2, 2001
 	    constants (QQYaw and QQPitch) in parcnst.inc.
           - Changed rotation of samples in calibration routine (rotated
 	    over 180 degrees less)
-          - inverted V-velovities in calibration routine (this is at least 
+          - inverted V-velocities in calibration routine (this is at least 
 	    valid -apparently- for the CSAT3).
+Revision 1.23: October 31, 2001
+          - included updated planerfit routines (in fact the ones in the
+	    previous revision where older than available at that moment);
+	    the dimensions of UMean are reversed relative to what 
+	    Arjan has.
+          - fixed bug in ECCorrec when tilt-correction is done
+	    with known angles (arguments of ECKYaw, ECKPitch and ECKRoll
+	    were incorrect)
+          - in ECReadNetCDF: now handle correctly the situation
+	    when there are no samples in the file
+          - removed HAVE_UNCAL from argument list of ECYaw
+

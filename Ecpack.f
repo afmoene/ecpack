@@ -411,15 +411,14 @@ C
 C Tilt ALL samples
 C
         DO i=1,M
-
           Speed(1) = Sample(U,i)
           Speed(2) = Sample(V,i)
           Speed(3) = Sample(W,i)
 
           IF (DoTilt) THEN
-            CALL ECKYaw(Speed,NMax,N,DumCov,PreYaw)
-            CALL ECKPitch(  Speed,NMax,N,DumCov,PrePitch  )
-            CALL ECKRoll( Speed,NMax,N,DumCov,PreRoll )
+            CALL ECKYaw(Speed,3,3,DumCov,PreYaw)
+            CALL ECKPitch(  Speed,3,3,DumCov,PrePitch  )
+            CALL ECKRoll( Speed,3,3,DumCov,PreRoll )
           ENDIF
 
           IF (DoYaw) CALL ECKYaw(Speed,3,3,DumCov,DirYaw)
@@ -1025,130 +1024,135 @@ C...........................................................................
 
       STATUS = NF_INQ_VARDIMID(NCID,NCsecID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
-      IND1 = 1
-      IND3 = MAXIND
-      OK = .FALSE.
-      DO WHILE (.NOT. OK)
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
-	IF (((DOY1 .GT. 0) .AND. (DOY1 .LE. 366) .AND.
-     +       (HM1 .GE. 0) .AND. (HM1 .LE. 2400)) .OR. 
-     +      (IND1 .EQ. MAXIND)) THEN
-	   OK = .TRUE.
-	ELSE
-	   IND1 = IND1 + 1
-	ENDIF
-      ENDDO
-      OK = .FALSE.
-      DO WHILE (.NOT. OK) 
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
-	IF (((DOY3 .GT. 0) .AND. (DOY3 .LE. 366) .AND.
-     +       (HM3 .GE. 0) .AND. (HM3 .LE. 2400)) .OR. 
-     +      (IND3 .EQ. 1)) THEN
-	   OK = .TRUE.
-	ELSE
-	   IND3 = IND3 - 1
-	ENDIF
-      ENDDO
+      IF (MAXIND .GT. 0) THEN
+         IND1 = 1
+         IND3 = MAXIND
+         OK = .FALSE.
+         DO WHILE (.NOT. OK)
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+	   IF (((DOY1 .GT. 0) .AND. (DOY1 .LE. 366) .AND.
+     +          (HM1 .GE. 0) .AND. (HM1 .LE. 2400)) .OR. 
+     +         (IND1 .EQ. MAXIND)) THEN
+	      OK = .TRUE.
+	   ELSE
+	      IND1 = IND1 + 1
+	   ENDIF
+         ENDDO
+         OK = .FALSE.
+         DO WHILE (.NOT. OK) 
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+	   IF (((DOY3 .GT. 0) .AND. (DOY3 .LE. 366) .AND.
+     +          (HM3 .GE. 0) .AND. (HM3 .LE. 2400)) .OR. 
+     +         (IND3 .EQ. 1)) THEN
+	      OK = .TRUE.
+	   ELSE
+	      IND3 = IND3 - 1
+	   ENDIF
+         ENDDO
 
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND1, SEC1)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND3, SEC3)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND1, SEC1)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND3, SEC3)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
 C Get mean sample rate
-      DOYD = DOY3 - DOY1
-      HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM1)
-      SECD = SEC3 - SEC1
-      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-      SAMPF = MAXIND/ABS(TIMED)
+         DOYD = DOY3 - DOY1
+         HOURD = CSI2HOUR(HM3) - CSI2HOUR(HM1)
+         SECD = SEC3 - SEC1
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         SAMPF = MAXIND/ABS(TIMED)
 C Check whether point is before start or beyond end of file
-      DOYD = FDOY - DOY1
-      HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
-      SECD = 0 - SEC1
-      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-      IF (TIMED .LT. 0) THEN
-         FDOY = DOY1
-	 FHOURMIN = HM1
-      ENDIF
-      DOYD = DOY3 - FDOY
-      HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
-      SECD = SEC3 - 0
-      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-      IF (TIMED .LT. 0) THEN
-         FDOY = DOY3
-	 FHOURMIN = HM3
-      ENDIF
+         DOYD = FDOY - DOY1
+         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+         SECD = 0 - SEC1
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         IF (TIMED .LT. 0) THEN
+            FDOY = DOY1
+	    FHOURMIN = HM1
+         ENDIF
+         DOYD = DOY3 - FDOY
+         HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
+         SECD = SEC3 - 0
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+         IF (TIMED .LT. 0) THEN
+            FDOY = DOY3
+	    FHOURMIN = HM3
+         ENDIF
 
 C Get time difference between start and requested point
-      DOYD = FDOY - DOY1
-      HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
-      SECD = 0 - SEC1
-      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-      ATTEMPTS = 0
-      IND2 = TIMED*SAMPF+1
-      IF (IND2 .LT. 1) THEN
-         IND2 = 1
-      ELSE IF (IND2 .GT. MAXIND) THEN
-         IND2 = MAXIND
-      ENDIF
-      CURCH = IND2
-
-      DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
-C Determine time difference between current sample and required time
-         PREVCH = CURCH
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2, SEC2)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2+1, SEC4)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2+1, DOY4)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2+1, HM4)
-C Get local sample rate
-         DOYD = DOY4 - DOY2
-         HOURD = CSI2HOUR(HM4) - CSI2HOUR(HM2)
-         SECD = SEC4 - SEC2
+         DOYD = FDOY - DOY1
+         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+         SECD = 0 - SEC1
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-	 SAMPF = 1D0/TIMED
+         ATTEMPTS = 0
+         IND2 = TIMED*SAMPF+1
+         IF (IND2 .LT. 1) THEN
+            IND2 = 1
+         ELSE IF (IND2 .GT. MAXIND) THEN
+            IND2 = MAXIND
+         ENDIF
+         CURCH = IND2
+
+         DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
+C Determine time difference between current sample and required time
+            PREVCH = CURCH
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2, SEC2)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2+1, SEC4)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2+1, DOY4)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2+1, HM4)
+C Get local sample rate
+            DOYD = DOY4 - DOY2
+            HOURD = CSI2HOUR(HM4) - CSI2HOUR(HM2)
+            SECD = SEC4 - SEC2
+            TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+	    SAMPF = 1D0/TIMED
 
 C Get distance between current point and requested point
-         DOYD = FDOY - DOY2
-         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
-         SECD = 0D0 - SEC2
-         TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-         CURCH = ANINT(TIMED*SAMPF)
+            DOYD = FDOY - DOY2
+            HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
+            SECD = 0D0 - SEC2
+            TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+            CURCH = ANINT(TIMED*SAMPF)
 C We're there
-	 IF (CURCH .EQ. 0) THEN
-	    IND = IND2
-	    RETURN
+	    IF (CURCH .EQ. 0) THEN
+	       IND = IND2
+	       RETURN
 C Shift forward, but not beyond end of file
-	 ELSE IF (TIMED .GT. 0) THEN 
-	     IF (IND2 .EQ. MAXIND) THEN
-	        IND = IND2
-		RETURN
-	     ENDIF
-	     IND1 = IND2
-	     HM1 = HM2
-	     SEC1 = SEC2
-	     DOY1 = DOY2
-             IND2 = IND2 + ANINT(TIMED*SAMPF)
+	    ELSE IF (TIMED .GT. 0) THEN 
+	        IF (IND2 .EQ. MAXIND) THEN
+	           IND = IND2
+	   	   RETURN
+	        ENDIF
+	        IND1 = IND2
+	        HM1 = HM2
+	        SEC1 = SEC2
+	        DOY1 = DOY2
+                IND2 = IND2 + ANINT(TIMED*SAMPF)
 C Shift backward, but not beyond start of file
-	 ELSE IF  (TIMED .LT. 0) THEN
-	     IF (IND2 .EQ. 1) THEN
-	        IND = IND2
-		RETURN
-	     ENDIF
-	     IND3 = IND2
-	     HM3 = HM2
-	     SEC3 = SEC2
-	     DOY3 = DOY2
-             IND2 = IND2 + ANINT(TIMED*SAMPF)
-	ENDIF
+	    ELSE IF  (TIMED .LT. 0) THEN
+	        IF (IND2 .EQ. 1) THEN
+	           IND = IND2
+	   	   RETURN
+	        ENDIF
+	        IND3 = IND2
+	        HM3 = HM2
+	        SEC3 = SEC2
+	        DOY3 = DOY2
+                IND2 = IND2 + ANINT(TIMED*SAMPF)
+	   ENDIF
 C
 C Get time difference between start of interval and requested point
-        ATTEMPTS = ATTEMPTS + 1
-      ENDDO
+           ATTEMPTS = ATTEMPTS + 1
+         ENDDO
+      ELSE
+         IND = -1
+      ENDIF
+
       IF (ATTEMPTS .EQ. 20) THEN
          IND = -1
       ENDIF
@@ -1175,97 +1179,102 @@ C...........................................................................
 
       STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
-      IND1 = 1
-      IND3 = MAXIND
-      OK = .FALSE.
-      DO WHILE (.NOT. OK)
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
-	IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR. 
-     +      (IND1 .EQ. MAXIND)) THEN
-	   OK = .TRUE.
-	ELSE
-	   IND1 = IND1 + 1
-	ENDIF
-      ENDDO
-      OK = .FALSE.
-      DO WHILE (.NOT. OK) 
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
-        STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
-	IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR. 
-     +      (IND3 .EQ. 1)) THEN
-	   OK = .TRUE.
-	ELSE
-	   IND3 = IND3 - 1
-	ENDIF
-      ENDDO
-      IND2 = ANINT((IND3+IND1)/2.0)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
-      STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+      IF (MAXIND .GT. 0) THEN
+         IND1 = 1
+         IND3 = MAXIND
+         OK = .FALSE.
+         DO WHILE (.NOT. OK)
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+	   IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR. 
+     +         (IND1 .EQ. MAXIND)) THEN
+	      OK = .TRUE.
+	   ELSE
+	      IND1 = IND1 + 1
+	   ENDIF
+         ENDDO
+         OK = .FALSE.
+         DO WHILE (.NOT. OK) 
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+           STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
+	   IF ((DOY3 .GT. 0) .AND. (HM3 .GE. 0) .OR. 
+     +         (IND3 .EQ. 1)) THEN
+	      OK = .TRUE.
+	   ELSE
+	      IND3 = IND3 - 1
+	   ENDIF
+         ENDDO
+         IND2 = ANINT((IND3+IND1)/2.0)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND3, DOY3)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND3, HM3)
 
 C Check whether point is before start or beyond end of file
-      DOYD = FDOY - DOY1
-      HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
-      TIMED = 3600.0*24*DOYD + HOURD*3600.0 
-      IF (TIMED .LT. 0) THEN
-         FDOY = DOY1
-	 FHOURMIN = HM1
-      ENDIF
-      DOYD = DOY3 - FDOY
-      HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
-      TIMED = 3600.0*24*DOYD + HOURD*3600.0
-      IF (TIMED .LT. 0) THEN
-         FDOY = DOY3
-	 FHOURMIN = HM3
-      ENDIF
-
-      CURCH = IND2
-      ATTEMPTS = 0
-
-      DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 50))
-C Determine time difference between current sample and required time
-         PREVCH = CURCH
-         DOYD = FDOY - DOY2
-         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
+         DOYD = FDOY - DOY1
+         HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 
-         IF (ANINT(TIMED) .LT. 0) THEN
-	    CURCH = IND3 - IND2
-            IND3 = IND2
-	    HM3 = HM2
-	    DOY3 = DOY2
-	 ELSE IF (ANINT(TIMED) .GT. 0) THEN
-	    CURCH = IND1 - IND2
-            IND1 = IND2
-	    HM1 = HM2
-	    DOY1= DOY2
-	 ELSE
-	    IND4=IND2-1
-            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND4, DOY4)
-            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND4, HM4)
-	    IF (ABS(ANINT(HM2 - HM4)) .GT. 0) THEN
-	      IND = IND2
-	      RETURN
-	    ELSE
-	      CURCH = IND2 - IND3
-              IND3 = IND2
-	      HM3 = HM2
-	      DOY3 = DOY2
-	    ENDIF
+         IF (TIMED .LT. 0) THEN
+            FDOY = DOY1
+	    FHOURMIN = HM1
          ENDIF
-         IND2 = ANINT((IND3+IND1)/2.0)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
-         STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+         DOYD = DOY3 - FDOY
+         HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
+         TIMED = 3600.0*24*DOYD + HOURD*3600.0
+         IF (TIMED .LT. 0) THEN
+            FDOY = DOY3
+	    FHOURMIN = HM3
+         ENDIF
 
-	 IF (CURCH .EQ. 0) THEN
-	    IND = IND2
-	    RETURN
-	 ENDIF
-         ATTEMPTS = ATTEMPTS + 1
-      ENDDO
+         CURCH = IND2
+         ATTEMPTS = 0
+
+         DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 50))
+C Determine time difference between current sample and required time
+            PREVCH = CURCH
+            DOYD = FDOY - DOY2
+            HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
+            TIMED = 3600.0*24*DOYD + HOURD*3600.0 
+            IF (ANINT(TIMED) .LT. 0) THEN
+	       CURCH = IND3 - IND2
+               IND3 = IND2
+	       HM3 = HM2
+	       DOY3 = DOY2
+	    ELSE IF (ANINT(TIMED) .GT. 0) THEN
+	       CURCH = IND1 - IND2
+               IND1 = IND2
+	       HM1 = HM2
+	       DOY1= DOY2
+	    ELSE
+	       IND4=IND2-1
+               STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND4, DOY4)
+               STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND4, HM4)
+	       IF (ABS(ANINT(HM2 - HM4)) .GT. 0) THEN
+	         IND = IND2
+	         RETURN
+	       ELSE
+	         CURCH = IND2 - IND3
+                 IND3 = IND2
+	         HM3 = HM2
+	         DOY3 = DOY2
+	       ENDIF
+            ENDIF
+            IND2 = ANINT((IND3+IND1)/2.0)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
+            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
+
+
+	    IF (CURCH .EQ. 0) THEN
+	       IND = IND2
+	       RETURN
+	    ENDIF
+            ATTEMPTS = ATTEMPTS + 1
+         ENDDO
+      ELSE
+         IND = -1
+      ENDIF
       IF (ATTEMPTS .EQ. 50) THEN
          IND = -1
       ENDIF
@@ -2470,7 +2479,9 @@ C
 
 
 
-      SUBROUTINE PlanarFit(uMean, NRuns,Apf,Alpha,Beta,Gamma,WBias)
+      SUBROUTINE PlanarFit(TrustWilczak,SingleRun,uMean,NRuns,Apf,
+     &  Alpha,Beta,Gamma,WBias)
+
 C
 C Subroutine performs tilt correction of Sonic data, using Planar Fit
 C Method, as described in James M. Wilczak et al (2001), 'Sonic
@@ -2489,16 +2500,14 @@ C        Beta  : tiltangle beta in degrees
 C        Gamma : Fixed yaw-angle in degrees associated with mean over all runs
 C        WBias : The bias in the vertical velocity
 C
+      LOGICAL SingleRun,TrustWilczak
       INTEGER i,j,k,NRuns,UmeanMax
-c     REAL*8 uMean(NRuns,3),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
-      REAL*8 uMean(3, Nruns),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
+      REAL*8 uMean(3,NRuns),Apf(3,3),Alpha,Beta,Gamma,WBias,USum(3),
      &  UUSum(3,3)
 C
 C Make all sums of mean velocity components and of products of
 C mean velocity components in relation W.48
 C
-c     write(*,*) Umean(1,1),Umean(1,2), Umean(1,3),
-c    &           Umean(1,Nruns), Umean(2,Nruns), Umean(3,Nruns)
       DO i=1,3
         USum(i) = 0.D0
 	DO j=1,3
@@ -2515,17 +2524,17 @@ c    &           Umean(1,Nruns), Umean(2,Nruns), Umean(3,Nruns)
 	ENDDO
       ENDDO
       DO i=1,3
-c	USum(i) = USum(i)/NRuns
-	USum(i) = USum(i)
+ 	USum(i) = USum(i)/NRuns
 	DO j=1,3
-c	  UUSum(i,j) = UUSum(i,j)/NRuns
-	  UUSum(i,j) = UUSum(i,j)
+ 	  UUSum(i,j) = UUSum(i,j)/NRuns
 	ENDDO
       ENDDO
 C
 C Call to slave-routine for details
 C
-      CALL PFit(uSum,UUSum,Apf,Alpha,Beta,Gamma,WBias)
+      CALL PFit(TrustWilczak,SingleRun,uSum,UUSum,Apf,
+     &  Alpha,Beta,Gamma,WBias)
+
 
       END
 
@@ -2534,45 +2543,129 @@ C
 
 
 
-      SUBROUTINE PFit(uSum,UUSum,Apf,Alpha,Beta,Gamma,WBias)
+      SUBROUTINE PFit(TrustWilczak,SingleRun,uSum,UUSum,Apf,
+     &  Alpha,Beta,Gamma,WBias)
+
 C
 C Supportive routine for planar fit method for tilt-correction
 C
-      REAL*8 b(0:2),S(3,3),SInv(3,3),x(3),Apf(3,3),
+      LOGICAL SingleRun,TrustWilczak
+      REAL*8 b(0:2),S(3,3),SInv(3,3),x(3),Apf(3,3),SS2(2,2),SS2Inv(2,2),
      &  Sqrt1,Sqrt2,Alpha,Beta,SinAlpha,SinBeta,CosAlpha,CosBeta,Pi,
-     &  Gamma,WBias,SinGamma,CosGamma,UHor,Yaw(3,3),USum(3),UUSum(3,3)
+     &  Gamma,WBias,SinGamma,CosGamma,UHor,Yaw(3,3),USum(3),UUSum(3,3),
+     &  u,v,w,R11,R12,R13,R22,R23,R33,A,Disc
 
       Pi = 4.D0*ATAN(1.D0)
+
+
+      IF (.NOT.SingleRun) THEN
+        IF (TrustWilczak) THEN
 C
 C Make matrix in relation W.48
 C
-      S(1,1) = 1.D0
-      S(1,2) = USum(1)
-      S(1,3) = USum(2)
-      S(2,1) = USum(1)
-      S(2,2) = UUSum(1,1)
-      S(2,3) = UUSum(1,2)
-      S(3,1) = USum(2)
-      S(3,2) = UUSum(1,2)
-      S(3,3) = UUSum(2,2)
+	  S(1,1) = 1.D0
+	  S(1,2) = USum(1)
+	  S(1,3) = USum(2)
+	  S(2,1) = USum(1)
+	  S(2,2) = UUSum(1,1)
+	  S(2,3) = UUSum(1,2)
+	  S(3,1) = USum(2)
+	  S(3,2) = UUSum(1,2)
+	  S(3,3) = UUSum(2,2)
 C
 C Invert this matrix
 C
-      CALL ECInvM(S,Sinv)
+          CALL ECInvM(S,Sinv)
 C
 C Make RHS of relation W.48
 C
-      x(1) = USum(3)
-      x(2) = UUSum(1,3)
-      x(3) = UUSum(2,3)
+	  x(1) = USum(3)
+	  x(2) = UUSum(1,3)
+	  x(3) = UUSum(2,3)
 C
 C Calculate coefficients b0, b1 and b2 in relation W.48
 C
-      CALL ECMapVec(SInv,x,b(0))
+          CALL ECMapVec(SInv,x,b(0))
 C
 C Find the bias in the vertical velocity via relation W.39
 C
-      WBias = b(0)
+          WBias = b(0)
+        ELSE
+C
+C Make the sub-matrix of relation W.48 for a plane through origin
+C
+          SS2(1,1) = UUSum(1,2)
+          SS2(1,2) = UUSum(2,2)
+          SS2(2,1) = UUSum(1,1)
+          SS2(2,2) = UUSum(2,1)
+C
+C Invert this matrix
+C
+          CALL ECInvM2(SS2,SS2inv)
+C
+C Make RHS of relation W.48 for this submatrix
+C
+          x(1) = UUSum(2,3)
+          x(2) = UUSum(1,3)
+C
+C Calculate coefficients b1 and b2 in relation W.48
+C
+          CALL ECMap2Vec(SS2Inv,x,b(1))
+C
+C Assume that the calibration of the sonic is ok and has no bias in w
+C
+          WBias = 0.D0
+	ENDIF
+      ELSE
+	U = USum(1)
+	V = USum(2)
+	W = USum(3)
+	R11 = UUSum(1,1) - U*U
+	R12 = UUSum(1,2) - U*V
+	R13 = UUSum(1,3) - U*W
+	R22 = UUSum(2,2) - V*V
+	R23 = UUSum(2,3) - V*W
+	R33 = UUSum(3,3) - W*W
+C
+C Find the plane through both origin and mean velocity such that
+C velocity-components in the plane, perpendicular to the mean velocity
+C do not correlate with velocity components normal to the plane.
+C In practice this means <v'w'>=0 (see roll-correction).
+C
+        IF ((R23.GT.(1.D-10*(R11+R22+R33))).OR.
+     &  ((V*V+W*W).GT.((U*U+V*V+W*W)*1.D-10))) THEN
+      A = u**3*R23-w*R22*v*u+v*R11*w*u+v**2*R23*u
+     &   -v*R13*u**2+w*R12*v**2-v**3*R13-w*R12*u**2
+      Disc = w**4*R11**2+4*w**2*R13**2*u**2+4*w**4*R12**2+v**4*R11**2
+     &+4*v
+     #**2*R13**2*u**2+8*u**2*R23*v*R11*w-4*u**2*R23*v*R33*w-4*w*R22*v*u*
+     #*2*R23-4*v**3*R11*u*R12+4*v**2*R12**2*w**2+4*v**3*R23*R11*w-4*v**3
+     #*R23*R33*w-2*v**2*R11*w**2*R22-8*u**3*R23*w*R12+2*u**2*R33*w**2*R1
+     #1-2*u**2*R22*w**2*R11+4*v*R12*u**3*R33-4*w**3*R22*v*R23+4*v*R11*w*
+     #*3*R23+8*u*R22*v**2*R13*w+4*u**3*R22*w*R13-2*v**2*R33*u**2*R22-2*u
+     #**2*R33*w**2*R22-4*v**2*R33*u*w*R13-8*v**3*R12*R13*w+4*v**2*R12**2
+     #*u**2-4*v*R12*u*w**2*R11+2*v**2*R11**2*w**2-8*v**3*R23*u*R13+2*v**
+     #2*R33**2*u**2+
+     &4*v**4*R13**2+4*u**4*R23**2+u**4*R22**2+u**4*R33**2+4*w**3*R
+     #22*u*R13-4*w**3*R11*u*R13-8*w**3*R12*v*R13+2*v**2*R33*w**2*R22-2*v
+     #**2*R33*w**2*R11-4*u**3*R33*w*R13+8*u*R33*w**2*R12*v-4*v*R12*u**3*
+     #R22-4*v*R12*u*w**2*R22-8*u*R23*w**3*R12-8*u**3*R23*v*R13-4*v**2*R1
+     #1*u*w*R13+4*v**3*R12*u*R33+v**4*R33**2+2*v**2*R11*u**2*R22-2*v**2*
+     #R11*u**2*R33+4*u**2*R23**2*w**2+4*w**2*R12**2*u**2-2*u**4*R22*
+     #R33+w**4*R22**2+4*v**2*R23**2*u**2+2*u**2*R22**2*w**2-2*v**4*R11*R
+     #33-2*w**4*R22*R11+4*v**2*R23**2*w**2+4*v**2*R13**2*w**2
+
+      b(1) = -0.5D0*(-v**3*R11+2*u*R12*v**2+2*w**2*R12*u-2*u**2*R23*w
+     &  -u**2*R22*v+u**2*v*R33+w**2*R22*v-w**2*R11*v-2*w*R23*v**2
+     &  +v**3*R33+v*SQRT(Disc))/a
+      b(2) = 0.5D0*(-v**2*R11*u+2*v*R12*u**2+v**2*R33*u
+     &  -u**3*R22+u**3*R33-w**2*R22*u+w**2*R11*u
+     &  +2*w**2*R12*v-2*v**2*R13*w-2*w*R13*u**2+u*SQRT(Disc))/a
+	ELSE
+	  b(1) = 0.D0
+          b(2) = 0.D0
+       ENDIF
+      ENDIF
 C
 C Construct the factors involved in the planar angles
 C
@@ -2626,10 +2719,6 @@ C
       CALL ECMMul(Yaw,Apf,Apf)
 
       END
-
-
-
-
 
 
 C
@@ -2969,6 +3058,33 @@ C     Matrix C is product of 3*3-matrices A and B
 
 
 
+
+      REAL*8 FUNCTION ECDet2(x)
+C     Give determinant of REAL*8 2*2-matrix
+      REAL*8 x(2,2)
+      ECDet2 = x(1,1)*x(2,2)-x(2,1)*x(1,2)
+      END
+
+      SUBROUTINE ECInvM2(a, aInv)
+C     Find the inverse of REAL*8 2*2 matrix "a"
+      REAL*8 a(2,2), aInv(2,2), Dum(2,2), Det, ECDet2
+      INTEGER i, j
+      Det = ECDet2(a)
+      IF (ABS(Det) .LT. 1.D-10)
+     &	WRITE(*,*) ' Sorry, cannot invert matrix!'
+      Dum(1,1) =  a(2,2)/Det
+      Dum(2,1) = -a(2,1)/Det
+      Dum(1,2) = -a(1,2)/Det
+      Dum(2,2) =  a(1,1)/Det
+      DO i = 1,2
+	DO j = 1,2
+	  aInv(j,i) = Dum(j,i)
+	END DO
+      END DO
+      RETURN
+      END
+
+
       REAL*8 FUNCTION ECDeterm(x)
 C
 C     Give determinant of real 3*3-matrix
@@ -3087,6 +3203,57 @@ C
 
       RETURN
       END
+
+      SUBROUTINE ECMap2Vec(a,x,y)
+C
+C EC-Pack Library for processing of Eddy-Correlation data
+C Subroutine		: ECMapVec
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
+C Author		: Arjan van Dijk
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
+C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
+C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
+C Contact address	: Duivendaal 2
+C			  6701 AP  Wageningen
+C			  The Netherlands
+C			  WWW.MetAir.WAU.nl
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
+C			  Tel. +31 317 483981 (secretary)
+C			  Fax. +31 317 482811
+C
+C Purpose :
+C Calculates the image of "x" under the map "a"; y(i) = a(ij)x(j)
+C
+C input : a : REAL*8 (2,2) : the mapping matrix
+C	  x : REAL*8 (2)   : the vector to be mapped
+C output : y : REAL*8 (2)  : the image of the map
+C
+      IMPLICIT NONE
+
+      REAL*8 a(2,2),x(2),y(2),Dum(2)
+      INTEGER I,J
+
+      DO I=1,2
+	Dum(I) = 0.D0
+      ENDDO
+
+      DO I=1,2
+	DO J=1,2
+	  Dum(I) = Dum(I) + a(I,J)*x(J)
+	ENDDO
+      ENDDO
+
+      DO I=1,2
+	y(I) = Dum(I)
+      ENDDO
+
+      RETURN
+      END
+
+
+
+
 
 
 
@@ -3345,7 +3512,7 @@ C
 
 
 
-      SUBROUTINE ECYaw(Mean,NMax,N,Cov,Direction, Have_Uncal)
+      SUBROUTINE ECYaw(Mean,NMax,N,Cov,Direction)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECYaw
@@ -3370,7 +3537,6 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N
-      LOGICAL Have_Uncal(NNMax)
       REAL*8 UHor,SinPhi,CosPhi,Mean(NMax),Cov(NMax,NMax),Direction
 
       UHor = ((Mean(U))**2+(Mean(V))**2)**0.5
@@ -4347,7 +4513,7 @@ C
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
-      CALL ECYaw(Mean,NMax,N,Cov,Dirs, Have_Uncal)
+      CALL ECYaw(Mean,NMax,N,Cov,Dirs)
       CALL RESET(Have_Uncal, Mean, TolMean, Cov, TolCov)
 
       IF (DoPrint) THEN

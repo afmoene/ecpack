@@ -16,7 +16,7 @@ LIBDIR=-Lc:/gcc-2.95.2/lib
 EXT=.exe
 
 FFLAGS=$(INCDIR) -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer
-LDFLAGS=$(LIBDIR) -lnetcdf
+LDFLAGS=$(LIBDIR) -lnetcdf 
 
 all: ec_ncdf$(EXT) planfit$(EXT)
 
