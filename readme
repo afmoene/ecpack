@@ -1,0 +1,354 @@
+$Id$
+
+Program : ec_ncdf
+Purpose : to process eddy-correlation data stored in NetCDF files
+Author  : Arjan van Dijk (presently at IMAU: A.vanDijk@phys.uu.nl)
+          Arnold Moene (afmoene@hp1.met.wau.nl)
+Date    : June 7, 2000
+
+For information on NetCDF see 
+  http://www.unidata.ucar.edu/packages/netcdf/docs.html
+and the documentation of the program csi2ncdf (to convert Campbell binary
+datafiles to NetCDF).
+
+Purpose
+--------
+
+To start an excerpt from the documentation in the source:
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
+C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
+C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
+C Contact address	: Duivendaal 2
+C			  6701 AP  Wageningen
+C			  The Netherlands
+C			  WWW.MetAir.WAU.nl
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
+C			  Tel. +31 317 483981 (secretary)
+C			  Fax. +31 317 482811
+C
+C Purpose :
+C
+C The aim of the special interest group is to develop a standard processing
+C method for eddycorrelation data. With such a standard method results will
+C become better comparable. All important corrections can be carried out.
+C These are:
+C
+C  - Correction of sonic-temperature for lateral velocity (deferred to
+C    calibration routine).
+C  - Correction of sonic-temperature for presence of humidity.
+C  - Correction of sonic path length to make mean sonic temperature match
+C    mean temperature according to a different device (e.g. thermocouple).
+C  - Time-delay in the datafile between the different columns
+C  - Pitch-correction to make Mean(V) --> 0
+C  - Yaw-correction to make Mean(W) --> 0
+C  - Roll-correction to make Cov(W,V) --> 0
+C  - Frequency-reponse corrections for slow apparatus and path length
+C    integration.
+C  - Oxygen-correction for hygrometers which are sensitive for O2.
+C  - Inclusion of the mean vertical velocity according to Webb.
+C
+C If you process your data using EC-Pack, please make a reference
+C of the kind: "This data has been processed using EC-PACK version XX".
+C This will make your data better exchangeable and comparable.
+C
+C If you have suggestions for additional functionalities, comments
+C or questions concerning EC-Pack, please contact us at the above
+C address. To prevent the formation of EC-Pack dialects, and to bring
+C bright insights to the attention and disposal of fellow researchers:
+C		  Share your knowledge via us!
+C
+C DISCLAIMER/COPYRIGHT: The routines in EC-Pack are provided for free
+C and may freely be copied. We would appreciate acknowledgement in your
+C publications. Furthermore: EC-Pack is provided as is. No responsibility
+C can be taken for consequences of the use of EC-Pack. Any use of EC-Pack
+C is done at your own risk.
+C
+C
+C Developments :
+C - Better accessibility of frequency-response corrections
+C - Separation of calibration routine from library
+C - Detection of different trends and subsequent handling
+C - Better documentation of all input/output variables and functionality
+C   of subroutines
+C - Flow distortion correction
+C - Better standardisation of different types of functions
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+Usage
+-----
+The program is controlled by a large number of configuration files.
+
+The program is invoked as:
+   ec_ncdf < configfile
+where configfile is the name of the main configuration file of which 
+the structure is described below. Thus the configuration is read from 
+standard input.
+The hierarchy of configuration files is as follows (an arrow means that
+the file from which the arrow points contains the name of the file
+pointed to):
+
+main configuration file
+    |-> | processing parameter file 
+        | interval file              -> | data file
+        | flux output file              | intermediate results file
+        | calibration files
+
+Main configuration file
+-----------------------
+The main configuration file consits of two types of lines:
+- lines with an assigment 
+- comment lines (starting with //)
+
+Assignments are of the form 
+   VARNAME = VALUE
+where VARNAME is one of a prescribed list of tokens and VALUE is the value
+to be assigned (VALUE may be placed between quotes, but this is not necessary
+as long as no spcaes are part of VALUE). VARNAME is case-insensitive
+(i.e. VARNAME is equivalent to VarName), but VALUE may not be (on UNIX
+path names are cases sensitive and names of variables in a NetCDF file
+are also cases-sensitive).
+
+Valid tokens are:
+DatDir        directory for data files
+OutDir        directory for output files (flux files, intermediate result file)
+ParmDir       directory for parameter file (processing parameters, calibration
+              files, interval files)
+ParmName      name of processing parameter file
+FluxName      name of flux output file
+InterName     name of interval file 
+SonName       name of sonic calibration file 
+CoupName      name of thermo couple calibration file
+HygName       name of hygrometer calibration file
+U_var         name of u-velocity variable in NetCDF file
+V_var         name of v-velocity variable in NetCDF file
+W_var         name of w-velocity variable in NetCDF file
+TSonic_var    name of sonic temperature variable in NetCDF file
+TCouple_var   name of thermocouple temperature variable in NetCDF file
+Tref_var      name of thermocouple reference temperature variable in NetCDF file
+Humidity_var  name of humidity variable in NetCDF file
+HourMin_var   name of hour/minute variable in NetCDF file (presently this
+              should be a la the Campbell hour/minutes: e.g. 1845 means
+	      18:45
+Doy_var       name of day of year variable in NetCDF file
+sec_var       name of seconds variable in NetCDF
+
+Processing parameter file
+-------------------------
+The parameter file contains information on how to process the data.
+The information is expected on fixed line, so blank lines are significant!
+At the moment parameter file consists of seven blocks:
+1.  sample frequency
+2.  limits on yaw and roll correction
+3.  fixed ptch, yaw and roll angles
+4.  limits on frequency response corrections factors
+5.  'corrections' to perform
+6.  switch for yes/no printing of intermediate results
+7.  switches for which intermediate results to print
+
+Below you will find an example of a parameter file
+---------------start---------------------
+20	FREQ	  = ! [Hz] Sample frequency datalogger	
+
+30	YawLim	  = ! [degree] Limit when Mean(W) is turned to zero
+30	RollLim   = ! [degree] Limit when Cov(V,W) is turned to zero	
+
+0	PrePitch  = Fixed pitch angle for known tilt-correction	
+0	PreYaw	  = Fixed yaw angle for known tilt-correction
+0	PreRoll   = Fixed roll angle for known tilt-correction	
+
+0.85	LLimit	  = ! Smallest acceptable freq-response corr. factor	
+1.15	ULimit	  = ! Largest acceptable freq-response corr. factor	
+
+T	DoCrMean  = ! Replace mean quantities by better estimates	
+T	DoDetren  = ! Correct data for linear trend	
+T	DoSonic   = ! Correct sonic temperature for humidity	
+F	DoTilt	  = ! Perform true tilt-correction with known angles
+T	DoPitch   = ! Turn system such that Mean(V) --> 0	
+T	DoYaw	  = ! Turn system such that Mean(W) --> 0
+T	DoRoll	  = ! Turn System such that Cov(W,V) --> 0
+T	DoFreq	  = ! Correct for poor frequency response
+T	DoO2	  = ! Correct hygrometer for oxygen-sensitivity
+T	DoWebb	  = ! Calculate mean velocity according to Webb
+T       DoStruct  = ! Calculate structure coefficients			
+
+F	DoPrint   = ! Skip printing intermediate results or not?	
+
+T	PRaw	  = Indicator if these intermediate results are wanted
+T	PCal	  = Indicator if these intermediate results are wanted
+T	PDetrend  = Indicator if these intermediate results are wanted	
+T	PIndep	  = Indicator if these intermediate results are wanted
+T	PTilt	  = Indicator if these intermediate results are wanted
+T	PPitch	  = Indicator if these intermediate results are wanted
+T	PYaw	  = Indicator if these intermediate results are wanted
+T	PRoll	  = Indicator if these intermediate results are wanted
+T	PSonic	  = Indicator if these intermediate results are wanted
+T	PO2	  = Indicator if these intermediate results are wanted
+T	PFreq	  = Indicator if these intermediate results are wanted
+T	PWebb	  = Indicator if these intermediate results are wanted
+------------end----------------
+
+Interval file
+-------------
+The interval file describes for which times intervals fluxes have to be 
+computed from which data files etc.
+The format is:
+- One blank line (can be used for a heading, comments ...)
+- one line per interval, where the interval is described with the
+following columns:
+
+1. Starting day of year number
+2. Starting hour
+3. Starting minutes
+4. End day of year number 
+5. End hour
+6. End minutes
+7. Water vapour density (in kg/m3) from a slow sensor (used to correct for
+   drift of the fast hygrometer)
+8. Atmopheric pressure (in Pa)
+9. Name of data file
+10. Name of file for intermediate results
+
+Note that the program determines the time interval such that the datapoint
+should have a time that corresponds a doy,hour,minute combination within
+the interval specified, including the given limits. This implies that e.g.
+the interval 
+  255 13 00 255 13 30 
+corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:59.99
+So when the interval file contains two lines like
+  255 13 00 255 13 30 
+  255 13 30 255 14 00 
+The intervals will overlap by one minute (viz. 255,13:30:00 to 255,13:30:59.99).
+
+Calibration files
+-----------------
+The structure of the calibration files is identical for all sensors.
+The file consists of 28 lines, with one number per line. The order of the 
+lines is significant and no blank lines should be present.
+An example of a calibration file is given below. Explantion for
+some parameters follows after the example file.
+
+-------------start-----------------------
+1	  QQType   ! Either of the ApXXXXXX numbers
+296       QQIdent  ! True series-number of the apparatus
+1   	  QQGain   ! Gain in this experiment
+0	  QQOffset ! Offset in this experiment
+0	  QQX	   ! Absolute x-position of the focal point
+0	  QQY	   ! Absolute y-position of the focal point
+3.52	  QQZ	   ! [m] Absolute z-position of the focal point
+0	  QQC0	   ! Zeroth order coefficient of calibration
+0	  QQC1	   ! First order coefficient of calibration
+0	  QQC2	   ! Second order coefficient of calibration
+0	  QQC3	   ! Third order coefficient of calibration
+0	  QQC4	   ! Fourth order coefficient of calibration
+0	  QQC5	   ! Fifth order coefficient of calibration
+0	  QQC6	   ! Sixth order coefficient of calibration
+287  	  QQPitch  ! [degree] Pitch angle of apparatus relative to north
+0	  QQYaw    ! Yaw angle
+0	  QQRoll   ! Roll angle
+0	  QQOrder  ! Order of the calibration model
+0	  QQFunc   ! Type of fitfunction
+0.1 	  QQPath   ! [m] Path length over which sensor integrates
+0	  QQTime   ! Time constant
+0         QQDelay  ! [ms] Delay of this apparatus
+0         QQExt1   ! Factor for conversion of sonic temperature signal
+1         QQExt2   ! Multiplication factor for sonic temperature due to path length
+0.1	  QQExt3   ! [m] distance w-u
+0.1  	  QQExt4   ! [m] path length sonic T
+0	  QQExt5   ! Additional calibration coefficient
+-------------stop------------------------
+
+QQType:    now 5 types of sensors are known:
+           1 : Gill Sonic (also works for Campbell or other sonics, I think)
+	   2 : thermo couple (undefined type)
+	   3 : Krypton hygrometer
+	   4 : PT100 thermometer
+	   5 : Psychrometer
+QQX, QQY and QQZ:
+           are used for frequency response corrections
+QQFunc:    Two types of fit functions are available
+           1 : Polynomial
+	   2 : logarithmic polynomial
+QQExt1 to QQExt5:
+           These are used to specify calibration factors specific to a
+	   type of sensor.
+
+See section on Program internals on how gain, offset and calibration 
+polynomials are treated.
+
+Data file
+---------
+A NetCDF file. The file is searched for the variables specified in the
+main configuration file. All attributes to variables are ignored (including
+units) except for 'scale_factor' and 'add_offset'. How these are treated
+in combination with gain and offset and calibration read from the
+calibration file is treated in the section on Program internals.
+
+Intermediate results file
+-------------------------
+A (possibly huge) text file that gives information on a variety of
+things:
+- data file from which data where read
+- time interval
+- time scales
+- all (cross-correlations) between calibrated variables
+- the latter can be shown after each correction/operation on the data
+For each time interval this file is started again (so if you want to
+store intermediate results from more than one time interval, they should
+have different neames for each time interval; this is defined in
+the interval file).
+
+Flux output file
+----------------
+The flux output file contains one line per interval, stating the number of
+samples read, means, variances and covariances of variables as well as
+the tolerances of those quantities. A header line explains the contents.
+For each complete run of the program (comprising various time intervals
+as defined in the interval file) the data are appended.
+
+Program internals
+-----------------
+A number of details on the internal operation of the program will be
+discussed here.
+
+Gain, offset etc.
+.................
+The order in which the various gains, offsets and calibrations are applied
+to the data is as follows:
+- if scale_factor present : sample = sample * scale_factor
+- if add_offset present   : sample = sample + add_offset
+-                           sample = sample / gain
+-                           sample = sample + offset
+- sample = calibration_function(sample)
+
+Thermo couple
+.............
+If no name for a reference temperature variable is given in the main
+configuration file (i.e. Tref_var is empty) it is assumed that the
+variabele Tcouple_var contains the temperature itself (in deg Celsius)
+If a reference temperature IS given, it is assumed that the variables
+Tcouple_var contains a voltage, which is the voltage between the
+actual sensor and the reference junction. The temperature is then 
+determined as:
+  T = f(voltage + f^-1(reference T))
+where f is the calibration function given in the calibration file, and
+f^-1 is the inverse of the calibration function. It is assumed that 
+the calibration function yields a temperature in degrees Celsius.
+
+This procedure is
+in accordance with what is done in the P14 instruction of the Campbell
+dataloggers.
+
+Krypton hygrometer
+..................
+The calibration of the Krypton hygrometer as given in the manual of the instrument is not really compatible with the way in which calibrations
+are treated in the present program. According to the Krypton manual
+the calibration is:
+   ln(V) = ln(V0) - rho x K
+where V is the output voltage, V0 is the voltage in absence of water vapour,
+x is the path length and K is the effective extinction coefficient. In order
+to convert this calibration to a (log) polynomial, the calibration 
+curve has to be fitted to either model. This implies that when the path length
+is changed, a new calibration curve needs to be fitted.
+
+
