@@ -11,21 +11,21 @@ C      E	  C    C	 P	A	  A   C    C  K   K
 C      EEEEE	   CCCC 	 P     A	   A   CCCC   K    K
 C
 C	     Library for processing Eddy-Correlation data
-C     EC Special Interest Group of WUR-METAIR Wageningen and KNMI
+C     EC Special Interest Group of Wag-UR-METAIR Wageningen and KNMI
 C
 C
 C
-C Version of release	: 1.0
-C Date			: 13 August 1999
+C Version of release    : 1.03
+C Date			: 21 October 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -36,7 +36,8 @@ C method for eddycorrelation data. With such a standard method results will
 C become better comparable. All important corrections can be carried out.
 C These are:
 C
-C  - Correction of sonic-temperature for lateral velocity.
+C  - Correction of sonic-temperature for lateral velocity (deferred to
+C    calibration routine).
 C  - Correction of sonic-temperature for presence of humidity.
 C  - Correction of sonic path length to make mean sonic temperature match
 C    mean temperature according to a different device (e.g. thermocouple).
@@ -82,7 +83,7 @@ C###########################################################################
      &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,DoCrMean,PCal,PIndep,
      &	Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
      &	Calibr,
-     &	Sample,Flag,MIndep,CIndep,Rc,
+     &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
      &	QName,UName,
      &	DoDetren,PDetrend,
      &	DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
@@ -100,17 +101,17 @@ C###########################################################################
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECMain
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -126,12 +127,12 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
-     &	OutF,MMax,MaxChan,Channels
+     &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut
       LOGICAL PPitch,PYaw,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
      &	DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,Flag(NMAx,MMax),DoDetren,
-     &	PDetrend
-      REAL*8 RawSampl(MaxChan,MMax) ! Different type of real to suit NETCDF
+     &	PDetrend,AnyTilt,DumPitch,DumYaw,DumRoll,DumTilt,BadTc
+      REAL*8 RawSampl(MaxChan,MMax)
       REAL*8 P,Psychro,Sample(NMax,MMax),
      &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
@@ -140,7 +141,7 @@ C
      &	SonFactr(NMax),CorMean(NNMax),PrePitch,PreYaw,PreRoll,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau
+     &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
@@ -173,10 +174,20 @@ C
 	CorMean(i) = 0.D0
       ENDDO
 
+      NTcOut = 0
+      BadTc = (.FALSE.)
       DO i=1,M
 	CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	  CalSonic,CalTherm,CalHyg,Sample(1,i),N,Flag(1,i))
+     &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
+        IF (Flag(TCouple,i)) NTcOut = NTcOut + 1
       ENDDO
+      BadTc = (NTcOut.GE.(M/2))
+      IF (BadTc) THEN
+        DO i=1,M
+          CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+     &      CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
+        ENDDO
+      ENDIF
 C
 C
 C Calibrate the raw samples for the second time, now correcting mean
@@ -188,10 +199,10 @@ C
 C Find the shift/drift in humidity of the krypton hygrometer
 C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep)
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
 
 	CorMean(Humidity) = Psychro - Mean(Humidity)
-	IF (PCal) THEN
+	IF (DoPrint.AND.PCal) THEN
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'Added to humidity : ',
      &	  (Psychro - Mean(Humidity)),' [kg m^{-3}]'
@@ -199,15 +210,12 @@ C
         ENDIF
 
 	DO i=1,M
-C          DO j=1,Channels
-C            DumSam(j) = DBLE(RawSampl(i,j))
-C          ENDDO
 	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	    CalSonic,CalTherm,CalHyg,Sample(1,i),N,Flag(1,i))
+     &	    CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i))
 	ENDDO
       ENDIF
 
-      IF (PCal) THEN
+      IF (DoPrint.AND.PCal) THEN
 	DO i=1,M
 	  DO j=1,N
 	    IF (Flag(j,i)) WRITE(OutF,*) 'Error in sample ',i,' = ',
@@ -221,18 +229,18 @@ C Estimate mean values, covariances and tolerances of both
 C
 C
       CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep)
+     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
 
 C
 C Print number of independent contributions
 C
-      IF (PIndep) THEN
+      IF (DoPrint.AND.PIndep) THEN
 	CALL ECShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
       ENDIF
 C
 C Print averages of raw, calibrated data
 C
-      IF (PCal) THEN
+      IF (DoPrint.AND.PCal) THEN
 	WRITE(OutF,*)
 	WRITE(OutF,*) 'For raw calibrated data : '
 	WRITE(OutF,*)
@@ -253,9 +261,9 @@ C for the detrended dataset
 C
 C
 	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep)
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
 
-	IF (PDetrend) THEN
+	IF (DoPrint.AND.PDetrend) THEN
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After detrending : '
 	  WRITE(OutF,*)
@@ -268,12 +276,6 @@ C
 	ENDIF
       ENDIF
 C
-C
-C From here the program works only with the mean values and their covariances
-C
-C
-
-C
 C Correct mean values and covariances for all thinkable effects
 C
       CALL ECCorrec(OutF,
@@ -281,6 +283,7 @@ C
      &	Mean,NMax,N,TolMean,
      &	Cov,TolCov,
      &	QName,UName,
+     &  BadTc,
      &	DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
      &	DoPitch,PPitch,DirPitch,
      &	DoYaw,PYaw,YawLim,DirYaw,
@@ -290,11 +293,96 @@ C
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
      &	DoWebb,PWebb,P)
 C
+C If any transformation of coordinates was required (one of the options
+C DoTilt, DoPitch, DoYaw or DoRoll was selected), then the numbers
+C of independent samples of the respective quantities has to be
+C re-estimated. It is not possible to "tilt the error-bars" on basis of
+C the quantities which have been calculated until here.
+C Therefore we return to the calibrated time series and
+C make the transformations BEFORE averaging. Then averaging and corrections
+C are repeated all over again.
+C
+      AnyTilt = ((DoTilt.OR.DoPitch).OR.(DoYaw.OR.DoRoll))
+
+      IF (AnyTilt) THEN
+
+        DO i=1,3
+          DO j=1,3
+            DumCov(i,j) = 0.D0
+          ENDDO
+        ENDDO
+C
+C Tilt ALL samples
+C
+        DO i=1,M
+
+          Speed(1) = Sample(U,i)
+          Speed(2) = Sample(V,i)
+          Speed(3) = Sample(W,i)
+
+          IF (DoTilt) THEN
+            CALL ECKPitch(Speed,NMax,N,DumCov,PrePitch)
+            CALL ECKYaw(  Speed,NMax,N,DumCov,PreYaw  )
+            CALL ECKRoll( Speed,NMax,N,DumCov,PreRoll )
+          ENDIF
+
+          IF (DoPitch) CALL ECKPitch(Speed,3,3,DumCov,DirPitch)
+          IF (DoYaw  ) CALL ECKYaw(  Speed,3,3,DumCov,DirYaw  )
+          IF (DoRoll ) CALL ECKRoll( Speed,3,3,DumCov,DirRoll )
+
+          Sample(U,i) = Speed(1)
+          Sample(V,i) = Speed(2)
+          Sample(W,i) = Speed(3)
+
+        ENDDO
+C
+C Reestablish the averages and covariances in the correct frame of reference.
+C
+	CALL ECAverag(Sample,NMax,N,MMax,M,Flag,
+     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+
+	IF (DoPrint) THEN
+	  WRITE(OutF,*)
+	  WRITE(OutF,*) 'After untilting raw data : '
+	  WRITE(OutF,*)
+
+	  IF (PIndep) THEN
+	    CALL ECShwInd(OutF,QName,MIndep,CIndep,NMax,N,M,Freq)
+	  ENDIF
+
+	  CALL ECShow(OutF,QName,UName,Mean,TolMean,Cov,TolCov,NMax,N)
+	ENDIF
+
+        DumTilt  = (.FALSE.)
+        DumPitch = (.FALSE.)
+        DumYaw   = (.FALSE.)
+        DumRoll  = (.FALSE.)
+C
+C Perform all necessary corrections on the mean values and (co-)variances.
+C
+        CALL ECCorrec(OutF,
+     &	  DoPrint,
+     &	  Mean,NMax,N,TolMean,
+     &	  Cov,TolCov,
+     &	  QName,UName,
+     &    BadTc,
+     &	  DumTilt,PTilt,PrePitch,PreYaw,PreRoll,
+     &	  DumPitch,PPitch,DirPitch,
+     &	  DumYaw,PYaw,YawLim,DirYaw,
+     &	  DumRoll,PRoll,RollLim,DirRoll,
+     &	  DoSonic,PSonic,SonFactr,
+     &	  DoO2,PO2,O2Factor,
+     &	  DoFreq,PFreq,LLimit,ULimit,Freq,
+     &    CalSonic,CalTherm,CalHyg,FrCor,
+     &	  DoWebb,PWebb,P)
+
+      ENDIF
+C
 C
 C Calculate fluxes from processed mean values and covariances.
 C
 C
-      CALL ECFlux(Mean,NMax,Cov,TolMean,TolCov,p,
+      CALL ECFlux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau)
@@ -309,23 +397,24 @@ C
       SUBROUTINE ECParams(InName,
      &	Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,
      &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoPitch,DoYaw,
-     &	DoRoll,DoFreq,DoO2,DoWebb,DoPrint,
+     &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
      &	PRaw,PCal,PDetrend,PIndep,PTilt,PPitch,PYaw,
-     &	PRoll,PSonic,PO2,PFreq,PWebb,SonName,CoupName,HygName)
+     &	PRoll,PSonic,PO2,PFreq,PWebb,SonName,CoupName,HygName,
+     &  InterName)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECParams
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -337,8 +426,8 @@ C
       REAL*8 Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,LLimit,ULimit
       LOGICAL DoCrMean,DoSonic,DoTilt,DoPitch,DoYaw,DoRoll,DoFreq,DoO2,
      &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PPitch,PYaw,PRoll,PSonic,
-     &	PO2,PFreq,PWebb,DoDetren,PDetrend
-      CHARACTER*12 SonName,CoupName,HygName,InName
+     &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct
+      CHARACTER*12 SonName,CoupName,HygName,InName,InterName
 
       OPEN(TempFile,FILE=InName)
 
@@ -364,6 +453,7 @@ C
       READ(TempFile,*) DoFreq	  ! Correct for poor frequency response
       READ(TempFile,*) DoO2	  ! Correct hygrometer for oxygen-sensitivity
       READ(TempFile,*) DoWebb	  ! Calculate mean velocity according to Webb
+      READ(TempFile,*) DoStruct	  ! Calculate structure parameters
       READ(TempFile,*)
       READ(TempFile,*) DoPrint	  ! Skip printing intermediate results or not?
       READ(TempFile,*)
@@ -383,6 +473,8 @@ C
       READ(TempFile,*) SonName	  ! Name of calibration file of anemometer
       READ(TempFile,*) CoupName   ! Name of calibration file of thermometer
       READ(TempFile,*) HygName	  ! Name of calibration file of hygrometer
+      READ(TempFile,*)
+      READ(TempFile,*) InterName  ! Name of file containing time intervals
 
       CLOSE(TempFile)
 
@@ -398,6 +490,7 @@ C
      &	Mean,NMax,N,TolMean,
      &	Cov,TolCov,
      &	QName,UName,
+     &  BadTc,
      &	DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
      &	DoPitch,PPitch,DirPitch,
      &	DoYaw,PYaw,YawLim,DirYaw,
@@ -409,17 +502,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECCorrec
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -434,7 +527,7 @@ C
       INTEGER N,NInt,NMAx,OutF
       LOGICAL PPitch,PYaw,PRoll,PFreq,PO2,PWebb,
      &	DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
-     &	DoSonic,DoTilt,PTilt,DoPrint,
+     &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
      &	QPitch,QYaw,QRoll,QFreq,QO2,QWebb,QSonic,QTilt
       REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
@@ -587,6 +680,83 @@ C
 
 
 
+      SUBROUTINE ECReadWou(InName,Delay,Gain,Offset,x,NMax,N,MMax,M)
+C
+C Read raw data from file
+C
+C input : InName : CHARACTER*40 : Name of the datafile (binary Wouter format)
+C	  NMax : INTEGER : Maximum number of quantities in this array
+C	  MMax : INTEGER : Maximum number of samples in this array
+C	  N : INTEGER : Number of quantities in file
+C
+C output : x(NMax,MMax) : REAL*8 Raw data array.
+C			  First index counts quantities; second counter
+C			  counts samples. Only the first N quantities
+C			  and the first M samples are used.
+C	   M : Number of samples in file
+C
+      INCLUDE 'physcnst.for'
+
+      CHARACTER*40 InName
+      INTEGER NMax,N,MMax,M,j,Delay(NMax),MaxDelay,CRT,NHead,NErr
+      INTEGER*2 Buffer(NNNMax)
+      BYTE ByteBuf(2*NNNMax),C
+      CHARACTER Char
+      REAL*8 x(NMax,MMax),Gain(NMax),Offset(NMax)
+      LOGICAL Ready
+      EQUIVALENCE(Buffer,ByteBuf)
+
+      MaxDelay = 0
+      DO j=1,N
+	MaxDelay = MAX(Delay(j),MaxDelay)
+      ENDDO
+
+      OPEN(InFile,FILE=InName,STATUS='OLD',ACCESS='direct',recl=1)
+C
+C Skip header
+C
+      CRT = 0
+      NHead = 0
+      DO WHILE (CRT.LT.3)
+        NHead = NHead + 1
+        READ(InFile,REC=NHead) Char
+        IF (ICHAR(Char).EQ.13) CRT = CRT+1
+        ENDDO
+      NHead = NHead + 1
+
+      M = 0
+      Ready = (.FALSE.)
+
+ 10   CONTINUE
+      DO j=1,2*N
+        READ(InFile,REC=NHead+M*2*N+j,IOSTAT=NErr) ByteBuf(j)
+        Ready = (Ready.OR.(NErr.NE.0))
+      ENDDO
+
+      IF (.NOT.Ready) THEN
+        M = M+1
+        DO j=1,N
+          C = ByteBuf(2*(j-1)+1)
+          ByteBuf(2*(j-1)+1) = ByteBuf(2*(j-1)+2)
+          ByteBuf(2*(j-1)+2) = C
+
+	  IF ((M-Delay(j)).GT.0)
+     &      x(j,M-Delay(j)) = DBLE(Buffer(j))/Gain(j) + Offset(j)
+        ENDDO
+      ENDIF
+
+      IF ((M.LT.MMMax).AND.(.NOT.READY)) GOTO 10
+
+ 20   CLOSE(InFile)
+      M = M-MaxDelay
+
+      RETURN
+      END
+
+
+
+
+
       SUBROUTINE ECReadNCDF(InName,StartTime,StopTime,
      &  Delay,Gain,Offset,x,NMax,N,MMax,M)
 C
@@ -674,10 +844,24 @@ C
 
         x(i,M) = DBLE(Dum)/Gain(i) + Offset(i)
       ENDDO
-      Started = ((ANINT(StartTime(1)).LE.ANINT(x(1,M))).AND.
+C
+C Either the sample has the correct day and the requested start
+C time is less than the time of the sample, or the sample has a
+C day that is past the requested start time.
+C
+      Started = (((ANINT(StartTime(1)).EQ.ANINT(x(1,M))).AND.
      &  (HMStart.LE.ANINT(x(2,M))))
-      NotStopped = ((ANINT(StopTime(1)).GE.ANINT(x(1,M))).AND.
-     &  (HMStop.GE.ANINT(x(2,M))))
+     &  .OR.
+     &  (ANINT(StartTime(1)).LT.ANINT(x(1,M))))
+C
+C Either the sample has correct day and the requested stop time is
+C larger than the time of the sample, or the sample has a day
+C that is before the day of the requested stop time.
+C
+      NotStopped = (((ANINT(StopTime(1)).EQ.ANINT(x(1,M))).AND.
+     &  (HMStop.GT.ANINT(x(2,M))))
+     &  .OR.
+     &  (ANINT(StopTime(1)).GT.ANINT(x(1,M))))
       IF (Started) M = M + 1
       Counter = Counter + 1
       IF ((M.LE.MMMax).AND.(NotStopped)) GOTO 81
@@ -699,17 +883,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: EC_NCDF_HANDLE_ERR
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -744,23 +928,23 @@ C
 
 
 
-      SUBROUTINE ECFlux(Mean,NMax,Cov,TolMean,TolCov,p,
+      SUBROUTINE ECFlux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &	HSonic,dHSonic,HTc,dHTc,LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECFlux
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.03
+C Date			: 21 October 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -769,6 +953,7 @@ C Construct estimates for surface fluxes from mean values and covariances
 C
       INCLUDE 'physcnst.for'
 
+      LOGICAL BadTc
       INTEGER NMax
       REAL*8 ECRhoWet,Mean(NMax),Cov(NMax,NMax),HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,Tau,dTau,RhoSon,RhoTc,Frac1,Frac2,Sgn,
@@ -780,9 +965,14 @@ C
       HSonic = Cp*RhoSon*Cov(W,TSonic)
       dHSonic = Cp*RhoSon*TolCov(W,TSonic)
 
-      RhoTc = ECRhoWet(Mean(Humidity),Mean(TCouple),p)
-      HTc = Cp*RhoTc*Cov(W,TCouple)
-      dHTc = Cp*RhoTc*TolCov(W,TCouple)
+      IF (.NOT.BadTc) THEN
+        RhoTc = ECRhoWet(Mean(Humidity),Mean(TCouple),p)
+        HTc = Cp*RhoTc*Cov(W,TCouple)
+        dHTc = Cp*RhoTc*TolCov(W,TCouple)
+      ELSE
+        HTc = -9999.D0
+        dHTc = -9999.D0
+      ENDIF
 C
 C Latent heat flux [W m^{-2}]
 C
@@ -792,7 +982,7 @@ C
 C
 C These few statements are eliminated to make sure that the
 C error in the mean velocity is NOT YET taken into the error
-C of the sensible heat. By uncommenting the folowing four commented
+C of the sensible heat. By uncommenting the following four commented
 C statements, this is restored.
 C
 C      IF (ABS(Mean(W)).GT.1.D-10) THEN    ! statement 1
@@ -819,7 +1009,11 @@ C
 C
 C Friction force [N m^{-2}]
 C
-      Tau = Sgn*0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
+      IF (.NOT.BadTc) THEN
+        Tau = Sgn*0.5*(RhoSon+RhoTc)*(ABS(UStar))**2.D0
+      ELSE
+        Tau = Sgn*(RhoSon)*(ABS(UStar))**2.D0
+      ENDIF
       dTau = ABS(TolCov(W,U)/Cov(W,U))*Tau
 
       RETURN
@@ -850,17 +1044,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECReadAp
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -906,17 +1100,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECShow
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -989,17 +1183,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECShwInd
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1063,17 +1257,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECShwFrq
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1121,21 +1315,21 @@ C
 
 
       SUBROUTINE ECAverag(x,NMax,N,MMax,M,Flag,
-     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep)
+     &	Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECAverag
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1170,11 +1364,12 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N,MMax,M,i,j,k,NChange(NNMax,NNMax),
-     &	MIndep(NMax),CIndep(NMax,NMax),NGood(NNMax,NNMax)
+     &	MIndep(NMax),CIndep(NMax,NMax),NMin(NNMax,NNMax),
+     &  Mok(NMax),Cok(NMax,NMax),NPlus(NNMax,NNMax)
       LOGICAL Flag(NMax,MMax)
       REAL*8 x(NMax,MMax),RawMean(NNMax),Mean(NMax),TolMean(NMax),
      &	Cov(NMax,NMax),TolCov(NMax,NMax),xPrime(NNMax),
-     &	PrevPrime(NNMax),dTolCov(NNMax,NNMax)
+     &	PrevPrime(NNMax),dTolCov(NNMax,NNMax),PSwap
 C
 C Initialise the arrays
 C
@@ -1182,10 +1377,11 @@ C
 	RawMean(i) = 0.D0
 	Mean(i) = 0.D0
 	TolMean(i) = 0.D0
+	Mok(i) = 0
 	DO j=1,NMax
 	  Cov(i,j) = 0.D0
 	  TolCov(i,j) = 0.D0
-	  NGood(i,j) = 0
+	  Cok(i,j) = 0
 	ENDDO
       ENDDO
 C
@@ -1194,14 +1390,14 @@ C
       DO i=1,M
 	DO j=1,N
 	  IF (.NOT.Flag(j,i)) THEN
-	    NGood(j,j) = NGood(j,j) + 1
+	    Mok(j) = Mok(j) + 1
 	    RawMean(j) = RawMean(j) + x(j,i)
 	  ENDIF
 	ENDDO
       ENDDO
 
       DO j=1,N
-	IF (NGood(j,j).GT.0) RawMean(j) = RawMean(j)/DBLE(NGood(j,j))
+	IF (Mok(j).GT.0) RawMean(j) = RawMean(j)/DBLE(Mok(j))
       ENDDO
 C
 C Find final estimates for mean
@@ -1215,7 +1411,7 @@ C
       ENDDO
 
       DO j=1,N
-	IF (NGood(j,j).GT.0) Mean(j) = Mean(j)/DBLE(NGood(j,j))
+	IF (Mok(j).GT.0) Mean(j) = Mean(j)/DBLE(Mok(j))
 	Mean(j) = Mean(j) + RawMean(j)
       ENDDO
 C
@@ -1223,13 +1419,16 @@ C Find (co-)variances and from them the tolerances of the mean
 C
       DO j=1,N
 	NChange(j,j) = 0
-	NGood(j,j) = 0
+        NMin(j,j) = 0
+        NPlus(j,j) = 0
       ENDDO
 
       DO i=1,M
 	DO j=1,N
 	  IF (.NOT.Flag(j,i)) THEN
 	    xPrime(j) = x(j,i) - Mean(j)
+            IF (xPrime(j).LT.0.D0) NMin(j,j) = NMin(j,j)+1
+            IF (xPrime(j).GT.0.D0) NPlus(j,j) = NPlus(j,j)+1
 	    IF (i.GT.1) THEN
 	      IF (PrevPrime(j)*xPrime(j).LE.0.D0)
      &		NChange(j,j) = NChange(j,j) + 1
@@ -1242,7 +1441,7 @@ C
 	DO j=1,N
 	  DO k=j,N
 	    IF (.NOT.(Flag(j,i).OR.Flag(k,i))) THEN
-	      NGood(j,k) = NGood(j,k) + 1
+	      Cok(j,k) = Cok(j,k) + 1
 	      Cov(j,k) = Cov(j,k) + xPrime(j)*xPrime(k)
 	    ENDIF
 	  ENDDO
@@ -1251,7 +1450,7 @@ C
 
       DO j=1,N
 	DO k=j,N
-	  IF (NGood(j,k).GT.0) Cov(j,k) = Cov(j,k)/DBLE(NGood(j,k))
+	  IF (Cok(j,k).GT.0) Cov(j,k) = Cov(j,k)/DBLE(Cok(j,k))
 	ENDDO
       ENDDO
 
@@ -1262,7 +1461,9 @@ C
       ENDDO
 
       DO j=1,N
-	MIndep(j) = 2*NChange(j,j) - 1
+        PSwap = 2.D0*DBLE(NMin(j,j))*DBLE(NPlus(j,j))/
+     &    DBLE(NMin(j,j) + NPlus(j,j))**2.D0
+	MIndep(j) = ANINT(DBLE(NChange(j,j))/PSwap) - 1
 	MIndep(j) = MAX(MIndep(j),1)
 	TolMean(j) = 2.D0*(Cov(j,j)/DBLE(MIndep(j)))**0.5D0
       ENDDO
@@ -1291,7 +1492,7 @@ C
 C Calculate the standard deviation of the instantaneous contributions
 C to the covariances.
 C
-	  IF (NGood(j,k).GT.0) TolCov(j,k)=TolCov(j,k)/DBLE(NGood(j,k))
+	  IF (Cok(j,k).GT.0) TolCov(j,k)=TolCov(j,k)/DBLE(Cok(j,k))
 C
 C Here we estimate the number of independent contributions to the
 C covariance by counting the least number of independent contributions
@@ -1338,17 +1539,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECDetren
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1406,17 +1607,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECBaseF
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1467,17 +1668,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECRhoDry
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1497,7 +1698,7 @@ C
 
       REAL*8 RhoV,T,P
 
-      ECRhoDry = P/(Rd*T) - RhoV*Rv/Rd	  ! [kg m^{-3}]
+      ECRhoDry = P/(Rd*T)	  ! [kg m^{-3}]
 
       RETURN
       END
@@ -1510,17 +1711,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECRhoWet
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1550,17 +1751,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECQ
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1608,17 +1809,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECMapVec
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1659,17 +1860,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECMapMtx
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1719,17 +1920,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECShake
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1765,17 +1966,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECUnShak
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1812,17 +2013,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECRotate
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1836,20 +2037,16 @@ C
       INCLUDE 'physcnst.for'
 
       INTEGER NMax,N,j
-      REAL*8 Map(3,3),Stress(3,3),Speed(3)
-      REAL*8 DumVecs(3,4:NNmax),Mean(NMax),Cov(NMax,NMax)
+      REAL*8 Map(3,3),Stress(3,3),Speed(3),
+     &  DumVecs(3,4:NNmax),Mean(NMax),Cov(NMax,NMax)
 
-      CALL ECShake(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NNmax)
-
+      CALL ECShake(Mean,NMax,N,Cov,Speed,Stress,DumVecs,NNMax)
       CALL ECMapVec(Map,Speed,Speed)
-
       CALL ECMapMtx(Map,Stress,Stress)
-
       DO j = 4,N
-	CALL ECMapVec(Map,DumVecs(1,j),DumVecs(1,j))
+        CALL ECMapVec(Map,DumVecs(1,j),DumVecs(1,j))
       ENDDO
-
-      CALL ECUnShak(Speed,Stress,DumVecs,NNmax,Mean,NMax,N,Cov)
+      CALL ECUnShak(Speed,Stress,DumVecs,NNMax,Mean,NMax,N,Cov)
 
       RETURN
       END
@@ -1862,17 +2059,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECKPitch
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1911,17 +2108,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPitch
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -1953,17 +2150,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECKYaw
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2002,17 +2199,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECYaw
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2043,17 +2240,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECKRoll
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2092,17 +2289,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECRoll
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2142,18 +2339,18 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECFrResp
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
 C Based on old routine by Van de Hurk, Elbers and Nieveen.
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2470,17 +2667,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECOxygen
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2517,17 +2714,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECSchot
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2542,8 +2739,6 @@ C
       INTEGER NMax,N,i
       REAL*8 Mean(NMax),Cov(NMax,NMax),Factor(NMax)
 
-      Mean(TSonic) = Mean(TSonic)/(1.D0+0.51D0*Mean(SpecHum))
-
       DO i = 1,N
 	Factor(i) = 1.D0 - 0.51D0*Mean(SpecHum)
      &	  -0.51D0*Mean(TSonic)*Cov(i,SpecHum)/Cov(i,TSonic)
@@ -2551,6 +2746,8 @@ C
 	Cov(i,TSonic) = Factor(i)*Cov(i,TSonic)
 	Cov(TSonic,i) = Cov(i,TSonic)
       ENDDO
+
+      Mean(TSonic) = Mean(TSonic)/(1.D0+0.51D0*Mean(SpecHum))
 
       RETURN
       END
@@ -2563,17 +2760,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECWebb
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2617,17 +2814,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPTilt
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2668,17 +2865,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPPitch
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2718,17 +2915,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPYaw
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2768,17 +2965,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPRoll
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2818,17 +3015,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPSchot
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2873,17 +3070,17 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPO2
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
@@ -2928,22 +3125,60 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPFreq
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
 C Purpose :
 C All-in procedure to perform frequency response correction and print results
+C
+C input : DoPrint [LOGICAL] : Indicator if intermediate results must be
+C           printed to file OutF.
+C         OutF [INTEGER] : Unit number of output-file for intermediate
+C           results. OutF must be an open file.
+C         Mean [REAL*8(NMax)] : Array of mean values of the quantities in
+C           this experiment (only the first N quantities are used).
+C         TolMean [REAL*8(NMax)] : Tolerances of Mean.
+C         NMax [INTEGER] : Physical dimension of array Mean
+C         N [INTEGER] : Number of quantities actually involved in this
+C           experiment.
+C         Cov [REAL*8(NMax,NMax)] : covariances of the fluctuations.
+C         TolCov [REAL*8(NMax,NMax)] : Tolerances of covariances (2 sigma).
+C         QName [CHARACTER*9(NMax)] : Names of the quantities.
+C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
+C         LLimit [REAL*8] : Lower acceptance limit for frequency-response
+C           factors. Correction factors smaller than LLimit are set to 1.
+C         ULimit [REAL*8] : Upper acceptance limit for frequency-response
+C           factors. Correction factors larger than ULimit are set to 1.
+C         NSta [REAL*8] : Start frequency numerical integration.
+C           Popular value: -5.D0 [unit?].
+C         NEND [REAL*8] : End frequency numerical integration.
+C           Popular value: LOG(5) = 0.69897D0 [unit?].
+C         NINT [INTEGER] : Number of intervals in integration.
+C           Popular value: 19.
+C         Freq [REAL*8] : Sampling frequency [Hz].
+C         TauD [REAL*8] : Interval length for running mean.
+C           Popular value: 0.D0 [unit?].
+C         TAUV [REAL*8] : Low pass filter time constant.
+C           Popular value: 0.D0 [unit?]
+C         CalSonic [REAL*8(NQQ)] : Calibration specification array of
+C           sonic anemometer.
+C         CalTherm [REAL*8(NQQ)] : Calibration specification array of
+C           thermometer.
+C         CalHyg [REAL*8(NQQ)] : Calibration specification array of
+C           hygrometer.
+C
+C output : FrCor [REAL*8(NMax,NMax)] : Correction factors for covariances.
 C
       INCLUDE 'physcnst.for'
 
@@ -2981,22 +3216,40 @@ C
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECPWebb
-C Version of subroutine : 1.0
-C Date			: 13 August 1999
+C Version of subroutine : 1.02
+C Date			: 27 August 1999
 C Author		: Arjan van Dijk
-C For : EC Special Interest Group of WUR-METAIR Wageningen
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
 C Contact address	: Duivendaal 2
 C			  6701 AP  Wageningen
 C			  The Netherlands
 C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.WUR.nl (in due time...)
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
 C			  Tel. +31 317 483981 (secretary)
 C			  Fax. +31 317 482811
 C
 C Purpose :
 C All-in procedure to calculate Webb-velocity and print results
+C
+C input : DoPrint [LOGICAL] : Indicator if intermediate results must be
+C           printed to file OutF.
+C         OutF [INTEGER] : Unit number of output-file for intermediate
+C           results. OutF must be an open file.
+C         Mean [REAL*8(NMax)] : Array of mean values of the quantities in
+C           this experiment (only the first N quantities are used).
+C         TolMean [REAL*8(NMax)] : Tolerances of Mean.
+C         NMax [INTEGER] : Physical dimension of array Mean
+C         N [INTEGER] : Number of quantities actually involved in this
+C           experiment.
+C         Cov [REAL*8(NMax,NMax)] : covariances of the fluctuations.
+C         TolCov [REAL*8(NMax,NMax)] : Tolerances of covariances (2 sigma).
+C         P [REAL*8] : Ambient air pressure in Pascal.
+C         QName [CHARACTER*9(NMax)] : Names of the quantities.
+C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
+C output : This routine sets the mean vertical velocity "Mean(w)" to the
+C         Webb-velocity.
 C
       INCLUDE 'physcnst.for'
 
@@ -3021,3 +3274,146 @@ C
       RETURN
       END
 
+
+
+
+
+C
+C
+C Routines to calculate structure parameters
+C
+C
+
+
+
+
+
+      SUBROUTINE ECStruct(Sample,NMax,N,MMax,M,Flag,XIndex,YIndex,
+     &  R,dR,Freq,CIndep,Cxy,dCxy)
+C
+C EC-Pack Library for processing of Eddy-Correlation data
+C Subroutine		: ECStruct
+C Version of subroutine : 1.02
+C Date			: 26 August 1999
+C Author		: Arjan van Dijk
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
+C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
+C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
+C Contact address	: Duivendaal 2
+C			  6701 AP  Wageningen
+C			  The Netherlands
+C			  WWW.MetAir.WAU.nl
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
+C			  Tel. +31 317 483981 (secretary)
+C			  Fax. +31 317 482811
+C
+C Purpose :
+C Calculate structure parameters <(x(r)-x(r+R))*(y(r)-y(r+R))>/R^2/3
+C
+C input : Sample [REAL*8(NMax,MMax)] : The first N out of NMax quantities
+C           and the first M samples in Sample are used.
+C         NMax [INTEGER] : physical first dimension of array Sample.
+C         N [INTEGER] : actual number of meaningful quantities in array
+C           Sample.
+C         MMax [INTEGER] : physical second dimension of array Sample.
+C         M [INTEGER] : actual number of meaningful samples in array Sample.
+C         Flag [LOGICAL(NMax,MMax)] : if Flag(i,j) is true, then something
+C           is wrong with quantity i in sample j.
+C         XIndex [INTEGER] : indicator of first quantity involved in
+C           structure function.
+C         YIndex [INTEGER] : indicator of second quantity involved in
+C           structure function.
+C         R [REAL*8] : separation in meters at which one wants to estimate
+C           the structure function.
+C         Freq [REAL*8] : Sampling frequency in s^-1.
+C         CIndep [INTEGER[NMax,NMax]) : Number of independent contributions
+C           by array Sample to covariance between quantities selected with
+C           XIndex and YIndex.
+C output: dR [REAL*8] : separation in meters corresponding with a delay
+C           of one sample.
+C         cxy [REAL*8] : Structure parameter.
+C         dcxy [REAL*8] : Tolerance of cxy.
+C
+      INCLUDE 'physcnst.for'
+      INTEGER NMax,N,i,M,MMax,XIndex,YIndex,NOk,NSeparate,
+     &  CIndep(NMax,NMax)
+      LOGICAL Flag(NMax,MMax),ok
+      REAL*8 R,Sample(NMax,MMax),UMean,Freq,TwoThird,Cxy,dCxy,Dum,
+     &  Increment,dR
+
+      TwoThird = 2.D0/3.D0
+C
+C Calculate the average of the length of the velocity (and not
+C the length of the average velocity!!!)
+C
+      UMean = 0.D0
+      NOk = 0
+      DO i=1,M
+        IF ( (.NOT.(Flag(U,i))).AND.
+     &      ((.NOT.(Flag(V,i))).AND.
+     &       (.NOT.(Flag(W,i))))) THEN
+          NOk = NOk + 1
+          UMean = UMean + Sample(U,i)**2+Sample(V,i)**2+Sample(W,i)**2
+        ENDIF
+      ENDDO
+      IF (NOk.GT.0) UMean = UMean/DBLE(NOk)
+      UMean = SQRT(UMean)
+C
+C Estimate how many samples delay one must go to let Taylor's hypothesis
+C of frozen turbulence give the correct spatial separation R.
+C The discrete nature of sampling may call for strong rounding off of the
+C delay distance. The rounded off value for R is returned to the calling
+C rourine.
+C
+      dR = UMean/Freq
+      NSeparate = NINT(R/dR)
+      R = R*NSeparate/(R/dR)
+C
+C Calculate structure parameter
+C
+      Cxy = 0.D0
+      NOk = 0
+      DO i=1,(M-NSeparate)
+        ok = (((.NOT.Flag(XIndex, i           )).AND.
+     &         (.NOT.Flag(XIndex,(i+NSeparate))))
+     &        .AND.
+     &        ((.NOT.Flag(YIndex, i           )).AND.
+     &         (.NOT.Flag(YIndex,(i+NSeparate)))))
+        IF (ok) THEN
+          NOk = NOk + 1
+          Cxy = Cxy +
+     &      (Sample(XIndex,i)-Sample(XIndex,(i+NSeparate)))*
+     &      (Sample(YIndex,i)-Sample(YIndex,(i+NSeparate)))
+        ENDIF
+      ENDDO
+      IF (NOk.GT.0) Cxy = Cxy/DBLE(Nok)
+      Dum = Cxy ! For use in tolerance estimation loop
+      IF (NSeparate.GT.0) Cxy = Cxy/R**TwoThird
+C
+C Estimate tolerance of structure parameter
+C
+      dCxy = 0.D0
+      IF (NSeparate.GT.0) THEN
+        DO i=1,(M-NSeparate)
+          ok = (((.NOT.Flag(XIndex, i           )).AND.
+     &           (.NOT.Flag(XIndex,(i+NSeparate))))
+     &          .AND.
+     &          ((.NOT.Flag(YIndex, i           )).AND.
+     &           (.NOT.Flag(YIndex,(i+NSeparate)))))
+          IF (ok) THEN
+            Increment =
+     &        (Sample(XIndex,i)-Sample(XIndex,(i+NSeparate)))*
+     &        (Sample(YIndex,i)-Sample(YIndex,(i+NSeparate)))
+            dCxy = dCxy + (Increment - Dum)**2.D0
+          ENDIF
+        ENDDO
+        IF (NOk.GT.0) dCxy = dCxy/DBLE(Nok)
+        dCxy = SQRT(dCxy)/R**TwoThird ! Standard deviation
+        dCxy = 2.D0*dCxy/SQRT(DBLE(CIndep(XIndex,YIndex))) ! Tolerance
+      ENDIF
+C
+C We use the number of independent samples found earlier in the estimation
+C of the covariances
+C
+      RETURN
+      END

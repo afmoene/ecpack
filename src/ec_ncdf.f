@@ -7,8 +7,8 @@
       LOGICAL PRaw,PPitch,PYaw,PRoll,PFreq,PO2,PWebb,PCal,PIndep,
      &  DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,DoCrMean,PSonic,
      &  DoSonic,DoTilt,PTilt,DoPrint,Flag(NNMAx,MMMax),DoDetren,
-     &  PDetrend,DoStruct
-      INTEGER N,i,M,MIndep(NNMax),CIndep(NNMax,NNMax),
+     &  PDetrend,DoStruct,BadTc
+      INTEGER N,i,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),FirstDay,Mok(NNMax),Cok(NNMax,NNMax)
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
@@ -18,7 +18,7 @@
      &  SonFactr(NNMax),PrePitch,PreYaw,PreRoll,
      &  HSonic,dHSonic,HTc,dHTc,
      &  LvE,dLvE,LvEWebb,dLvEWebb,
-     &  UStar,dUStar,Tau,dTau,CorMean(NNMax),
+     &  UStar,dUStar,Tau,dTau,CorMean(NNMax),DirFrom,
      &  Gain(NNNMax),Offset(NNNMax),StartTime(3),StopTime(3)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
@@ -151,7 +151,11 @@ C
 C
 C Get names of files
 C
-      OPEN(IntervalFile,FILE = InterName)
+      OPEN(IntervalFile,FILE = InterName,IOSTAT=FOO,STATUS='OLD')
+      IF (FOO.NE.0) THEN
+        WRITE(*,*) 'Could not open interval-file ',InterName
+        STOP'- Fatal: no time info could be read -'
+      ENDIF
       READ(IntervalFile,*)
 
 C
@@ -179,10 +183,6 @@ C The following lines are examples:
 C
 C      FName = 'e:/suikerbieten/ec_split/'//DumName1
 C      OutName = 'd:/wouter/'//DumName2
-
-        FName = 'c:/Rapid Data/EC_wau/'//DumName1
-        OutName = 'c:/Rapid Data/EC_wau/'//DumName2
-
 
 C
 C Show which file is currently being analysed
@@ -231,7 +231,7 @@ C
      &    DoCrMean,PCal,PIndep,
      &    Psychro,Freq,CalSonic,CalTherm,CalHyg,P,
      &    Calibrat,
-     &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,
+     &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
      &    QName,UName,
      &    DoDetren,PDetrend,
      &    DoTilt,PTilt,PrePitch,PreYaw,PreRoll,
@@ -278,11 +278,16 @@ C
 C Print fluxes
 C
 C
+        IF (DirPitch.GE.180.D0) THEN
+          DirFrom = DirPitch-180.D0
+        ELSE
+          DirFrom = DirPitch+180.D0
+        ENDIF
         WRITE(FluxFile,55)
      &    (NINT(StartTime(i)),i=1,3),
      &    (NINT(StopTime(i)),i=1,3),
      &    M,(Mok(i),i=1,8),
-     &    NINT(DirPitch),
+     &    NINT(DirFrom),
      &    NINT(2.D0*180.D0*ATAN(SQRT(Cov(V,V))/Mean(U))/Pi),
      &    Mean(U),TolMean(U),
      &    Mean(TSonic),TolMean(TSonic),
@@ -367,13 +372,13 @@ C
 C ########################################################################
 C
       SUBROUTINE Calibrat(RawSampl,Channels,P,CorMean,
-     &  CalSonic,CalTherm,CalHyg,Sample,N,Error)
+     &  CalSonic,CalTherm,CalHyg,BadTc,Sample,N,Error)
 
       INCLUDE 'physcnst.for'
 
       INTEGER N,i,ColU,ColV,ColW,ColTSonic,ColTCple,ColHum,
      &  ColDay,Channels,ColHrMin,ColScnds,FirstDay,ColDiagnostic
-      LOGICAL Error(N)
+      LOGICAL Error(N),BadTc
       REAL*8 RawSampl(Channels),Sample(N),P,UDum,VDum,Hook,Dum,
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CorMean(N),C(0:5),
      &  Hours,Minutes,Days,Secnds
@@ -481,11 +486,27 @@ C
 
           Error(Humidity) = ((Sample(Humidity).GT.MaxRhoV)
      &        .OR. (Sample(Humidity).LT.MinRhoV))
+          Error(SpecHum) = Error(Humidity)
 C
 C Calculate specific humidity associated with this absolute humidity
 C
-          Sample(SpecHum) = ECQ(Sample(Humidity),Sample(TCouple),P)
-          Error(SpecHum) = Error(Humidity)
+          IF (.NOT.Error(Humidity)) THEN
+            IF (.NOT.BadTc) THEN
+              IF (.NOT.Error(TCouple)) THEN
+                Sample(SpecHum)=ECQ(Sample(Humidity),Sample(TCouple),P)
+              ELSE IF (.NOT.Error(TSonic)) THEN
+                Sample(SpecHum)=ECQ(Sample(Humidity),Sample(TSonic),P)
+              ELSE
+                Error(SpecHum) = (.TRUE.)
+              ENDIF
+            ELSE
+              IF (.NOT.Error(TSonic)) THEN
+                Sample(SpecHum)=ECQ(Sample(Humidity),Sample(TSonic),P)
+              ELSE
+                Error(SpecHum) = (.TRUE.)
+              ENDIF
+            ENDIF
+          ENDIF
 
         ENDIF
       ENDIF
