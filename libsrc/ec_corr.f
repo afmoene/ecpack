@@ -1,47 +1,82 @@
+C  ec_corr.f, part of ecpack
+C  
+C  Copyright (C) 
+C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
+C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
+C    1999-2002   Arnold Moene, Wageningen University, The Netherlands
+C 
+C  This program is free software; you can redistribute it and/or
+C  modify it under the terms of the GNU General Public License
+C  as published by the Free Software Foundation; either version 2
+C  of the License, or (at your option) any later version.
+C 
+C  This program is distributed in the hope that it will be useful,
+C  but WITHOUT ANY WARRANTY; without even the implied warranty of
+C  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+C  GNU General Public License for more details.
+C 
+C  You should have received a copy of the GNU General Public License
+C  along with this program; if not, write to the Free Software
+C  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+C 
 
 
+      
 
+      SUBROUTINE EC_C_D01(x,b,aInv)
+C     ****f* ec_corr.f/EC_C_D01
+C NAME
+C     EC_C_D01
+C SYNOPSIS
+C     CALL EC_C_D01(x, b, aInv)
+C FUNCTION
+C     This routines computes and applies the matrix for the
+C     correction of turbulent air flow measurements for the
+C     presence of small disturbing objects, like a box with
+C     electronic apparatus. The approach followed is described in:
+C     (see SEE ALSO). The actual matrix is computed 
+C     in EC_C_D02.
+C INPUTS
+C      x : [REAL*8(3)]
+C          Position vector of the point where measurements have been taken.
+C          The ellipsoid is placed in the origin.
+C          A right-handed frame of coordinates is chosen.
+C          The flow is supposed to be expressed in this coordinate frame.
+C          Therefore, when the flow velocity has positive components,
+C          upstream measurement points are selected when by giving
+C          vector x negative components!
+C      b : [REAL*8(3)]
+C          Three ellipsoid semi-axes in meters. The ellipsoid is
+C          supposed to be oriented along the coordinate axes.
+C          Somehow the algorithm does not seem to like it when two or more
+C          semi-axes are equal, or when your point x is in one of the
+C          coordinate planes (one component of x equal to zero).
+C          To circumvent problems one can take values slightly off
+C          the problematic values.
+C OUTPUT
+C     aInv : [REAL*8(3,3)]
+C          The matrix which can be used to correct samples and
+C          covariances for flow distortion.
+C          Sum_j aInv(i,j)*u(j)     gives the distortion-corrected
+C          image of measured velocity u.
+C AUTHOR
+C     Arjan van Dijk
 C
-C ########################################################################
-C
-C
-C     This set of routines provides the matrix for the correction of
-C     turbulent air flow measurements for the presence of
-C     small disturbing objects, like a box with electronic
-C     apparatus. The approach followed is described in:
+C SEE ALSO
+C     Oost, W. (1991).  Flow distortion by an ellipsoid and its 
+C     application to the analysis of atmospheric measurements. 
+C     J.Atm.Oc.Tech., 8 No 3:331-340. 
+
 C     "Flow distortion by an ellipsoid and its application
 C     to atmpspheric measurements" by W.A. Oost, May 1989,
 C     KNMI internal report, accepted by J.Atm.Oc.Tech.,'90.
 C     References in the code are to this article.
-C
-C
-C ########################################################################
-C
-
-C
-C The generic call is to the following subroutine:
-C
-      SUBROUTINE EC_C_D01(x,b,aInv)
-C
-C Input: x : Position vector of the point where measurements have been taken.
-C            The ellipsoid is placed in the origin.
-C            A right-handed frame of coordinates is chosen.
-C            The flow is supposed to be expressed in this coordinate frame.
-C            Therefore, when the flow velocity has positive components,
-C            upstream measurement points are selected when by giving
-C            vector x negative components!
-C        b : Three ellipsoid semi-axes in meters. The ellipsoid is
-C            supposed to be oriented along the coordinate axes.
-C            Somehow the algorithm does not seem to like it when two or more
-C            semi-axes are equal, or when your point x is in one of the
-C            coordinate planes (one component of x equal to zero).
-C            To circumvent problems one can take values slightly off
-C            the problematic values.
-C Output: aInv : The matrix which can be used to correct samples and
-C            covariances for flow distortion.
-C            Sum_j aInv(i,j)*u(j)     gives the distortion-corrected
-C            image of measured velocity u.
-C
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     EC_C_D02
+C     EC_M_InvM
+C     ***
       REAL*8 x(3),b(3),a(3,3),aInv(3,3)
       CALL EC_C_D02(x,b,a)
       CALL EC_M_InvM(a,aInv)
@@ -49,19 +84,52 @@ C
       END
 
 
-
-
-
-
       SUBROUTINE EC_C_D02(x,b,a)
-C     Calculates the distortion matrix according to equation 12
-C     INPUT : b = a vector containing the three semiaxes of the
-C                 ellipsoid
-C             x = position where the distortion-matrix will be
-C                 calculated; coordinates are relative to the
-C                 center of the ellipsoid
-C     OUTPUT: a = the distortion matrix, when applied to an
-C                 undisturbed wind, "a" gives the disturbed wind
+C     ****f* ec_corr.f/EC_C_D02
+C NAME
+C     EC_C_D02
+C SYNOPSIS
+C     CALL EC_C_D02(x, b, a)
+C FUNCTION
+C     This routines computes the distortion matrix for the
+C     correction of turbulent air flow measurements for the
+C     presence of small disturbing objects, like a box with
+C     electronic apparatus. The approach followed is described in:
+C     (see SEE ALSO). 
+C     Calculates the distortion matrix according to equation 12.
+C INPUTS 
+C     b : [REAL*8(3)]
+C         a vector containing the three semiaxes of the
+C         ellipsoid
+C     x : [REAL*8(3)]
+C         position where the distortion-matrix will be
+C         calculated; coordinates are relative to the
+C         center of the ellipsoid
+C OUTPUT 
+C     a : [REAL*8(3,3)]
+C         the distortion matrix, when applied to an
+C         undisturbed wind, "a" gives the disturbed wind
+C AUTHOR
+C     Arjan van Dijk
+C SEE ALSO
+C     Oost, W. (1991).  Flow distortion by an ellipsoid and its 
+C     application to the analysis of atmospheric measurements. 
+C     J.Atm.Oc.Tech., 8 No 3:331-340. 
+
+C     "Flow distortion by an ellipsoid and its application
+C     to atmpspheric measurements" by W.A. Oost, May 1989,
+C     KNMI internal report, accepted by J.Atm.Oc.Tech.,'90.
+C     References in the code are to this article.
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     EC_M_Sort_Decr
+C     EC_M_SortUse
+C     EC_M_EllCoords
+C     EC_M_specint
+C     EC_M_MulVec
+C     EC_M_UnSort
+C     ***
       INTEGER Lambda, Mu, Nu
       PARAMETER(Lambda=1,Mu=2,Nu=3)
       REAL*8 x(3),b(3),a(3,3)
@@ -93,11 +161,65 @@ C                 undisturbed wind, "a" gives the disturbed wind
 
       SUBROUTINE EC_C_F01(Mean,Cov,NMax,NSize,WhichTemp,
      &	NSta,NEnd,NInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,WXT)
+C     ****f* ec_corr.f/EC_C_F01
+C NAME
+C     EC_C_F01
+C SYNOPSIS
+C     CALL EC_C_F01(Mean, Cov, NMax, NSize, WhichTemp,
+C                   NSta, NEnd, NInt, NS, TauD, TauV, CalSonic,
+C                   CalTherm, CalHyg, WXT)
+C FUNCTION
+C     Calculate frequency response corrections for sensor response, path
+C     length averaging, sensor separation, signal processing and dampening
+C     of fluctuations in a tube. Based on publications in SEE ALSO.
 C
-C Calculate frequency response corrections for sensor response, path
-C length averaging, sensor separation, signal processing and dampening
-C of fluctuations in a tube. Based on publications;
+C INPUTS
+C     Mean   : [REAL*8(NMax)]  
+C              Array of mean values of the quantities in
+C              this experiment (only the first N quantities are used).
+C     Cov    : [REAL*8(NMax,NMax)]  
+C               covariances of the fluctuations.
+C     NMax   : [INTEGER]  
+C              Physical dimension of array Mean
+C     NSize  : [INTEGER]  
+C              Number of quantities actually involved in this
+C              experiment.
+C     WhichTemp: [INTEGER]
+C              Which temperature to use: thermocouple (Tcouple)
+C              or sonic (TSOnic): see parcnst.inc
+C     NSta   : [REAL*8]  
+C              Start frequency numerical integration.
+C              Popular value: -5.D0 [unit?].
+C     NEND   : [REAL*8]  
+C              End frequency numerical integration.
+C              Popular value: LOG(5) = 0.69897D0 [unit?].
+C     NINT   : [INTEGER]  
+C              Number of intervals in integration.
+C              Popular value: 19.
+C     NS     : [INTEGER]
+C     TauD   : [REAL*8]  
+C              Interval length for running mean.
+C              Popular value: 0.D0 [unit?].
+C     TAUV   : [REAL*8]  
+C              Low pass filter time constant.
+C              Popular value: 0.D0 [unit?]
+C     CalSonic : [REAL*8(NQQ)]  
+C              Calibration specification array of
+C              sonic anemometer.
+C     CalTherm : [REAL*8(NQQ)]  
+C              Calibration specification array of
+C              thermometer.
+C     CalHyg : [REAL*8(NQQ)]  
+C              Calibration specification array of
+C              hygrometer.
 C
+C OUTPUT
+C     WXT    : [REAL*8(NMax,NMax)]  
+C              Correction factors for covariances.
+C AUTHOR
+C     Arjan van Dijk
+C
+C SEE ALSO
 C	Moore, C.J. (1986): 'Frequency Response Corrections for Eddy
 C	Correlation Systems'. Boundary Layer Met. 37: 17-35.
 C
@@ -107,48 +229,15 @@ C
 C	Leuning, R. and K.M. King (1991): 'Comparison of Eddy-Covariance
 C	Measurements of CO2 Fluxes by open- and closed-path CO2 analysers'
 C	(unpublished)
-C
-C input : DoPrint [LOGICAL] : Indicator if intermediate results must be
-C           printed to file OutF.
-C         OutF [INTEGER] : Unit number of output-file for intermediate
-C           results. OutF must be an open file.
-C         Mean [REAL*8(NMax)] : Array of mean values of the quantities in
-C           this experiment (only the first N quantities are used).
-C         TolMean [REAL*8(NMax)] : Tolerances of Mean.
-C         NMax [INTEGER] : Physical dimension of array Mean
-C         N [INTEGER] : Number of quantities actually involved in this
-C           experiment.
-C         Cov [REAL*8(NMax,NMax)] : covariances of the fluctuations.
-C         TolCov [REAL*8(NMax,NMax)] : Tolerances of covariances (2 sigma).
-C         QName [CHARACTER*9(NMax)] : Names of the quantities.
-C         UName [CHARACTER*9(NMax)] : Names of the units of the quantities.
-C         LLimit [REAL*8] : Lower acceptance limit for frequency-response
-C           factors. Correction factors smaller than LLimit are set to 1.
-C         ULimit [REAL*8] : Upper acceptance limit for frequency-response
-C           factors. Correction factors larger than ULimit are set to 1.
-C         NSta [REAL*8] : Start frequency numerical integration.
-C           Popular value: -5.D0 [unit?].
-C         NEND [REAL*8] : End frequency numerical integration.
-C           Popular value: LOG(5) = 0.69897D0 [unit?].
-C         NINT [INTEGER] : Number of intervals in integration.
-C           Popular value: 19.
-C         Freq [REAL*8] : Sampling frequency [Hz].
-C         TauD [REAL*8] : Interval length for running mean.
-C           Popular value: 0.D0 [unit?].
-C         TAUV [REAL*8] : Low pass filter time constant.
-C           Popular value: 0.D0 [unit?]
-C         CalSonic [REAL*8(NQQ)] : Calibration specification array of
-C           sonic anemometer.
-C         CalTherm [REAL*8(NQQ)] : Calibration specification array of
-C           thermometer.
-C         CalHyg [REAL*8(NQQ)] : Calibration specification array of
-C           hygrometer.
-C
-C output : FrCor [REAL*8(NMax,NMax)] : Correction factors for covariances.
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
-C
+C HISTORY
+C       28-05-2001: added info on which temperature should be used
+C                   in corrections (Sonic or thermocouple)
+C     $Name$ $Id$
+C USES
+C     physcnst.inc
+C     parcnst.inc
+C     
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -431,23 +520,57 @@ C
 
 
       SUBROUTINE EC_C_F02(WXT,NMax,NSize,Lower,Upper,Cov,TolCov)
+C     ****f* ec_corr.f/EC_C_F02
+C NAME
+C     EC_C_F02
+C SYNOPSIS
+C     CALL EC_C_F02(WXT, NMax, NSize, Lower, Upper, Cov, TolCov)
+C FUNCTION
+C     Apply frequency response corrections for sensor response, path
+C     length averaging, sensor separation, signal processing and dampening
+C     of fluctuations in a tube. Based on publications given in SEE ALSO
+C INPUTS
+C     WXT    : [REAL*8(NMax,NMax)]  
+C              Correction factors for covariances.
+C     NMax   : [INTEGER]  
+C              Physical dimension of array Mean
+C     NSize  : [INTEGER]  
+C              Number of quantities actually involved in this
+C              experiment.
+C     Lower  : [REAL*8]
+C              Lower acceptance limit for frequency-response
+C              factors. Correction factors smaller than Lower are 
+C              set to 1.
+C     Upper  : [REAL*8]
+C              Upper acceptance limit for frequency-response
+C              factors. Correction factors larger than Upper are 
+C              Which temperature to use: thermocouple (Tcouple)
+C              or sonic (TSOnic): see parcnst.inc
+C OUTPUT
+C     Cov    : [REAL*8(NMax,NMax)]  
+C              covariances of the fluctuations.
+C     TolCov : [REAL*8(NMax,NMax)]
+C              tolerances in covariances 
 C
-C Apply frequency response corrections for sensor response, path
-C length averaging, sensor separation, signal processing and dampening
-C of fluctuations in a tube. Based on publications;
+C SEE ALSO
+C     Moore, C.J. (1986): 'Frequency Response Corrections for Eddy
+C     Correlation Systems'. Boundary Layer Met. 37: 17-35.
 C
-C	Moore, C.J. (1986): 'Frequency Response Corrections for Eddy
-C	Correlation Systems'. Boundary Layer Met. 37: 17-35.
+C     Philip, J.R. (1963): 'The Damping of Fluctuating Concentration
+C     by Continuous Sampling Through a tube' Aust. J. Phys. 16: 454-463.
 C
-C	Philip, J.R. (1963): 'The Damping of Fluctuating Concentration
-C	by Continuous Sampling Through a tube' Aust. J. Phys. 16: 454-463.
+C     Leuning, R. and K.M. King (1991): 'Comparison of Eddy-Covariance
+C     Measurements of CO2 Fluxes by open- and closed-path CO2 analysers'
+C     (unpublished)
 C
-C	Leuning, R. and K.M. King (1991): 'Comparison of Eddy-Covariance
-C	Measurements of CO2 Fluxes by open- and closed-path CO2 analysers'
-C	(unpublished)
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
+C HISTORY 
+C     28-05-2001: added info on which temperature should be used
+C                 in corrections (Sonic or thermocouple)
+C     $Name$ $Id$
+C USES
+C     physcnst.inc
+C     parcnst.inc
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -509,17 +632,179 @@ C
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
      &	DoWebb,PWebb,P, Have_Uncal)
-C
-C Purpose : Integrated correction routine applying ALL (user-selected)
-C	    corrections in this library on mean values and covariances.
-C	    All intermediate results can be output to a file.
-C	    Moreover they are returned to the calling routine in
-C	    respective variables.
-C
-C Revision 28-05-2001: added info on whether uncalibrated data are
-C                      available for a given variable (mainly important
-C                      for sonic and/or Couple temperature since that
-C                      is used for various corrections)
+C     ****f* ec_corr.f/EC_C_Main
+C NAME
+C     EC_C_MAIN
+C SYNOPSIS
+C     CALL EC_C_Main(OutF,
+C     	DoPrint, Mean,NMax,N,TolMean, Cov,TolCov,
+C     	QName,UName, BadTc,
+C     	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
+C     	DoYaw,PYaw,DirYaw,
+C     	DoPitch,PPitch,PitchLim,DirPitch,
+C     	DoRoll,PRoll,RollLim,DirRoll,: 
+C     	DoSonic,PSonic,SonFactr,
+C     	DoO2,PO2,O2Factor,
+C     	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
+C     	DoWebb,PWebb,P, Have_Uncal)
+C FUNCTION
+C     Integrated correction routine applying ALL (user-selected)
+C     corrections in this library on mean values and covariances.
+C     All intermediate results can be output to a file.
+C     Moreover they are returned to the calling routine in
+C     respective variables.
+C INPUTS
+C     (outputs and combined inputs/outputs are given as well,
+C     but also under OUTPUT)
+C     OutF    : [INTEGER]
+C               Unit number of file for intermediate results
+C     DoPrint : [LOGICAL]
+C               Print intermediate results ?
+C     Mean    : [REAL*8(NMax)] (in/out)
+C               Mean values of all calibrated signals
+C     NMax    : [INTEGER]
+C               Size of arrays with calibrated signals
+C     N       : [INTEGER]
+C               Actual number of calibrated signals
+C     TolMean : [REAL*8(NMax)] (in/out)
+C               Tolerances in mean values of all calibrated signals
+C     Cov     : [REAL*8(NMax,NMax)] (in/out)
+C               Covariances of all calibrated signals
+C     TolCov  : [REAL*8(NMax,NMax)] (in/out)
+C               Tolerances in covariances of all calibrated signals
+C     QName   : [CHARACTER*6(NMax)]
+C               Names of calibrated signals
+C     UName   : [CHARACTER*9(NMax)]
+C               Unit of calibrated signal (in text)
+C     BadTc   : [LOGICAL]
+C               Is thermocouple data unreliable ?
+C     DoTilt  : [LOGICAL]
+C               Perform tilt correction with known angles?
+C     PTilt   : [LOGICAL]
+C               Print intermediate results of known angle tilt-correction ?
+C     PreYaw  : [REAL*8]
+C               Known yaw angle (degrees)
+C     PrePitch: [REAL*8]
+C               Known pitch angle (degrees)
+C     PreRoll : [REAL*8]
+C               Known roll angle (degrees)
+C     DoYaw   : [LOGICAL]
+C               Do yaw rotation ?
+C     PYaw    : [LOGICAL]
+C               Print intermediate results of yaw-rotation
+C     DirYaw  : [REAL*8] (out)
+C               Yaw angle (degrees)
+C     DoPitch : [LOGICAL]
+C               Do pitch rotation ?
+C     PPitch  : [LOGICAL]
+C               Print intermediate results of pitch-rotation?
+C     PitchLim: [REAL*8]
+C               Maximum pitch angle (degrees)
+C     DirPitch: [REAL*8] (out)
+C               Pitch angle (degrees)
+C     DoRoll  : [LOGICAL]
+C               Do roll rotation ?
+C     PRoll   : [LOGICAL]
+C               Print intermediate results of roll-rotation?
+C     RollLim : [REAL*8]
+C               Maximum roll angle (degrees)
+C     DirRoll : [REAL*8] (out)
+C               Roll angle (degrees)
+C     DoSonic : [LOGICAL]
+C               Do Schotanus correction on sonic temperature ?
+C     PSonic  : [LOGICAL]
+C               Print intermediate info on Schotanus correction ?
+C     SonFactr: [REAL*8(NMax)] (out)
+C               Correction factor due to Schotanus correction for
+C               covariance of sonic temperature with each calibrated
+C               signal.
+C     DoO2    : [LOGICAL]
+C               Correct hygrometer data for oxygen sensitivity ?
+C     PO2     : [LOGICAL]
+C               Print intermediate result for oxygen correction ?
+C     O2Factor: [REAL*8(NMax)] (out)
+C               Correction factor due to oxygen correction for
+C               covariance of humidity with each calibrated
+C     DoFreq  : [LOGICAL]
+c               Do frequency response correction ?
+C     PFreq   : [LOGICAL]
+C               Print intermediate results for frequency response
+C               correction ?
+C     LLimit  : [REAL*8]
+C               Lower limit for correction factor for frequency response
+C     ULimit  : [REAL*8]
+C               Upper limit for correction factor for frequency response
+C     Freq    : [REAL*8]
+C               Sampling frequency (Hz)
+C     CalSonic: [REAL*8(NQQ)]
+C               Calibration info for sonic anemometer
+C     CalTherm: [REAL*8(NQQ)]
+C               Calibration info for thermocouple
+C     CalHyg  : [REAL*8(NQQ)]
+C               Calibration info for hygrometer
+C     FrCor   : [REAL*8(NMax,NMax)] (out)
+C               Correction factors for covariances for frequency
+C               response
+C     DoWebb  : [LOGICAL]
+C               Do Webb correction for humidity flux ?
+C     PWebb   : [LOGICAL]
+C               Print intermediate results for Webb correction ?
+C     P       : [REAL*8]
+C               Atmospheric pressure (Pa)
+C     Have_Uncal : [LOGICAL(NMax)]
+C               Uncalibrated signal available for given quantity ?
+C OUTPUT
+C     Mean    : [REAL*8(NMax)] (in/out)
+C               Mean values of all calibrated signals
+C     TolMean : [REAL*8(NMax)] (in/out)
+C               Tolerances in mean values of all calibrated signals
+C     Cov     : [REAL*8(NMax,NMax)] (in/out)
+C               Covariances of all calibrated signals
+C     TolCov  : [REAL*8(NMax,NMax)] (in/out)
+C               Tolerances in covariances of all calibrated signals
+C     DirYaw  : [REAL*8] (out)
+C               Yaw angle (degrees)
+C     DirPitch: [REAL*8] (out)
+C               Pitch angle (degrees)
+C     DirRoll : [REAL*8] (out)
+C               Roll angle (degrees)
+C     SonFactr: [REAL*8(NMax)] (out)
+C               Correction factor due to Schotanus correction for
+C               covariance of sonic temperature with each calibrated
+C               signal.
+C     O2Factor: [REAL*8(NMax)] (out)
+C               Correction factor due to oxygen correction for
+C               covariance of humidity with each calibrated
+C     FrCor   : [REAL*8(NMax,NMax)] (out)
+C               Correction factors for covariances for frequency
+C               response
+C HISTORY
+C     28-05-2001: added info on whether uncalibrated data are
+C                 available for a given variable (mainly important
+C                 for sonic and/or Couple temperature since that
+C                 is used for various corrections)  
+C     $Name$ $Id$
+C USES
+C     physcnst.inc
+C     parcnst.inc
+C     EC_C_T05
+C     EC_C_T06
+C     EC_C_T07
+C     EC_C_T08
+C     EC_C_T09
+C     EC_C_T10
+C     EC_C_T11
+C     EC_C_Schot1
+C     EC_C_Schot2
+C     EC_C_Oxygen1
+C     EC_C_Oxygen2
+C     EC_C_F01
+C     EC_C_F02
+C     EC_C_Webb
+C     EC_G_Show
+C     EC_G_ShwFrq
+C     EC_G_Reset
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -551,8 +836,8 @@ C
       QO2    = (PO2    .AND. DoPrint)
       QFreq  = (PFreq  .AND. DoPrint)
       QWebb  = (PWebb  .AND. DoPrint)
-C A Hack: Just set Qschot off
-      QSchot = .FALSE.
+C A Hack: Just set Qschot to QSonic (name confusion, apparently)
+      QSchot = QSonic
 C
 C
 C Perform a tilt-correction of the whole system using KNOWN (!!!!!!) angles.
@@ -791,17 +1076,56 @@ C
 
 
 
-
-
       SUBROUTINE EC_C_Oxygen1(MeanT,NMax,N,Cov,P,HygType,WhichTemp,
      &  Factor)
+C     ****f* ec_corr.f/EC_C_Oxygen1
+C NAME
+C     EC_C_Oxygen1
+C SYNOPSIS
+C     CALL EC_C_Oxygen1(MeanT, NMax, N, Cov, P, 
+C          HygType, WhichTemp, Factor)
+C FUNCTION
+C     Contribution of other gases especially oxygen absorb
+C     some of the radiation at the wavelengths at which the
+C     hygrometer works.
+C     This routine computes the correction factors. The 
+C     factors are applied in EC_C_Oxygen2
+C INPUT
+C     MeanT     : [REAL*8]
+C                 Mean temperature (Kelvin)
+C     NMax      : [INTEGER]
+C                 Size of array dimensions
+C     N         : [INTEGER]
+C                 Actual number of calibrated signals
+C     Cov       : [REAL*8(Nmax,Nmax)]
+C                 Covariances
+C     P         : [REAL*8]
+C                 Atmospheric pressure (Pa)
+C     HygType   : [INTEGER]
+C                 Type of hygrometer (see parcnst.inc for codes)
+C     WhichTemp : [INTEGER]
+C                 Use thermocouple temperature or sonic temperature ?
+C                 (Tcouple or TSonic, codes in parcnst.inc)
+C OUTPUT
+C     Factor    : [REAL*8(NMax)]
+C                 Correction factor for the covariance with each of
+C                 calibrated signals
+C NOTES
+C     Currently this routine knows about two types of hygrometer:
+C        ApCampKrypton : the KH20 krypton hygrometer from Campbell Sci.
+C        ApMierijLyma  : the Lymann-alpha hygrometer from Mierij Meteo
 C
-C Contribution of other gases especially oxygen absorb
-C some of the radiation at the wavelengths at which the
-C Krypton works.
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
+C HISTORY
+C     28-05-2001: added info on which temperature should be used
+C                 in corrections (Sonic or thermocouple)
+C SEE ALSO
+C     EC_C_Oxygen2
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     parcnst.inc
+C     physcnst.inc
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -832,14 +1156,37 @@ C                      in corrections (Sonic or thermocouple)
 
 
       SUBROUTINE EC_C_Oxygen2(Factor,NMax,N,Cov)
-C
-C Contribution of other gases especially oxygen absorb
-C some of the radiation at the wavelengths at which the
-C Krypton works.
-C
-C Revision 28-05-2001: added info on which temperature should be used
-C                      in corrections (Sonic or thermocouple)
-      INCLUDE 'physcnst.inc'
+C     ****f* ec_corr.f/EC_C_Oxygen2
+C NAME
+C     EC_C_Oxygen2
+C SYNOPSIS
+C     CALL EC_C_Oxygen2(Factor, Nmax, N, Cov)
+C FUNCTION
+C     Contribution of other gases especially oxygen absorb
+C     some of the radiation at the wavelengths at which the
+C     hygrometer works.
+C     This routine applies the correction factors that were 
+C     computed in EC_C_Oxygen1
+C INPUT
+C     Factor    : [REAL*8(NMax)]
+C                 Correction factor for the covariance with each of
+C                 calibrated signals
+C     NMax      : [INTEGER]
+C                 Size of array dimensions
+C     N         : [INTEGER]
+C                 Actual number of calibrated signals
+C     Cov       : [REAL*8(Nmax,Nmax)] (in/out)
+C                 Covariances
+C OUTPUT
+C     Cov       : [REAL*8(Nmax,Nmax)] (in/out)
+C                 Covariances
+C SEE ALSO
+C     EC_C_Oxygen1
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     parcnst.inc
+C     ***
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i, WhichTemp
@@ -857,46 +1204,71 @@ C                      in corrections (Sonic or thermocouple)
 
 
 
-C...........................................................................
-C Function  : EC_C_SCal
-C Purpose   : to calibrate a sonic signal according to wind tunnel
-C             calibration (for th moment this works for apparatus 6,
-C             i.e. a wind tunnel calibrated sonic)
-C Interface : Cal     IN        array of length NQQ with calibation info
-C             UDum    IN/OUT    one horizontal component (on exit: calibrated)
-C             VDum    IN/OUT    another horizontal component (on exit:
-calibrated)
-C             WDum    IN/OUT    vertical component (on exit: calibrated)
-C             UERROR  IN/OUT    error flag for U (.TRUE. if wrong data)
-C             VERROR  IN/OUT    error flag for V (.TRUE. if wrong data)
-C             WERROR  IN/OUT    error flag for W (.TRUE. if wrong data)
-C Author    : Arnold Moene
-C Date      : September 26, 2000
-C Remarks   : The method is based on a wind tunnel calibration of the sonic
-C             The real velocity components can be derived from the
-C             measured components and the real azimuth and elevation angle.
-C             But the latter are not known and have to be determined
-C             iteratively from the measured components. The relationship
-C             between the real components and the measured components is:
-C
-C               Ureal =  Umeas/(UC1*(1 - 0.5*
-C                                    ((Azi + (Elev/0.5236)*UC2)*
-C                                     (1 - UC3*Abs(Elev/0.5236)))**2 ))
-C               Vreal =  Vmeas*(1 - VC1*Abs(Elev/0.5236))
-C               Wreal =  Wmeas/(WC1*(1 - 0.5*(Azi*WC2)**2))
-C
-C             and
-C               Azi = arctan(V/U)
-C               Elev = arctan(W/sqrt(U**2 + V**2))
-C
-C             where UC1, UC2, UC3, VC1, WC1, WC2 are fitting coefficients.
-C             An azimuth angle of zero is supposed to refer to a wind
-C             direction from the most optimal direction (i.e. the 'open'
-C             side of a sonic). Samples with an absolute azimuth angle of
-C             more than 40 degrees are rejected.
-C...........................................................................
       SUBROUTINE EC_C_Scal(Cal, UDum, VDum, WDum,
      &                  UError, VError, WError)
+C     ****f* ec_corr.f/EC_C_Scal
+C NAME
+C     EC_C_Scal
+C SYNOPSIS
+C     CALL EC_C_Scal(Cal, UDum, VDum, WDum, 
+C                    UError, VError, WError)
+C FUNCTION
+C     To calibrate a sonic signal according to wind tunnel
+C     calibration (for the moment this works for apparatus 6,
+C     i.e. a wind tunnel calibrated sonic)
+C INPUT
+C     Cal   : [REAL*8(NQQ)]
+C             Array of length NQQ with calibration info
+C     UDum  : [REAL*8 ] (in/out)
+C             One horizontal component (on exit: calibrated)
+C     VDum  : [REAL*8 ] (in/out)
+C             Another horizontal component (on exit: calibrated)
+C     WDum  : [REAL*8 ] (in/out)
+C             Vertical component (on exit: calibrated)
+C OUTPUT
+C     UDum  : [REAL*8 ] (in/out)
+C             One horizontal component (on exit: calibrated)
+C     VDum  : [REAL*8 ] (in/out)
+C             Another horizontal component (on exit: calibrated)
+C     WDum  : [REAL*8 ] (in/out)
+C             Vertical component (on exit: calibrated)
+C     UError: [LOGICAL]  
+C             error flag for U (.TRUE. if wrong data)
+C     VError: [LOGICAL]  
+C             error flag for V (.TRUE. if wrong data)
+C     WError: [LOGICAL]  
+C             error flag for W (.TRUE. if wrong data)
+C AUTHOR
+C     Arnold Moene
+C CREATION DATE
+C     September 26, 2000
+C NOTES
+C     The method is based on a wind tunnel calibration of the sonic
+C     The real velocity components can be derived from the
+C     measured components and the real azimuth and elevation angle.
+C     But the latter are not known and have to be determined
+C     iteratively from the measured components. The relationship
+C     between the real components and the measured components is:
+C
+C     Ureal =  Umeas/(UC1*(1 - 0.5*
+C                   ((Azi + (Elev/0.5236)*UC2)*
+C                    (1 - UC3*Abs(Elev/0.5236)))**2 ))
+C     Vreal =  Vmeas*(1 - VC1*Abs(Elev/0.5236))
+C     Wreal =  Wmeas/(WC1*(1 - 0.5*(Azi*WC2)**2))
+C     and
+C     Azi = arctan(V/U)
+C     Elev = arctan(W/sqrt(U**2 + V**2))
+C
+C     where UC1, UC2, UC3, VC1, WC1, WC2 are fitting coefficients.
+C     An azimuth angle of zero is supposed to refer to a wind
+C     direction from the most optimal direction (i.e. the 'open'
+C     side of a sonic). Samples with an absolute azimuth angle of
+C     more than 40 degrees are rejected.
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     parcnst.inc
+C   ***
 
       INCLUDE 'parcnst.inc'
 
@@ -965,12 +1337,42 @@ C...........................................................................
 
 
       SUBROUTINE EC_C_Schot1(MeanQ,MeanTSon,NMax,N,Cov,Factor,TSonFact)
-C
-C Partial Schotanus et al. correction: correction for humidity
-C of sonic temperature, and of all covariances with sonic temperature.
-C Sidewind-correction has already been applied in the
-C routine where the sonic signal is calibrated.
-C
+C     ****f* ec_corr.f/EC_C_Schot1
+C NAME
+C     EC_C_Schot1
+C SYNOPSIS
+C     CALL EC_C_Schot1(MeanQ,MeanTSon,NMax,N,Cov,Factor,TSonFact)
+C FUNCTION
+C     Compute correction factor for partial Schotanus et al. correction.
+C     for humidity of sonic temperature, and of all covariances with 
+C     sonic temperature.
+C     Sidewind-correction has already been applied in the
+C     routine where the sonic signal is calibrated.
+C INPUT
+C     MeanQ    : [REAL*8]
+C                mean specific humidity  (kg/kg)
+C     MeanTSon : [REAL*8]
+C                mean sonic temperature (Kelvin)
+C     NMax     : [INTEGER]
+C                size of arrays
+C     N        : [INTEGER]
+C                actual number of calibrated signals
+C     Cov      : [REAL*8(NMax,NMax)]
+C                covariance matrix of calibrated signals
+C OUTPUT
+C     Factor   : [REAL*8(NMax)]
+C                correction factor for the covariances with specific
+C                humidity
+C     TSonFact : [REAL*8]
+C                correction factor for sonic temperature
+C SEE ALSO
+C     EC_C_Schot1
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     physcnst.inc
+C     parcnst.inc
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -992,12 +1394,42 @@ C
 
 
       SUBROUTINE EC_C_Schot2(Factor,TSonFact,MeanTSon,NMax,N,Cov)
-C
-C Partial Schotanus et al. correction: correction for humidity
-C of sonic temperature, and of all covariances with sonic temperature.
-C Sidewind-correction has already been applied in the
-C routine where the sonic signal is calibrated.
-C
+C     ****f* ec_corr.f/EC_C_Schot2
+C NAME
+C     EC_C_Schot2
+C SYNOPSIS
+C     CALL EC_C_Schot2(Factor,TSonFact,MeanTSoc, NMax,N,Cov)
+C FUNCTION
+C     Apply correction factor for partial Schotanus et al. correction
+C     as computed in EC_C_Schot1.
+C     for humidity of sonic temperature, and of all covariances with 
+C     sonic temperature.
+C     Sidewind-correction has already been applied in the
+C     routine where the sonic signal is calibrated.
+C INPUT
+C     Factor   : [REAL*8(NMax)]
+C                correction factor for the covariances with specific
+C                humidity
+C     TSonFact : [REAL*8]
+C                correction factor for sonic temperature
+C     MeanTSon : [REAL*8]
+C                mean sonic temperature (Kelvin)
+C     NMax     : [INTEGER]
+C                size of arrays
+C     N        : [INTEGER]
+C                actual number of calibrated signals
+C     Cov      : [REAL*8(NMax,NMax)] (in/out)
+C                covariance matrix of calibrated signals
+C OUTPUT
+C     Cov      : [REAL*8(NMax,NMax)] (in/out)
+C                covariance matrix of calibrated signals
+C SEE ALSO
+C     EC_C_Schot2
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     physcnst.inc
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
@@ -1018,27 +1450,53 @@ C
 
 
       REAL*8 FUNCTION EC_C_Schot3(Temp, Rhov, Press)
-C
-C To do humidity part of Schotanus et al. correction on a
-C raw sample of sonic temperature, with Rhov that was not yet
-C corrected
-C
-C Sidewind-correction has already been applied in the
-C routine where the sonic signal is calibrated.
-C
+C     ****f* ec_corr.f/EC_C_Schot3
+C NAME
+C     EC_C_Schot3
+C SYNOPSIS
+C     TCORR = EC_C_Schot3(Temp,Rhov, Press)
+C FUNCTION
+C     To do humidity part of Schotanus et al. correction on a
+C     raw sample of sonic temperature, while specific humidity is not
+C     yet known: to get specific humidity from the measured 
+C     Rhov one needs a temperature: if no thermocouple available
+C     the only temperature is the sonic temperature.
+C     (TSonic depends on specific humidity, to compute specific 
+C     humidity, one needs a temperature, Tsonics depends on 
+C     specific humidity ....etc.)
+C     Sidewind-correction has already been applied in the
+C     routine where the sonic signal is calibrated.
+C INPUTS
+C     TEMP    : [REAL*8]
+C               Sonic temperature (without hyumidity correction) (Kelvin)
+C     Rhov    : [REAL*8]
+C               absolute humidity (kg/m^3)
+C     Press   : [REAL*8]
+C               atmospheric pressure (Pa)
+C RETURN VALUE
+C     return value : [REAL*8]
+C               corrected sonic temperature (Kelvin)
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$ $Id$
+C USES
+C     physcnst.inc
+C     parcnst.inc
+C     EC_Ph_Q
+C     ***
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i
       REAL*8   Temp, Rhov, Press, SPHUM, SPHUMNEW, NEWTEMP
-      REAL*8 EC_Ph_Q,EC_M_BaseF ! External function calls
+      REAL*8 EC_Ph_Q ! External function calls
 
       SPHUM = EC_Ph_Q(Temp, Rhov, Press)
       SPHUMNEW = 1.0
       NEWTEMP = Temp
-C Dit convergeert dus helemaal niet !!!
+C Does this converge ?
       DO WHILE (ABS((SPHUM - SPHUMNEW)/SPHUM) .GT. 0.0001)
-
          NEWTEMP = TEMP/(1+0.51*SPHUM)
          SPHUMNEW = SPHUM
          SPHUM = EC_Ph_Q(NEWTEMP, Rhov, Press)
