@@ -44,18 +44,16 @@ LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
 
 # For Robodoc
 ROBODOC=robodoc
-ROBOOPTS=C SORT
+TMPDIR=`pwd`/tmp
+DOCDIR=`pwd`/doc
+MKDIR=mkdir -p
 PROJECT=ecpack
 LS=ls
 SED=sed
 RM=rm -f
+RMDIR=rm -rf
+MV=mv
 DOCFILES=ec_corr.f ec_phys.f ec_math.f ec_gene.f physcnst.inc parcnst.inc
-HTMLDOCS=$(DOCFILES:=.html)
-HTMLXREFS=$(DOCFILES:=.html.xref)
-HTMLXREFSFILE=$(PROJECT)_html.xrefs
-LATEXDOCS=$(DOCFILES:=.tex)
-LATEXXREFS=$(DOCFILES:=.tex.xref)
-LATEXXREFSFILE=$(PROJECT)_tex.xrefs
 PDFLATEX=pdflatex
 
 # By default, just the library
@@ -107,59 +105,19 @@ planang.o: planang.f physcnst.inc parcnst.inc  version.inc
 	$(FC) $(FFLAGS) -c planang.f
 
 # The docs
+dochtml: $(DOCFILES)
+	$(MKDIR) $(TMPDIR)
+	$(MKDIR) $(DOCDIR)
+	cp $(DOCFILES) $(TMPDIR)
+	$(ROBODOC) --multidoc --doc $(DOCDIR)  --src $(TMPDIR) --html --index
+	$(RMDIR) $(TMPDIR)
 
-xhtml: $(HTMLXREFSFILE) 
-xtex: $(LATEXXREFSFILE) 
-html: $(HTMLDOCS) $(PROJECT)_mi.html 
-tex: $(LATEXDOCS) $(PROJECT)_mi.tex 
-
-# master index file, currently works only for html and latex documentation.
-# Note that you can define the title of the document.
-$(PROJECT)_mi.html: $(HTMLXREFSFILE)
-	$(ROBODOC) $< $@ INDEX HTML 
-
-$(PROJECT)_mi.tex: $(LATEXXREFSFILE)
-	$(ROBODOC) $< $@ INDEX LATEX 
-
-# Create xrefs file
-$(HTMLXREFSFILE): $(HTMLXREFS)
-	$(LS) $(HTMLXREFS) > $@
-
-$(LATEXXREFSFILE): $(LATEXXREFS)
-	$(LS) $(LATEXXREFS) > $@
-
-# Rule to create an .xref file from a source file for the various formats.
-%.html.xref : %
-	$(ROBODOC) $< $(@:.xref=) $(ROBOOPTS) INTERNAL GENXREF $@
-%.tex.xref : %
-	$(ROBODOC) $< $(@:.xref=) $(ROBOOPTS) INTERNAL GENXREF $@
-
-# Rule to create html documentation from a source file.
-%.html : %
-	$(ROBODOC) $< $@ HTML $(ROBOOPTS) XREF $(HTMLXREFSFILE)
-# Rule to create latex documentation from a source file.
-# We do not include source items, and generate laxtex documents
-# than can be included in a master document.
-# Underscores is a problem
-%.tex : %
-#	$(SED) "s/\$$/\\\$$/g" $< > $<.tmp
-	$(ROBODOC) $< $@.tmp LATEX $(ROBOOPTS) NOSOURCE SINGLEDOC XREF $(LATEXXREFSFILE)
-# Number of final backslashes is not clear to me: under DOS there should be 3
-	$(SED) 's/\\\section{ec/\\\section{ec\\\/g' $@.tmp > $@
-	$(RM) $@.tmp
-
-docpdf: xtex tex 
-	$(PDFLATEX) $(PROJECT)_mi.tex
-	$(PDFLATEX) $(PROJECT)_mi.tex
-	$(RM) $(PROJECT)_mi.log *.aux *.toc *.idx
-
-doctex: xtex tex 
-	$(RM) $(PROJECT)_mi.log *.aux *.toc *.idx
-
-dochtml: xhtml html 
-
-docclean:
-	$(RM) $(HTMLXREFS)
-	$(RM) $(HTMLXREFSFILE)
-	$(RM) $(LATEXXREFS)
-	$(RM) $(LATEXXREFSFILE)
+docpdf: $(DOCFILES)
+	$(MKDIR) $(TMPDIR)
+	cp $(DOCFILES) $(TMPDIR)
+	$(ROBODOC) --singledoc --doc $(PROJECT)  --src $(TMPDIR) --latex --index --sections --toc
+	$(PDFLATEX) $(PROJECT).tex
+	$(PDFLATEX) $(PROJECT).tex
+	$(RM) $(PROJECT).tex *.aux *.toc *.idx
+	$(RMDIR) $(TMPDIR)
+	$(MV) $(PROJECT).pdf $(DOCDIR)
