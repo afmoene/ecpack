@@ -233,26 +233,6 @@ C SOURCE
       PARAMETER(FracO2 = 0.21D0)   ! [1]
 C     ***
 
-C     ****d* physcnst.inc/Cp
-C NAME
-C     Cp
-C FUNCTION
-C     Specific heat of air
-C SOURCE
-      REAL*8 Cp 		   ! Specific heat of air
-      PARAMETER(Cp = 1004.67D0)    ! [J Kg^{-1} K^{-1}]
-C     ***
-
-C     ****d* physcnst.inc/Lv
-C NAME
-C     Lv
-C FUNCTION
-C     Latent heat of vaporization of water
-C SOURCE
-      REAL*8 Lv 		   ! Vaporisation heat of water
-      PARAMETER(Lv = 2.45D6)	   ! [J Kg^{-1}]
-C     ***
-
 c     ****d* physcnst.inc/MinT
 C NAME
 C     MinT

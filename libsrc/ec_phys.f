@@ -99,8 +99,8 @@ C     $Id$
 C USES
 C     EC_Ph_RhoWet
 C     parcnst.inc
-C     Cp
-C     Lv
+C     EC_Ph_Cp
+C     EC_Ph_Lv    
 C     ***
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
@@ -108,11 +108,14 @@ C     ***
 
       LOGICAL BadTc
       INTEGER NMax
+      REAL*8 EC_Ph_Lv, EC_Ph_Cp
+      EXTERNAL EC_Ph_Lv, EC_Ph_Cp
       REAL*8 EC_Ph_RhoWet,Mean(NMax),Cov(NMax,NMax),
      &  RhoSon,RhoTc,Frac1,Frac2,
      &  p,TolMean(NMax),TolCov(NMax,NMAx),
      &  WebVel, 
-     &  DirYaw, LocalDir, QPhys(NMaxPhys), dQPhys(NMaxPhys)
+     &  DirYaw, LocalDir, QPhys(NMaxPhys), dQPhys(NMaxPhys),
+     &  Lv, Cp
 C
 C Air density (sonic T)
 C
@@ -139,6 +142,12 @@ C
 C
 C Sensible heat flux [W m^{-2}]
 C
+      IF (.NOT. BadTC) THEN
+        Cp = EC_Ph_Cp(Mean(TCouple))
+      ELSE
+        Cp = EC_Ph_Cp(Mean(TSonic))
+      ENDIF
+
       IF ((Mean(Humidity) .NE. DUMMY) .AND.
      &    (Mean(TSonic) .NE. DUMMY) .AND.
      &    (Cov(W,TSonic) .NE. DUMMY)) THEN
@@ -164,6 +173,12 @@ C
 C
 C Latent heat flux [W m^{-2}]
 C
+      IF (.NOT. BadTC) THEN
+        Lv = EC_Ph_Lv(Mean(TCouple))
+      ELSE
+        Lv = EC_Ph_Lv(Mean(TSonic))
+      ENDIF
+
       IF (Cov(W, Humidity) .NE. DUMMY) THEN
         QPhys(QPLvE) = Lv*Cov(W,Humidity)
         dQPhys(QPLvE) = Lv*TolCov(W,Humidity)
@@ -171,6 +186,7 @@ C
         QPhys(QPLvE) = DUMMY
         dQPhys(QPLvE) = DUMMY
       ENDIF   
+
       IF ((WebVel .NE. DUMMY) .AND. 
      &    (Mean(Humidity) .NE. DUMMY)) THEN
            Qphys(QPLvEWebb) = Lv*WebVel*Mean(Humidity)
@@ -719,4 +735,66 @@ C     ***
       REAL*8 SSpeed
 
       EC_Ph_SS2Ts = SSpeed**2/GammaR
+      END
+
+      REAL*8 FUNCTION EC_Ph_Lv(T)
+C     ****f* ec_phys.f/EC_Ph_Lv
+C NAME
+C     EC_Ph_Lv
+C SYNOPSIS
+C     Latent heat of vaporization =  EC_Ph_Lv(T)
+C FUNCTION
+C     Calculate the latent heat of vaporization
+C INPUTS
+C     T  : [REAL*8]  
+C                temperature (K) 
+C OUTPUT 
+C     return value  : [REAL*8]  
+C                latent heat of vaporaization  (J/kg)
+C AUTHOR
+C     Arnold Moene 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'physcnst.inc'
+
+      REAL*8 T
+
+      EC_Ph_Lv = (2501 - 2.375*(T-273.15))*1.0E3
+
+      END
+
+      REAL*8 FUNCTION EC_Ph_Cp(T)
+C     ****f* ec_phys.f/EC_Ph_Cp
+C NAME
+C     EC_Ph_Cp
+C SYNOPSIS
+C     Specific heat of dry air =  EC_Ph_Cp(T)
+C FUNCTION
+C     Calculate the specific heat of dry air
+C INPUTS
+C     T  : [REAL*8]  
+C                temperature (K) 
+C OUTPUT 
+C     return value  : [REAL*8]  
+C                specific heat of dry air (J/(kg*K))
+C AUTHOR
+C     Arnold Moene 
+C HISTORY
+C     $Name$ 
+C     $Id$
+C SEE ALSO
+C     equation (A20) in Garrat, J.R., 1992. 'The Atmospheric Boundary
+C     layer', Cambridge University Press
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'physcnst.inc'
+
+      REAL*8 T
+
+      EC_Ph_Cp = 1005 + ((T-250)**2.0)/3364
+
       END

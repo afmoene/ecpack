@@ -369,3 +369,9 @@ Revision : 2.5.12: September 21, 2004 (Arnold.Moene@wur.nl)
         configuration file (name is SSpeed_Var)
       - in calibrat: if no sonic temperature is given in data file, but
         speed of sound is, sonic temperature is determined from speed of sound
+Revision : 2.5.13: October 12, 2004 (Arnold.Moene@wur.nl)
+      - Lv is made temperature dependent (as used in EC_Ph_Flux). This is only
+        partially correct: we *should* use the temperature at which
+        evaporation takes place. Furthermore, the latent heat of fusion of ice
+        should be used if ice is the source of water vapour.
+      - Cp is made temperature dependent (based on observed air temperature)
