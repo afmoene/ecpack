@@ -4,7 +4,7 @@ Program : ec_ncdf
 Purpose : to process eddy-correlation data stored in NetCDF files
 Author  : Arjan van Dijk (presently at IMAU: A.vanDijk@phys.uu.nl)
           Arnold Moene (afmoene@hp1.met.wau.nl)
-Date    : June 7, 2000
+Date    : August 1, 2000
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
@@ -186,6 +186,7 @@ T	PSonic	  = Indicator if these intermediate results are wanted
 T	PO2	  = Indicator if these intermediate results are wanted
 T	PFreq	  = Indicator if these intermediate results are wanted
 T	PWebb	  = Indicator if these intermediate results are wanted
+0.15    StructSep = separation (in m) used for calculation of structure parameters
 ------------end----------------
 
 Interval file
@@ -350,5 +351,20 @@ x is the path length and K is the effective extinction coefficient. In order
 to convert this calibration to a (log) polynomial, the calibration 
 curve has to be fitted to either model. This implies that when the path length
 is changed, a new calibration curve needs to be fitted.
+
+Sonic temperature
+-----------------
+If no thermocouple is present, the sonic temperature is used for the
+calculations where a temperature is needed. But in order to derive specific
+humidty from either Krypton or Lymann-alpha data, one needs a temperature.
+On the other hand one part of the Schotanus et al. correction for the
+sonic temperature depends on specific humidity. Therefore, a temporary 
+temperature is constructed with both parts of the Schotanus correction
+applied (where the humidity part is done iteratively:
+find the correct temperature and specific humidity for the given absolute
+humidity and sonic temperature). The resulting temperature is used
+to determine the specific humidity.
+The actual humidity part of the Schotanus correction is applied only to the
+averaged data, not to the raw data.
 
 

@@ -5,12 +5,12 @@ DatDir='d:\data\ebex'
 Parmdir='d:\data\ebex'
 // file names
 ParmName='speclow.dat'
-FluxName='fluxes'
+FluxName='fluxes2'
 InterName='ectimes.dat'
 //
 // calibrations
 SonName='cals296l.qq'
-CoupName='caltcopl.qq'
+// CoupName='caltcopl.qq'
 HygName='calh1334.qq'
 //
 // netcdf variable names

@@ -23,7 +23,8 @@ C $Id$
      &  HSonic,dHSonic,HTc,dHTc,
      &  LvE,dLvE,LvEWebb,dLvEWebb,
      &  UStar,dUStar,Tau,dTau,CorMean(NNMax),DirFrom,
-     &  Gain(NNNMax),Offset(NNNMax),StartTime(3),StopTime(3)
+     &  Gain(NNNMax),Offset(NNNMax),StartTime(3),StopTime(3),
+     &  StructSep
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
@@ -132,7 +133,7 @@ C
      &  LLimit,ULimit,DoCrMean,DoDetren,DoSonic,
      &  DoTilt,DoPitch,DoYaw,DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
      &  PRaw,PCal,PDetrend,PIndep,PTilt,PPitch,PYaw,
-     &  PRoll,PSonic,PO2,PFreq,PWebb)
+     &  PRoll,PSonic,PO2,PFreq,PWebb, StructSep)
 C
 C Read calibration data from files :
 C
@@ -277,7 +278,7 @@ C
 C Calculate structure parameters
 C
         IF (DoStruct) THEN
-          R = 0.15D0
+          R = StructSep
           CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,TSonic ,TSonic ,
      &      R,dR,Freq,CIndep,CTSon2,dCTSon2)
           CALL ECStruct(Sample,NNMax,N,MMMax,M,Flag,TCouple,TCouple,
@@ -415,15 +416,15 @@ C
       LOGICAL Error(N),BadTc
       REAL*8 RawSampl(Channels),Sample(N),P,UDum,VDum,Hook,Dum,
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CorMean(N),
-     &  Hours,Minutes,Days,Secnds
+     &  Hours,Minutes,Days,Secnds, TsCorr
       REAL*8 ECQ,ECBaseF ! External function calls
       
       REAL*8 C(0:NMaxOrder)
       INTEGER IFLG, DUMORDER, DUMTYP
       REAL*8 ABSERROR, RELERROR, ESTIM, DNLIMIT, UPLIMIT
 
-      REAL*8 DUMFUNC
-      EXTERNAL DUMFUNC
+      REAL*8 DUMFUNC, ECRawSchot
+      EXTERNAL DUMFUNC, ECRawSchot
 C
 C To communicate with function of which zero is searched
 C
@@ -520,6 +521,7 @@ C Calibrate thermocouple
 C
       IF (HAVE_TCCAL) THEN
          IF (HAVE_TREF) THEN
+
 C
 C This is calibration according to Campbells P14 instruction
 C      T =  Calibration(voltage +
@@ -528,12 +530,12 @@ C
             DO i=0,CalTherm(QQOrder)
               c(i) = CalTherm(QQC0+i)
             ENDDO
-             Dum = RawSampl(ColTref)
-            UPLIMIT = (Dum + 10 - CalTherm(QQC0))/CalTherm(QQC1)
-            DNLIMIT = (Dum - 10 - CalTherm(QQC0))/CalTherm(QQC1)
+            Dum = RawSampl(ColTref)
+            UPLIMIT = (DUM + 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
+            DNLIMIT = (DUM - 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
             ESTIM = (Dum - CalTherm(QQC0))/CalTherm(QQC1)
-            RELERROR = 1e-6
-            ABSERROR = (0.0001)/CalTherm(QQC1)
+            RELERROR = 1e-4
+            ABSERROR = (0.001)/CalTherm(QQC1)
             DUMORDER = CalTherm(QQOrder)
             DUMTYP = CalTherm(QQFunc)
             CALL DFZERO(DUMFUNC, DNLIMIT, UPLIMIT, ESTIM, RELERROR,
@@ -586,15 +588,21 @@ C
                   Sample(SpecHum)=ECQ(Sample(Humidity),
      &                                Sample(TCouple),P)
                 ELSE IF (.NOT.Error(TSonic)) THEN
+                  TsCorr = ECRawSchot(Sample(TSonic),
+     &                                Sample(Humidity), P)
+                  write(*,*) 'applied schot corr: ',
+     &                        Sample(TSonic), TsCorr
                   Sample(SpecHum)=ECQ(Sample(Humidity),
-     &                                Sample(TSonic),P)
+     &                                TsCorr,P)
                 ELSE
                   Error(SpecHum) = (.TRUE.)
                 ENDIF
               ELSE
                 IF (.NOT.Error(TSonic)) THEN
+                  TsCorr = ECRawSchot(Sample(TSonic),
+     &                                Sample(Humidity), P)
                   Sample(SpecHum)=ECQ(Sample(Humidity),
-     &                                Sample(TSonic),P)
+     &                                TsCorr,P)
                 ELSE
                   Error(SpecHum) = (.TRUE.)
                 ENDIF

@@ -169,6 +169,15 @@ C
       ENDIF
 
 C
+C Check whether we have data needed for corrections
+C
+      IF ((DoSonic) .AND. .NOT. (HAVE_CAL(SpecHum))) THEN
+         WRITE(*,*) 'WARNING: Do not have a hygrometer: ',
+     &                 'can not do ',
+     &                 'humidity correction on sonic temperature'
+         DoSonic = .FALSE.
+      ENDIF
+C
 C Names of quantities and units
 C
       QName(U	    ) = '     U'
@@ -423,7 +432,7 @@ C
      &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoPitch,DoYaw,
      &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
      &	PRaw,PCal,PDetrend,PIndep,PTilt,PPitch,PYaw,
-     &	PRoll,PSonic,PO2,PFreq,PWebb)
+     &	PRoll,PSonic,PO2,PFreq,PWebb, StructSep)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECParams
@@ -446,7 +455,8 @@ C
 
       INCLUDE 'physcnst.for'
 
-      REAL*8 Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,LLimit,ULimit
+      REAL*8 Freq,YawLim,RollLim,PrePitch,PreYaw,PreRoll,LLimit,ULimit,
+     &       StructSep
       LOGICAL DoCrMean,DoSonic,DoTilt,DoPitch,DoYaw,DoRoll,DoFreq,DoO2,
      &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PPitch,PYaw,PRoll,PSonic,
      &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct
@@ -497,6 +507,8 @@ C
       READ(TempFile,*) PO2	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PFreq	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PWebb	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) StructSep! Separation (meter) for which to calculate structure parameter
+      
 
       CLOSE(TempFile)
 
@@ -2860,6 +2872,51 @@ C
       RETURN
       END
 
+      REAL*8 FUNCTION ECRawSchot(Temp, Rhov, Press)
+C
+C EC-Pack Library for processing of Eddy-Correlation data
+C Subroutine		: ECRawSchot
+C Version of subroutine : 1.0
+C Date			: July 27 2000
+C Author		: Arnold Moene
+C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
+C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
+C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
+C Contact address	: Duivendaal 2
+C			  6701 AP  Wageningen
+C			  The Netherlands
+C			  WWW.MetAir.WAU.nl
+C			  WWW.MetAir.Wag-UR.nl (in due time...)
+C			  Tel. +31 317 483981 (secretary)
+C			  Fax. +31 317 482811
+C
+C Purpose :
+C To do humidity part of Schotanus et al. correction on a
+C raw sample of sonic temperature, with Rhov that was not yet
+C corrected
+C
+C Sidewind-correction has already been applied in the
+C routine where the sonic signal is calibrated.
+C
+      INCLUDE 'physcnst.for'
+
+      INTEGER NMax,N,i
+      REAL*8   Temp, Rhov, Press, SPHUM, SPHUMNEW, NEWTEMP
+      REAL*8 ECQ,ECBaseF ! External function calls
+
+      SPHUM = ECQ(Temp, Rhov, Press)
+      SPHUMNEW = 1.0
+      NEWTEMP = Temp
+C Dit convergeert dus helemaal niet !!!
+      DO WHILE (ABS((SPHUM - SPHUMNEW)/SPHUM) .GT. 0.0001)
+
+         NEWTEMP = TEMP/(1+0.51*SPHUM)
+         SPHUMNEW = SPHUM
+         SPHUM = ECQ(NEWTEMP, Rhov, Press)
+      ENDDO
+      ECRAWSCHOT = NEWTEMP
+      RETURN
+      END
 
 
 
