@@ -266,7 +266,7 @@ C
      &    (Mean(V) .NE. DUMMY) .AND.
      &    (DirYaw .NE. DUMMY)) THEN
 
-         IF (DirYaw.LT.180.D0) THEN
+         IF (DirYaw.GE.180.D0) THEN
              QPhys(QPDirFrom) = DirYaw - 180.D0
          ELSE
              QPhys(QPDirFrom) = DirYaw + 180.D0

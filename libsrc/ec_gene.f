@@ -616,7 +616,11 @@ C
 C
 C The 180 degrees is to trick ec_Ph_Flux
 C
-      IF (.NOT. DoCorr(QCYaw)) DirYaw = 180D0
+      IF (.NOT. DoCorr(QCYaw)) THEN
+         DirYaw = 180D0
+      ELSE
+         DirYaw = DirYaw + 180D0
+      ENDIF
       
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &                QPhys, dQPhys, WebVel, DirYaw)

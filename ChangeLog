@@ -287,6 +287,10 @@ Revision 2.5.1: February 3, 2003 (Arnold.Moene@wur.nl)
 	    (output='version' or output='noversion' in configuration file).
 	    Makes debugging easier if someone has a problem, but
 	    doesn't know with what version the results were produced.
+Revision 2.5.2: March 11, 2003 (Arnold.Moene@wur.nl)
+          - fixed error in wind direction of 180 degrees: now should work 
+	    with planar fit and classic axis rotation: a change in ec_Ph_flux 
+	    and in ec_g_main.
 	  
 	  
 	    
