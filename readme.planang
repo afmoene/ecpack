@@ -48,7 +48,7 @@ contaminated by measurement errors).
 
 Link with ec_ncdf
 -----------------
-The  program planang is te be run first, to determine the untilting
+The  program planang is to be run first, to determine the untilting
 matrix. This is then written to a file, from which it is read by ec_ncdf
 that will perform the actual rotation of the data. So the programs
 planang and  ec_ncdf are run after each other.
@@ -58,7 +58,7 @@ The program uses the same type of input files as ec_ncdf:
 - calibration files
 
 Some changes need to be made:
-- In the configuration file, two extra item nees to be given:
+- In the configuration file, two extra item need to be given:
   1)   PlfIntName = 'interval.dat'
   This is the name of the file in which the intervals are defined 
   over which the planar fit angles need to be determined. If you want to
@@ -67,15 +67,15 @@ Some changes need to be made:
   152 12 00 157 12 00
   157 12 00 162 12 00
   162 12 00 167 12 00
-  So the sequencse is: start DOY, start hour, start minute, end DOY,
+  So the sequence is: start DOY, start hour, start minute, end DOY,
   end hour end minute.
   2)   PlfName = 'foo.out'
   where the foo.out can be any name, but will be the name of the file
-  to which the utiltiting informatio is written.
+  to which the untilting information is written.
   The information written to the file is:
-  the interval as it appers in the file defined by PlfIntName, Alpha,
+  the interval as it appears in the file defined by PlfIntName, Alpha,
   Beta, Gamma, WBias, ((Apf(i,j), i=1,3), j=1,3) (where Apf is
-  the planar fit untiltiing matrix, Alpha and Beta are rotation angles
+  the planar fit untilting matrix, Alpha and Beta are rotation angles
   (degrees) comparable to the pitch and roll angle, Gamma  is the rotation
   that is comparable to the yaw angle and WBias is an optional bias in the
   vertical wind speed (at the moment this is forced to zero).
@@ -136,14 +136,14 @@ main configuration file
 Main configuration file
 -----------------------
 The main configuration file consits of two types of lines:
-- lines with an assigment 
+- lines with an assignment 
 - comment lines (starting with //)
 
 Assignments are of the form 
    VARNAME = VALUE
 where VARNAME is one of a prescribed list of tokens and VALUE is the value
 to be assigned (VALUE may be placed between quotes, but this is not necessary
-as long as no spcaes are part of VALUE). VARNAME is case-insensitive
+as long as no spaces are part of VALUE). VARNAME is case-insensitive
 (i.e. VARNAME is equivalent to VarName), but VALUE may not be (on UNIX
 path names are cases sensitive and names of variables in a NetCDF file
 are also cases-sensitive).
@@ -185,7 +185,7 @@ following columns:
 6. End minutes
 7. Water vapour density (in kg/m3) from a slow sensor (used to correct for
    drift of the fast hygrometer)
-8. Atmopheric pressure (in Pa)
+8. Atmospheric pressure (in Pa)
 9. Name of data file
 10. Name of file for intermediate results
 

@@ -31,7 +31,7 @@ C               DatDir, OutDir,  ParmDir,
 C               FluxName, ParmName, InterName, PlfIntName,
 C               PlfName, SonName, CoupName, HygName, CO2Name,
 C               NCVarName, NCNameLen,
-C               OutMean, OutCov, OutPh, OutStd, OutStr,
+C               OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
 C               Outputs)
 C INPUTS
 C     ConfUnit : [INTEGER]
@@ -73,6 +73,8 @@ C     OutPh    : [LOGICAL](NMaxPhys)
 C                which physical quantities to write to output 
 C     OutStd   : [LOGICAL](NNMax)
 C                which standard deviations to write to output
+C     OutNum   : [LOGICAL](NNMax)
+C                which number of samples to write to output
 C     OutStr   : [LOGICAL](NNMax, NNMax)
 C                which structure parameters to write to output,
 C     OutPuts  : [LOGICAL](NMaxOS)
@@ -101,7 +103,7 @@ C     ***
      &           FluxName, ParmName, InterName, PlfIntName,
      &           PlfName, SonName, CoupName, HygName, CO2Name,
      &           NCVarName, NCNameLen,
-     &           OutMean, OutCov, OutPh, OutStd, OutStr,
+     &           OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
      &           Outputs)
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
@@ -114,7 +116,8 @@ C     ***
      &                CO2Name, PlfName, PlfIntName
       CHARACTER*(*)   NCVarName(NCNameLen)
       LOGICAL         OutMean(NNMax), OutCov(NNMax, NNMax), 
-     &                OutStd(NNMax), OutStr(NNMax, NNMax), 
+     &                OutStd(NNMax), OutNum(NNMax),  
+     &                OutStr(NNMax, NNMax), 
      &                OutPh(NMaxPhys), Outputs(NMaxOS)
 
       INTEGER         IOCODE, KINDEX
@@ -237,6 +240,9 @@ C Output definitions
             ELSE IF (INDEX(TOKLINE, 'OUT_STD') .GT. 0) THEN
                CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            OutStd)
+            ELSE IF (INDEX(TOKLINE, 'OUT_NUM') .GT. 0) THEN
+               CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutNum)
             ELSE IF (INDEX(TOKLINE, 'OUTPUT') .GT. 0) THEN
                CALL EC_T_GOutS(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            Outputs)
@@ -1017,7 +1023,7 @@ C                      M, Mok, Mean, dMean, Cov, dCov,
 C                      Phys, dPhys, Std, dStd, Struct,
 C                      dStruct, R, dR,
 C                      OutMean, OutCov, OutPh, 
-C                      OutStd, OutStr, Outputs)
+C                      OutStd, OutNum, OutStr, Outputs)
 C INPUTS
 C     Outunit   : [INTEGER]
 C                 output file unit
@@ -1066,6 +1072,8 @@ C     OutPh,    : [LOGICAL](NMaxPhys)
 C                 flags for output of physical quantities
 C     OutStd    : [LOGICAL](NNMax)
 C                 flags for output of standard deviations
+C     OutNum    : [LOGICAL](NNMax)
+C                 flags for output of number of samples 
 C     OutStr    : [LOGICAL](NNMax,NNMax)
 C                 flags for output of structure parameters
 C     Outputs   : [LOGICAL](NMAxOS)
@@ -1089,14 +1097,15 @@ C
      &                 Phys, dPhys, Std, dStd, Struct,
      &                 dStruct, R, dR,DiagFlag,
      &                 OutMean, OutCov, OutPh,
-     &                 OutStd, OutStr, Outputs)
+     &                 OutStd, OutNum, OutStr, Outputs)
       IMPLICIT NONE
       include 'parcnst.inc'
 
       INTEGER OutUnit, StartTime(3), StopTime(3), M, Mok(NNMax),
      &        I, J, DiagFlag(NMaxDiag)
       LOGICAL Header, OutMean(NNMax), OutCov(NNMax,NNMax),
-     &        OutPh(NMaxPhys), OutStd(NNMax), OutStr(NNMax,NNMax),
+     &        OutPh(NMaxPhys), OutStd(NNMax), OutNum(NNMax),
+     &        OutStr(NNMax,NNMax),
      &        Outputs(NMaxOS), AnyStruct
       REAL*8  Mean(NNMax), dMean(NNMax),
      &        Cov(NNMax,NNMax), dCov(NNMax,NNMax),
@@ -1202,11 +1211,23 @@ C Rest of time info
 C Number of samples
            write(OutUnit, FRM) '#samples'
            DO I=1,NNMax
-             NAME = QName(I)
-             CALL EC_T_STRIPSTR(NAME)
-             WRITE(OUTNAME, "('#',A)") NAME(:EC_T_STRLEN(NAME))
-             write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+             IF (OutNum(I)) THEN
+                NAME = QName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "('#',A)") NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+             ENDIF
            ENDDO
+C Diagnostics
+           IF (Outputs(OSDiag)) THEN
+              DO I=1,NMaxDiag
+                NAME = QDName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)")
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+              ENDDO
+           ENDIF
 C Means
            DO I=1,NNMax
              IF (OutMean(I)) THEN
@@ -1261,31 +1282,6 @@ C Covariances
                 ENDIF
              ENDDO
            ENDDO
-C Physical quantities
-           DO I=1,NMaxPhys
-             IF (OutPh(I)) THEN
-                NAME = QPName(I)
-                CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)")
-     &                NAME(:EC_T_STRLEN(NAME))
-                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
-                IF (Outputs(OSTol)) THEN
-                   WRITE(OUTNAME, "('Tol(',A,')')")
-     &                NAME(:EC_T_STRLEN(NAME))
-                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
-                ENDIF
-             ENDIF
-           ENDDO
-C Diagnostics
-           IF (Outputs(OSDiag)) THEN
-              DO I=1,NMaxDiag
-                NAME = QDName(I)
-                CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)")
-     &                NAME(:EC_T_STRLEN(NAME))
-                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
-              ENDDO
-           ENDIF
 C Structure parameters
            IF (AnyStruct) THEN
              write(OutUnit, FRM) 'R'
@@ -1312,6 +1308,21 @@ C Structure parameters
                 ENDDO
              ENDDO
            ENDIF
+C Physical quantities
+           DO I=1,NMaxPhys
+             IF (OutPh(I)) THEN
+                NAME = QPName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)")
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   WRITE(OUTNAME, "('Tol(',A,')')")
+     &                NAME(:EC_T_STRLEN(NAME))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF
+           ENDDO
            WRITE(OutUnit,*)
 C Second line of header
 C Special format for first column
@@ -1336,8 +1347,20 @@ C Rest of time info
 C # samples
            write(OutUnit, FRM) '[-]'
            DO I=1,NNMax
-             write(OutUnit, FRM) '[-]'
+             if (OutNum(I)) THEN
+                 write(OutUnit, FRM) '[-]'
+             ENDIF
            ENDDO
+C Diagnostics
+           IF (Outputs(OSDiag)) THEN
+              DO I=1,NMaxDiag
+                NAME = UDName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)")
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+              ENDDO
+           ENDIF
 C Means
            DO I=1,NNMax
              IF (OutMean(I)) THEN
@@ -1381,29 +1404,6 @@ C Covariances
                 ENDIF
              ENDDO
            ENDDO
-C Physical quantities
-           DO I=1,NMaxPhys
-             IF (OutPh(I)) THEN
-                NAME = UPName(I)
-                CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)")
-     &                NAME(:EC_T_STRLEN(NAME))
-                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
-                IF (Outputs(OSTol)) THEN
-                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
-                ENDIF
-             ENDIF
-           ENDDO
-C Diagnostics
-           IF (Outputs(OSDiag)) THEN
-              DO I=1,NMaxDiag
-                NAME = UDName(I)
-                CALL EC_T_STRIPSTR(NAME)
-                WRITE(OUTNAME, "(A)")
-     &                NAME(:EC_T_STRLEN(NAME))
-                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
-              ENDDO
-           ENDIF
 C Structure parameters
            IF (AnyStruct) THEN
              write(OutUnit, FRM) '[m]'
@@ -1428,6 +1428,19 @@ C Structure parameters
                 ENDDO
              ENDDO
            ENDIF
+C Physical quantities
+           DO I=1,NMaxPhys
+             IF (OutPh(I)) THEN
+                NAME = UPName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)")
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF
+           ENDDO
            WRITE(OutUnit,*)
 C The real data!
         ELSE
@@ -1440,52 +1453,17 @@ C General format for other columns
            ELSE
               FRM='(" ",I20,$)'
            ENDIF
+C Time info
            write(OutUnit, FRM) StartTime(2)
            write(OutUnit, FRM) StartTime(3)
            write(OutUnit, FRM) StopTime(1)
            write(OutUnit, FRM) StopTime(2)
            write(OutUnit, FRM) StopTime(3)
+C Number of samples
            write(OutUnit, FRM) M
            DO I=1,NNMax
-             CALL EC_F_WINT(OutUnit, FRM, Mok(I), M)
-           ENDDO
-           IF (Outputs(OSCSV)) THEN
-              FRM='(",",G20.5,$)'
-           ELSE
-              FRM='(" ",G20.5,$)'
-           ENDIF
-           DO I=1,NNMax
-             IF (OutMean(I)) THEN
-                CALL EC_F_WREAL(OutUnit, FRM, Mean(I), M)
-                IF (Outputs(OSTol)) THEN
-                   CALL EC_F_WREAL(OutUnit, FRM, dMean(I), M)
-               ENDIF
-             ENDIF
-           ENDDO
-           DO I=1,NNMax
-             IF (OutStd(I)) THEN
-                CALL EC_F_WREAL(OutUnit, FRM, Std(I), M)
-                IF (Outputs(OSTol)) THEN
-                    CALL EC_F_WREAL(OutUnit, FRM, dStd(I), M)
-                ENDIF
-             ENDIF
-           ENDDO
-           DO I=1,NNMax
-             DO J=1,NNMax
-                IF (OutCov(I,J)) THEN
-                   CALL EC_F_WREAL(OutUnit, FRM, Cov(I,J), M)
-                   IF (Outputs(OSTol)) THEN
-                      CALL EC_F_WREAL(OutUnit, FRM, dCov(I,J), M)
-                   ENDIF
-                ENDIF
-             ENDDO
-           ENDDO
-           DO I=1,NMaxPhys
-             IF (OutPh(I)) THEN
-                CALL EC_F_WREAL(OutUnit, FRM, Phys(I), M)
-                IF (Outputs(OSTol)) THEN
-                   CALL EC_F_WREAL(OutUnit, FRM, dPhys(I), M)
-                ENDIF
+             IF (OutNum(I)) THEN
+                CALL EC_F_WINT(OutUnit, FRM, Mok(I), M)
              ENDIF
            ENDDO
            IF (Outputs(OSDiag)) THEN
@@ -1497,12 +1475,42 @@ C General format for other columns
               DO I=1,NMaxDiag
                 CALL EC_F_WINT(OutUnit, FRM, DiagFlag(I), M)
               ENDDO
-              IF (Outputs(OSCSV)) THEN
-                 FRM='(",",G20.5,$)'
-              ELSE
-                 FRM='(" ",G20.5,$)'
-              ENDIF
            ENDIF
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",G20.5,$)'
+           ELSE
+              FRM='(" ",G20.5,$)'
+           ENDIF
+C Means
+           DO I=1,NNMax
+             IF (OutMean(I)) THEN
+                CALL EC_F_WREAL(OutUnit, FRM, Mean(I), M)
+                IF (Outputs(OSTol)) THEN
+                   CALL EC_F_WREAL(OutUnit, FRM, dMean(I), M)
+               ENDIF
+             ENDIF
+           ENDDO
+C Standard deviations
+           DO I=1,NNMax
+             IF (OutStd(I)) THEN
+                CALL EC_F_WREAL(OutUnit, FRM, Std(I), M)
+                IF (Outputs(OSTol)) THEN
+                    CALL EC_F_WREAL(OutUnit, FRM, dStd(I), M)
+                ENDIF
+             ENDIF
+           ENDDO
+C Covariances
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutCov(I,J)) THEN
+                   CALL EC_F_WREAL(OutUnit, FRM, Cov(I,J), M)
+                   IF (Outputs(OSTol)) THEN
+                      CALL EC_F_WREAL(OutUnit, FRM, dCov(I,J), M)
+                   ENDIF
+                ENDIF
+             ENDDO
+           ENDDO
+C Structure parameters
            IF (AnyStruct) THEN
              CALL EC_F_WREAL(OutUnit, FRM, R, M)
              CALL EC_F_WREAL(OutUnit, FRM, dR, M)
@@ -1517,6 +1525,15 @@ C General format for other columns
                 ENDDO
              ENDDO
            ENDIF
+C Physical quantities
+           DO I=1,NMaxPhys
+             IF (OutPh(I)) THEN
+                CALL EC_F_WREAL(OutUnit, FRM, Phys(I), M)
+                IF (Outputs(OSTol)) THEN
+                   CALL EC_F_WREAL(OutUnit, FRM, dPhys(I), M)
+                ENDIF
+             ENDIF
+           ENDDO
            WRITE(OutUnit,*)
         ENDIF
       ENDIF

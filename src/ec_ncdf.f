@@ -53,7 +53,8 @@ C                                correction) from ECMain and write it flux
 C                                file in two added columns
 C             Sept. 18, 2002:    removed calcomm.inc and added HAVE_UNCAL
 C                                to store which input data we have
-C Current version: 1.11
+C             For more recent changes, see Changelog
+C Current version: see version.inc
 C...........................................................................
       PROGRAM EC_NCDF
 
@@ -74,7 +75,7 @@ C...........................................................................
      &  AnglesFound, 
      &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  OutMean(NNMax), OutCov(NNMax, NNMax), 
-     &  OutStd(NNMax), OutStr(NNMax, NNMax), 
+     &  OutStd(NNMax), OutNum(NNMax), OutStr(NNMax, NNMax), 
      &  OutPh(NMaxPhys), Outputs(NMaxOS)     
       INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
@@ -138,6 +139,7 @@ C Get defaults for configuration
       DO I=1,NNMax
          OutMean(I) = .FALSE.
          OutStd(I) = .FALSE.
+         OutNum(I) = .FALSE.
          DO J=1,NNMax
             OutCov(I,J) = .FALSE.
             OutStr(I,J) = .FALSE.
@@ -153,7 +155,7 @@ C Get configuration (file names etc.)
      &             PlfName,
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
-     &             OutMean, OutCov, OutPh, OutStd, OutStr,
+     &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
      &             Outputs)
 C
 C Assume first we have no uncalibrated samples at all
@@ -213,7 +215,7 @@ C
      &                QPhys, dQPhys, Std, dStd, Struct,
      &                dStruct, R, dR, DiagFlag,
      &                OutMean, OutCov, OutPh, 
-     &                OutStd, OutStr, Outputs)
+     &                OutStd, OutNum, OutStr, Outputs)
       
 C
 C Number of quantities involved in this experiment

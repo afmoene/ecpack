@@ -62,8 +62,11 @@ C...........................................................................
       
 
 
+C Initialize 
       STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
+      ATTEMPTS = 0
+
       IF (MAXIND .GT. 0) THEN
          
          IND1 = 1
@@ -118,7 +121,6 @@ C Check whether point is before start or beyond end of file
          ENDIF
 
          CURCH = IND2
-         ATTEMPTS = 0
 
          DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 50))
 C Determine time difference between current sample and required time
@@ -193,8 +195,11 @@ C...........................................................................
 
       REAL*8 EC_NCDF_CSI2HOUR
 
+C Initialize
       STATUS = NF_INQ_VARDIMID(NCID,NCsecID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
+      ATTEMPTS = 0
+
       IF (MAXIND .GT. 0) THEN
          IND1 = 1
          IND3 = MAXIND

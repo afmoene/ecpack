@@ -177,6 +177,9 @@ Out_Cov       write covariance of two calibrated signal to output file
 Out_Std       write standard deviation of given calibrated signal to output file
               (e.g. Out_Std='TSon', for a list of variable names,
               see below)
+Out_Num       write number of samples of  given calibrated signal to output file
+              (e.g. Out_Std='TSon', for a list of variable names,
+              see below)
 Out_Phys      write given physical (=derived quantity) to output file 
               (e.g. Out_Phys='HSonic', for a list of variable names,
               see below)
@@ -459,6 +462,22 @@ One can either use a predefined set of columns (set Output='old'
 in the main configuration file) or defined the required columns
 yourselve (set Output='new' and define the columns in the
 main configuration file).
+Note that although the contents of the flux output file is now configurable,
+the order of the columns is fixed (i.e. independent of the order in which output
+is requested in the configuration file). The order of the blocks of output is
+(since version 2.5.7):
+time columns                        (always)
+# samples                           (always)
+# samples per variable              (on request)
+diagnostics                         (on request)
+means                               (on request)
+standard deviations                 (on request)
+covariances                         (on request)
+structure parameters                (on request)
+physical parameters (incl. fluxes)  (on request)
+
+Within the block of physical parameters, the fluxes come last.
+
 
 Program internals
 -----------------

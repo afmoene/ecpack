@@ -114,12 +114,35 @@ C     ***
      &  WebVel, 
      &  DirYaw, LocalDir, QPhys(NMaxPhys), dQPhys(NMaxPhys)
 C
+C Air density (sonic T)
+C
+      IF ((Mean(Humidity) .NE. DUMMY) .AND.
+     &    (Mean(TSonic) .NE. DUMMY)) THEN
+        QPhys(QPRhoSon) = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
+        dQPhys(QPRhoSon) = DUMMY
+      ELSE
+        QPhys(QPRhoSon) = DUMMY
+        dQPhys(QPRhoSon) = DUMMY
+      ENDIF        
+C
+C Air density (couple T)
+C
+      IF ((.NOT. BadTC) .AND.
+     &    (Mean(Humidity) .NE. DUMMY) .AND.
+     &    (Mean(TCouple) .NE. DUMMY)) THEN
+        QPhys(QPRhoTC) = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
+        dQPhys(QPRhoTC) = DUMMY
+      ELSE
+        QPhys(QPRhoTC) = DUMMY
+        dQPhys(QPRhoTC) = DUMMY
+      ENDIF
+C
 C Sensible heat flux [W m^{-2}]
 C
       IF ((Mean(Humidity) .NE. DUMMY) .AND.
      &    (Mean(TSonic) .NE. DUMMY) .AND.
      &    (Cov(W,TSonic) .NE. DUMMY)) THEN
-        RhoSon = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
+        RhoSon = QPhys(QPRhoSon)
         QPhys(QPHSonic) = Cp*RhoSon*Cov(W,TSonic)
         dQPhys(QPHSonic) = Cp*RhoSon*TolCov(W,TSonic)
       ELSE
@@ -131,7 +154,7 @@ C
      &    (Mean(Humidity) .NE. DUMMY) .AND.
      &    (Mean(TCouple) .NE. DUMMY) .AND.
      &    (Cov(W,TCouple) .NE. DUMMY)) THEN
-        RhoTc = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
+        RhoTc = QPhys(QPRhoTC)
         QPhys(QPHTc) = Cp*RhoTc*Cov(W,TCouple)
         dQPhys(QPHTc) = Cp*RhoTc*TolCov(W,TCouple)
       ELSE
@@ -196,9 +219,12 @@ C
 C Friction force [N m^{-2}]
 C
          IF (.NOT.BadTc) THEN
+           RhoSon = QPhys(QPRhoSon)
+           RhoTc = QPhys(QPRhoTc)
            QPhys(QPTau) = 0.5D0*(RhoSon+RhoTc)*
      &                          (ABS(QPhys(QPUStar)))**2.D0
          ELSE
+           RhoSon = QPhys(QPRhoSon)
            QPhys(QPTau) = RhoSon*(ABS(QPHys(QPUStar)))**2.D0
          ENDIF
          dQPhys(QPTau) = (0.5D0*(2D0*ABS(COV(W,U))*TolCov(W,U) + 
@@ -287,25 +313,6 @@ C
       ELSE
          QPhys(QPDirFrom) = DUMMY
          dQPhys(QPDirFrom) = DUMMY         
-      ENDIF
-      
-      IF ((Mean(Humidity) .NE. DUMMY) .AND.
-     &    (Mean(TSonic) .NE. DUMMY)) THEN
-        QPhys(QPRhoSon) = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
-        dQPhys(QPRhoSon) = DUMMY
-      ELSE
-        QPhys(QPRhoSon) = DUMMY
-        dQPhys(QPRhoSon) = DUMMY
-      ENDIF        
-      
-      IF ((.NOT. BadTC) .AND.
-     &    (Mean(Humidity) .NE. DUMMY) .AND.
-     &    (Mean(TCouple) .NE. DUMMY)) THEN
-        QPhys(QPRhoTC) = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
-        dQPhys(QPRhoTC) = DUMMY
-      ELSE
-        QPhys(QPRhoTC) = DUMMY
-        dQPhys(QPRhoTC) = DUMMY
       ENDIF
       
       RETURN

@@ -291,6 +291,22 @@ C Take care of situation when we don't have a hygrometer
       ZL = CalSonic(QQZ)/EC_Ph_Obukhov(Ustar, Tstar, Qstar,
      &                                 Mean(WhichTemp))
 
+C Initialize ATT etc
+      ATT=0.0961D0
+      AWW=0.838D0
+      AUU=0.2D0*AWW
+      AWT=0.284D0
+      AUW=0.124D0
+      BTT=3.124D0/ATT**0.667D0
+      BWW=3.124D0/AWW**0.667D0
+      BUU=3.124D0/AUU**0.667D0
+      BWT=2.34D0/AWT**1.1D0
+      BUW=2.34D0/AUW**1.1D0
+      XI   = 0.0D0
+      ZETA = (0.001D0*CalSonic(QQZ))**1.667D0
+      CW   = 0.7285D0+1.4115D0*XI
+      CU   = 9.546D0+1.235D0*XI/(ZETA**0.4D0)
+
       IF(ZL.GE.0.D0) THEN
 C
 C-- Stable spectral and co-spectral function factors, eq. 20b, 21b
@@ -1168,6 +1184,9 @@ C     ***
       REAL*8 Cov(NMax,NMax),Factor(NMax),OXC,P, HygType,
      +       GenKo, GenKw, MeanT
 
+C Intialize GenKo eand GenKw
+      GenKo = 0.0D0
+      GenKw = 1.0D0
       IF (HygType .EQ. ApCampKrypton) THEN
           GenKo = KoK
           GenKw = KwK

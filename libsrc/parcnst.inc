@@ -134,28 +134,31 @@ C
      &        QPSumFCO2, QPRhoSon, QPRhoTc
       PARAMETER(NMaxPhys  = 15) ! Maximum number of physical quantities
       
-      PARAMETER (QPVectWind = 1)
-      PARAMETER (QPDirFrom  = 2)
-      PARAMETER (QPHSonic   = 3)
-      PARAMETER (QPHTc      = 4)
-      PARAMETER (QPLvE      = 5)
-      PARAMETER (QPLvEWebb  = 6)
-      PARAMETER (QPSumLvE   = 7)
-      PARAMETER (QPUstar    = 8)
-      PARAMETER (QPTau      = 9)
-      PARAMETER (QPFCO2     = 10)
-      PARAMETER (QPFCO2Webb = 11)
-      PARAMETER (QPSumFCO2  = 12)      
-      PARAMETER (QPRhoSon   = 13)
-      PARAMETER (QPRhoTc    = 14)
-      PARAMETER (QPMeanW    = 15)
+      PARAMETER (QPRhoSon   = 1)
+      PARAMETER (QPRhoTc    = 2)
+      PARAMETER (QPMeanW    = 3)
+      PARAMETER (QPVectWind = 4)
+      PARAMETER (QPDirFrom  = 5)
+      PARAMETER (QPHSonic   = 6)
+      PARAMETER (QPHTc      = 7)
+      PARAMETER (QPLvE      = 8)
+      PARAMETER (QPLvEWebb  = 9)
+      PARAMETER (QPSumLvE   = 10)
+      PARAMETER (QPUstar    = 11)
+      PARAMETER (QPTau      = 12)
+      PARAMETER (QPFCO2     = 13)
+      PARAMETER (QPFCO2Webb = 14)
+      PARAMETER (QPSumFCO2  = 15)      
       
  
       
       CHARACTER*9 QPName(NMaxPhys) 
       DATA QPName
-     &                  /'VectWind',
-     &                   'DirFrom ',
+     &                  /'RhoSon  ',
+     &                   'RhoTc   ',
+     &                   'Wnorot  ',
+     &                   'U_vect  ',
+     &                   'U_dir   ',
      &                   'HSonic  ',
      &                   'HTc     ',
      &                   'LvEcov  ',
@@ -165,14 +168,14 @@ C
      &                   'Tau     ',
      &                   'FCO2cov ',
      &                   'FCO2Webb',
-     &                   'SumFCO2 ',
-     &                   'RhoSon  ',
-     &                   'RhoTc   ',
-     &                   'Wnorot  '/
+     &                   'SumFCO2 '/
      
       CHARACTER*10 UPName(NMaxPhys) 
       DATA UPName
-     &                  /'[m/s]     ',
+     &                  /'[kg/m^3]  ',
+     &                   '[kg/m^3]  ',
+     &                   '[m/s]     ',
+     &                   '[m/s]     ',
      &                   '[degr.]   ',
      &                   '[W/m^2]   ',
      &                   '[W/m^2]   ',
@@ -183,10 +186,7 @@ C
      &                   '[N/m^2]   ',
      &                   '[kg/m^2/s]',
      &                   '[kg/m^2/s]',
-     &                   '[kg/m^2/s]',
-     &                   '[kg/m^3]  ',
-     &                   '[kg/m^3]  ',
-     &                   '[m/s]     '/
+     &                   '[kg/m^2/s]'/
 
       INTEGER QDDelta, QDLock, QDHigh, QDLow, NMaxDiag
       PARAMETER(NMaxDiag  = 4) ! Maximum number of diagnostic flags

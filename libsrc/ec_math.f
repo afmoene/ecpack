@@ -652,6 +652,7 @@ C     ***
       PARAMETER (epsilon = 1.D-15)
       PI = 2.D0*DASIN(1.D0)
       It = 0
+      a  = 0
 C     A&S: 17.6.2:
       aprev = 1.D0
 C     A&S: 17.6.2:
