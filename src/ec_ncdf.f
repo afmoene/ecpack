@@ -1,5 +1,14 @@
 C $Id$
-      PROGRAM EC
+C...........................................................................
+C Function  : ec_ncdf
+C Purpose   : to do eddy correlation calculations on data from
+C             a NetCDF file
+C Interface : a configuration file is read from standard input
+C Author    : Arjan van Dijk
+C             Arnold Moene
+C Date      : May 24, 2000
+C...........................................................................
+      PROGRAM EC_NCDF
 
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
@@ -416,7 +425,7 @@ C
       LOGICAL Error(N),BadTc
       REAL*8 RawSampl(Channels),Sample(N),P,UDum,VDum,Hook,Dum,
      &  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CorMean(N),
-     &  Hours,Minutes,Days,Secnds, TsCorr
+     &  Hours,Minutes,Days,Secnds, TsCorr, WDum
       REAL*8 ECQ,ECBaseF ! External function calls
       
       REAL*8 C(0:NMaxOrder)
@@ -468,10 +477,22 @@ C
          UDum      =  RawSampl(ColU) ! U [m/s]
          VDum      =  RawSampl(ColV) ! V [m/s]
          Sample(W) =  RawSampl(ColW) ! W [m/s]
-   
+         
          Error(U) = (ABS(UDum).GT.40.D0)
          Error(V) = (ABS(VDum).GT.40.D0)
          Error(W) = (ABS(Sample(W)).GT.20.D0)
+C
+C If this is a wind tunnel calibrated sonic,
+C we can apply the KNMI calibrations
+C
+         IF (CalSonic(1) .EQ. ApSon3Dcal) THEN
+            WDum = Sample(W)
+            CALL ECSCal(CalSonic,
+     &                  UDUM, VDUM, WDum,
+     &                  ERROR(U), ERROR(V), ERROR(W))
+            Sample(W) = WDum
+         ENDIF
+   
 C This is he construction when we have a diagnostic variable
 C      IF (((Error(U).OR.Error(V)).OR.Error(W)).OR.
 C     &  ((RawSampl(ColDiagnostic).LT.0.D0).OR.
@@ -483,6 +504,7 @@ C     &   (RawSampl(ColDiagnostic).GT.100.D0))) THEN
          ENDIF
    
          IF (.NOT.((Error(U).OR.Error(V)).OR.Error(W))) THEN
+
 C
 C Rotate velocity according to angle of setup's north relative real north
 C

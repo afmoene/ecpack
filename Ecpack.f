@@ -3,22 +3,24 @@ C###########################################################################
 C
 C
 C
-C      EEEEE	   CCCC 	 PPPPP	     A	       CCCC   K    K
-C      E	  C    C	 P    P     A A       C    C  K   K
-C      E	 C		 P     P   A   A     C	      K  K
-C      EEEE	 C	  ------ PPPPPP   A	A    C	      K K
-C      E	 C		 P	 AAAAAAAAA   C	      KK K
-C      E	  C    C	 P	A	  A   C    C  K   K
-C      EEEEE	   CCCC 	 P     A	   A   CCCC   K    K
+C      EEEEE	   CCCC        PPPPP	       A	        CCCC   K    K
+C      E	       C    C	      P    P      A A       C    C  K   K
+C      E	      C		         P     P    A   A     C	      K  K
+C      EEEE	   C    	  ------ PPPPPP    A	    A    C	      K K
+C      E        C		         P	      AAAAAAAAA   C	      KK K
+C      E	        C    C	      P	     A	      A   C    C  K   K
+C      EEEEE	   CCCC 	      P      A	          A   CCCC   K    K
 C
 C	     Library for processing Eddy-Correlation data
 C     EC Special Interest Group of Wag-UR-METAIR Wageningen and KNMI
 C
 C
 C
-C Version of release    : 1.03
-C Date			: 21 October 1999
+C Version of release    : 1.05
+C (note that version numbers of subroutines are not maintained)
+C Date	   : September 26 2000
 C Author		: Arjan van Dijk
+C             Arnold Moene
 C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
 C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
 C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
@@ -1189,10 +1191,23 @@ C
       ENDIF
  5100 FORMAT ('ERROR: can not open calibration file ', (A))
 
-      DO i=1,NQQ
-       	READ(TempFile,*) CalSpec(i)
-      ENDDO
+C First get the type of apparatus
+      READ(TempFile,*) CalSpec(1)
 
+C Now read the correct number of specs
+      DO i=2,ApNQQ(CalSpec(1))
+       	READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
+         IF (IOCODE .NE. 0) THEN
+            WRITE(*,*) 'ERROR in reading of configuration file'
+            STOP
+         ENDIF
+      ENDDO
+ 9000 CONTINUE
+      IF ((I-1) .NE. ApNQQ(CalSpec(1))) THEN
+         WRITE(*,*) 'ERROR: did not find correct number of specs in ',
+     &               InName(:STRLEN(InName))
+      ENDIF
+      
       CLOSE(TempFile)
 
       RETURN
@@ -3581,4 +3596,104 @@ C We use the number of independent samples found earlier in the estimation
 C of the covariances
 C
       RETURN
+      END
+
+C...........................................................................
+C Function  : ECSCal
+C Purpose   : to calibrate a sonic signal according to wind tunnel
+C             calibration (for th moment this works for apparatus 6,
+C             i.e. a wind tunnel calibrated sonic)
+C Interface : Cal     IN        array of length NQQ with calibation info
+C             UDum    IN/OUT    one horizontal component (on exit: calibrated)
+C             VDum    IN/OUT    another horizontal component (on exit: calibrated)
+C             WDum    IN/OUT    vertical component (on exit: calibrated)
+C             UERROR  IN/OUT    error flag for U (.TRUE. if wrong data)
+C             VERROR  IN/OUT    error flag for V (.TRUE. if wrong data)
+C             WERROR  IN/OUT    error flag for W (.TRUE. if wrong data)
+C Author    : Arnold Moene
+C Date      : September 26, 2000
+C Remarks   : The method is based on a wind tunnel calibration of the sonic
+C             The real velocity components can be derived from the
+C             measured components and the real azimuth and elevation angle.
+C             But the latter are not known and have to be determined
+C             iteratively from the measured components. The relationship
+C             between the real components and the measured components is:
+C
+C               Ureal =  Umeas/(UC1*(1 - 0.5*
+C                                    ((Azi + (Elev/0.5236)*UC2)*
+C                                     (1 - UC3*Abs(Elev/0.5236)))**2 ))
+C               Vreal =  Vmeas*(1 - VC1*Abs(Elev/0.5236))
+C               Wreal =  Wmeas/(WC1*(1 - 0.5*(Azi*WC2)**2))
+C
+C             and
+C               Azi = arctan(V/U)
+C               Elev = arctan(W/sqrt(U**2 + V**2))
+C
+C             where UC1, UC2, UC3, VC1, WC1, WC2 are fitting coefficients.
+C             An azimuth angle of zero is supposed to refer to a wind
+C             direction from the most optimal direction (i.e. the 'open'
+C             side of a sonic). Samples with an absolute azimuth angle of
+C             more than 40 degrees are rejected.
+C...........................................................................
+      SUBROUTINE ECScal(Cal, UDum, VDum, WDum,
+     &                  UError, VError, WError)
+     
+      INCLUDE 'parcnst.inc'
+
+      REAL*8   Cal(NQQ), UDum, VDum, WDum
+      LOGICAL  UError, VError, WError
+
+      REAL*8   UCorr, VCorr, WCorr, AziNew, AziOld, ElevNew, ElevOld,
+     &         UC1, UC2, UC3, VC1, WC1, WC2
+      INTEGER  I, NITER, ITMAX
+
+
+      UC1 = Cal(QQExt6)
+      UC2 = Cal(QQExt7)
+      UC3 = Cal(QQExt8)
+      VC1 = Cal(QQExt9)
+      WC1 = Cal(QQExt10)
+      WC2 = Cal(QQExt11)
+
+      ITMAX = 20
+      NITER = 0
+      AziOld = 9999D0
+      ElevOld = 9999D0
+      AziNew = ATAN(VDum/UDum)
+      ElevNew = ATAN(WDum/SQRT(UDum**2 + VDum**2))
+
+      UCorr = UDum
+      VCorr = VDum
+      WCorr = WDum
+
+      DO WHILE ((ABS(AziNew-AziOld) .GT. 1./60) .OR.
+     &          (ABS(ElevNew-ElevOld) .GT. 1./60) .AND.
+     &          (NITER .LT. ITMAX))
+         UCorr =  UDum/(UC1*(1 - 0.5*
+     &           ((AziNew + (ElevNew/0.5236D0)*UC2)*
+     &            (1 - UC3*Abs(ElevNew/0.5236D0))
+     &           )**2        )
+     &                  )
+         VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
+         WCorr =  WDum/(WC1*(1 - 0.5*(AziNew*WC2)**2))
+
+         AziOld = AziNew
+         ElevOld = ElevNew
+
+         AziNew = ATAN(Vcorr/UCorr)
+         ElevNew = ATAN(Wcorr/SQRT(UCorr**2 + VCorr**2))
+
+         NITER = NITER + 1
+      ENDDO
+      
+      IF ((NITER .EQ. ITMAX) .OR. (ABS(AziNew) .GT. 0.698)) THEN
+         UError = .TRUE.
+         VError = .TRUE.
+         WError = .TRUE.
+      ELSE
+         UDum = UCorr
+         VDum = VCorr
+         WDum = WCorr
+      ENDIF
+
       END

@@ -40,7 +40,6 @@ C
       INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder
 
       PARAMETER(MMMax  = 50000) ! Maximum number of samples allowed
-C      PARAMETER(MMMax  = 5000) ! Maximum number of samples allowed
       PARAMETER(NNNMax	  = 13) ! Maximum number of uncalibrated quantities in 1 sample
       PARAMETER(NNMax	  =  8) ! Maximum number of calibrated quantities in 1 sample
       PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]
@@ -57,21 +56,30 @@ C
 C Constants to characterize types of measurement apparatus, all starting
 C with ''Ap''
 C
-      INTEGER ApGillSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro
+      INTEGER ApGillSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro,
+     &        ApSon3Dcal
 
       PARAMETER(ApGillSonic   = 1)
       PARAMETER(ApTCouple     = 2)
       PARAMETER(ApCampKrypton = 3)
       PARAMETER(ApPt100       = 4)
       PARAMETER(ApPsychro     = 5)
+      PARAMETER(ApSon3Dcal    = 6)
+
+C
+C Number of calibration data for each apparatus type
+C
+      INTEGER  ApNQQ(6) /27,27,27,27,27,33/
+            
 C
 C Constants to indicate calibration data, all starting with QQ
 C
       INTEGER QQType,QQIdent,QQGain,QQOffset,QQX,QQY,QQZ,QQC0,QQC1,
      &	QQC2,QQC3,QQC4,QQC5,QQC6,QQPitch,QQYaw,QQRoll,QQOrder,QQFunc,
-     &	QQPath,QQTime,QQExt1,QQExt2,QQExt3,QQExt4,QQExt5,NQQ,QQDelay
+     &	QQPath,QQTime,QQExt1,QQExt2,QQExt3,QQExt4,QQExt5,NQQ,QQDelay,
+     &   QQExt6, QQExt7, QQExt8, QQExt9, QQExt10, QQExt11
 
-      PARAMETER(NQQ	 = 27) ! Maximum number of calibration coefficients
+      PARAMETER(NQQ	 = 33) ! Maximum number of calibration coefficients
 
       PARAMETER(QQType	 =  1) ! Either of the ApXXXXXX numbers
       PARAMETER(QQIdent  =  2) ! True series-number of the apparatus
@@ -100,3 +108,9 @@ C
       PARAMETER(QQExt3	 = 25) ! Additional calibration coefficient
       PARAMETER(QQExt4	 = 26) ! Additional calibration coefficient
       PARAMETER(QQExt5	 = 27) ! Additional calibration coefficient
+      PARAMETER(QQExt6	 = 28) ! Additional calibration coefficient
+      PARAMETER(QQExt7	 = 29) ! Additional calibration coefficient
+      PARAMETER(QQExt8	 = 30) ! Additional calibration coefficient
+      PARAMETER(QQExt9	 = 31) ! Additional calibration coefficient
+      PARAMETER(QQExt10	 = 32) ! Additional calibration coefficient
+      PARAMETER(QQExt11	 = 33) ! Additional calibration coefficient

@@ -8,6 +8,9 @@ Date    : August 1, 2000
 Revision: September 18, 2000: changed in physconst.inc the sensitivity
           of Krypton to O2 from old 'Webb' value (0.0085) to  
 	  Arjan van Dijk's value (0.0038 m^3 g^-1 cm^-1)
+Revision: September 26, 2000: added support for wind tunnel calibrated
+          sonic anemometer (see description at end of this readme)
+Current version: 1.05
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
@@ -268,6 +271,7 @@ QQType:    now 5 types of sensors are known:
 	   3 : Krypton hygrometer
 	   4 : PT100 thermometer
 	   5 : Psychrometer
+	   6 : wind tunnel calibrated sonic anemometer
 QQX, QQY and QQZ:
            are used for frequency response corrections
 QQFunc:    Two types of fit functions are available
@@ -275,7 +279,10 @@ QQFunc:    Two types of fit functions are available
 	   2 : logarithmic polynomial
 QQExt1 to QQExt5:
            These are used to specify calibration factors specific to a
-	   type of sensor.
+	   type of sensor (for QQType = 6, six extra calibration factors
+	   are available (QQExt6 to QQExt11) to define the wind tunnel 
+	   calibration; see Wind tunnel calibrated sonic).
+
 
 See section on Program internals on how gain, offset and calibration 
 polynomials are treated.
@@ -369,5 +376,36 @@ humidity and sonic temperature). The resulting temperature is used
 to determine the specific humidity.
 The actual humidity part of the Schotanus correction is applied only to the
 averaged data, not to the raw data.
+
+Wind tunnel calibrated sonic
+----------------------------
+At KNMI sonic anemometers are -sometimes- calibrated in a wind tunnel
+to determine the directional dependence of the signal. As of version 1.05
+of ec_ncdf this can be dealt with. For this purpose a new instrument
+type, QQType = 6, has been introduced. For this type six extra extra
+calibration factors have to be defined in the calibration file (add
+six lines at the end for QQExt6 t QQExt11).
+
+The method is based on a wind tunnel calibration of the sonic
+The real velocity components can be derived from the measured components 
+and the real azimuth and elevation angle. But the latter are not known
+and have to be determined iteratively from the measured components.
+The relationship between the real components and the measured components is:
+
+  Ureal =  Umeas/(UC1*(1 - 0.5* 
+                  ((Azi + (Elev/0.5236)*UC2)* (1 - UC3*Abs(Elev/0.5236)))**2 )
+		 )
+  Vreal =  Vmeas*(1 - VC1*Abs(Elev/0.5236))
+  Wreal =  Wmeas/(WC1*(1 - 0.5*(Azi*WC2)**2)) 
+and
+  Azi = arctan(V/U)
+  Elev = arctan(W/sqrt(U**2 + V**2))
+
+where UC1, UC2, UC3, VC1, WC1, WC2 are fitting coefficients (corresponding
+to QQExt6, QQExt7, QQExt8, QQExt9, QQExt10 and QQExt11, respectively).
+An azimuth angle of zero is supposed to refer to a wind
+direction from the most optimal direction (i.e. the 'open'
+side of a sonic). Samples with an absolute azimuth angle of
+more than 40 degrees are rejected.
 
 
