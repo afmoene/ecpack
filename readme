@@ -37,8 +37,17 @@ Revision: May 30, 2001:
 	    This is not yet finished.
 	  - Now also dump min/max of samples to intermediate results file
 	    (not to flux file !)
+Revision: May 31, 2001:
+          - Search for time interval even more robust. If interval starts
+	    before start of file, first sample in the file is supposed to
+	    be the start of the interval. If the interval ends beyond end 
+	    of file, the interval is now supposed to run until the last
+	    sample in the file.
+          - Fixed a bug that erroneously flagged some covariances as invalid
+	    after axis rotation (bug appeared in previsou revision)
 
-Current version: 1.14
+
+Current version: 1.15
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html

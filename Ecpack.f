@@ -217,6 +217,9 @@ C
 
       NTcOut = 0
       BadTc = (.FALSE.)
+      Have_Uncal(TTime) = .TRUE.
+      IF (Have_Uncal(Humidity)) Have_Uncal(SpecHum) = .TRUE.
+
       DO i=1,M
          CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
      &	  CalSonic,CalTherm,CalHyg,BadTc,Sample(1,i),N,Flag(1,i),
@@ -670,6 +673,9 @@ C
           DO J=1,NMax
 	     IF ((.NOT. HAVE_UNCAL(I)) .OR.
      +           (.NOT. HAVE_UNCAL(J))) THEN
+                write(OUTF,*) 'Reset ', Qname(I), Qname(J),
+     +                                  Have_UNcal(I), Have_UNcal(J),
+     +                                 Cov(I,j)
                 COV(I,J) = DUMMY
 	     ENDIF
 	  ENDDO
@@ -929,6 +935,24 @@ C Get mean sample rate
       SECD = SEC3 - SEC1
       TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
       SAMPF = MAXIND/ABS(TIMED)
+C Check whether point is before start or beyond end of file
+      DOYD = FDOY - DOY1
+      HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
+      SECD = 0 - SEC1
+      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+      IF (TIMED .LT. 0) THEN
+         FDOY = DOY1
+	 FHOURMIN = HM1
+      ENDIF
+      DOYD = DOY3 - FDOY
+      HOURD = CSI2HOUR(HM3) - CSI2HOUR(DBLE(FHOURMIN))
+      SECD = SEC3 - 0
+      TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
+      IF (TIMED .LT. 0) THEN
+         FDOY = DOY3
+	 FHOURMIN = HM3
+      ENDIF
+
 C Get time difference between start and requested point
       DOYD = FDOY - DOY1
       HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM1)
@@ -941,10 +965,6 @@ C Get time difference between start and requested point
       DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 20))
 C Determine time difference between current sample and required time
          PREVCH = CURCH
-         IF ((IND2 .LT. 1) .OR. (IND2 .GT. MAXIND)) THEN
-             IND = -1
-             RETURN
-         ENDIF
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCsecID, IND2, SEC2)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND2, DOY2)
          STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND2, HM2)
@@ -962,36 +982,37 @@ C Get local sample rate
 C Get distance between current point and requested point
          DOYD = FDOY - DOY2
          HOURD = CSI2HOUR(DBLE(FHOURMIN)) - CSI2HOUR(HM2)
-         SECD = 0 - SEC2
+         SECD = 0D0 - SEC2
          TIMED = 3600.0*24*DOYD + HOURD*3600.0 + SECD
-         CURCH = INT(TIMED*SAMPF)
+         CURCH = ANINT(TIMED*SAMPF)
 	 IF (CURCH .EQ. 0) THEN
 	    IND = IND2
+            write(*,*) DOY2, HM2, SEC2, IND2, SAMPF
 	    RETURN
 	 ELSE IF (TIMED .GT. 0) THEN 
 	     IND1 = IND2
 	     HM1 = HM2
 	     SEC1 = SEC2
 	     DOY1 = DOY2
-             IND2 = IND2 + INT(TIMED*SAMPF)
+             IND2 = IND2 + ANINT(TIMED*SAMPF)
 	 ELSE IF  (TIMED .LT. 0) THEN
 	     IND3 = IND2
 	     HM3 = HM2
 	     SEC3 = SEC2
 	     DOY3 = DOY2
-             IND2 = IND2 + INT(TIMED*SAMPF)
+             IND2 = IND2 + ANINT(TIMED*SAMPF)
 	ENDIF
 C
 C Get time difference between start of interval and requested point
-        IF (IND2 .GT. MAXIND) THEN
-	   IND = -1
-	   RETURN
-	ENDIF
         ATTEMPTS = ATTEMPTS + 1
       ENDDO
       IF (ATTEMPTS .EQ. 20) THEN
          IND = -1
       ENDIF
+      IF (IND2 .LT. 1) IND2 = 1
+      IF (IND2 .GT. MAXIND) IND2 = MAXIND
+      IF (ABS(TIMED) .GT. 1./60D0) IND2 = -1
+      write(*,*) DOY2, HM2, SEC2, IND2, SAMPF
       IND = IND2
       END
       
@@ -1128,15 +1149,16 @@ C
      +             NCVarID(HourMin),
      +             NCVarID(Sec),
      +             STOPIND)
-      IF (((STARTIND .LE. 0) .OR. (STOPIND .LE. 0)) .OR.
+      NSAMPLE = STOPIND - STARTIND 
+      IF ((STARTIND .EQ. -1) .OR. (STOPIND .EQ. -1))  NSAMPLE = 0
+      IF ((NSAMPLE .EQ. 0) .OR.
      +    (STOPIND .LT. STARTIND)) THEN
           WRITE(*,*) 'ERROR: No data found for given interval'
           STATUS = NF_CLOSE(NCID)
           IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
           RETURN
       ENDIF
-      NSAMPLE = STOPIND - STARTIND 
-      IF ((STOPIND - STARTIND) .GT. MMMAX) THEN
+      IF (NSAMPLE .GT. MMMAX) THEN
          WRITE(*,5500) MMMAX, NSAMPLE
 	 STOP
       ENDIF
@@ -1190,8 +1212,8 @@ C
      
       
  5500 FORMAT('WARNING: stopped reading data because compiled ',
-     &              ' size of storage (',I4,') is unsufficient ',
-     &              ' for requested data (',I4,')')
+     &              ' size of storage (',I6,') is unsufficient ',
+     &              ' for requested data (',I6,')')
 C
 C Close file again
 C
@@ -3480,13 +3502,20 @@ C
       INCLUDE 'physcnst.for'
 
       LOGICAL DoPrint
-      INTEGER NMax,OutF,N,i
+      INTEGER NMax,OutF,N,i,j
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),SonFactr(NMax)
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
 
       CALL ECSchot(Mean,NMax,N,Cov,SonFactr)
+
+      DO I=1,N
+        write(OUTF,*) Qname(I), MEAN(I)
+	DO J=1,N
+	  write(OUTF,*) Qname(I), Qname(J), COV(i,j)
+	ENDDO
+      ENDDO
 
       IF (DoPrint) THEN
 	WRITE(OutF,*)
