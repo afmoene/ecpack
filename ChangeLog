@@ -308,6 +308,12 @@ Revision 2.5.5: August 28, 2003 (Arnold.Moene@wur.nl)
         the direction of the separation is not relevant in the separation-correction
         (i.e. neither the orientation with respect to the vertical, nor the orientation
         relative to the mean wind dieection is taken into account).
+Revision: 2.5.6: October 9, 2003 (Arnold.Moene@wur.nl)
+      - Now Schotanus side-wind correction is in accordance with written documentation:
+	    it depends on the type of sonic (i.e. the angle of the 'temperature sonic path' with
+		the vertical (30 degrees for CSAT, 45 degrees for Gill/Solent, 0 degrees for Kaijos).
+		Before for all sonics it was assumed that this angle was zero.
+	  - Introduced new sensor (number 11): de ApGillSolent (Gill Solent anemometer).
 
 
 

@@ -334,7 +334,7 @@ should have a time that corresponds a doy,hour,minute combination within
 the interval specified, including the start time, but excluding the end time
 This implies that e.g.
 the interval 
-  255 13 00 255 13 30 
+  255 13 00 255 13 30
 corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:00
 (this different from the behaviour before version has changed as of 
 
@@ -377,7 +377,7 @@ some parameters follows after the example file.
 -------------stop------------------------
 
 QQType:    now 10 types of sensors are known:
-           1 : Campbell Sonic (also works for Gill, except for wind direction!)
+       1 : Campbell Sonic (30 degree angle with vertical)
 	   2 : thermo couple (undefined type)
 	   3 : Krypton hygrometer
 	   4 : PT100 thermometer
@@ -387,6 +387,7 @@ QQType:    now 10 types of sensors are known:
 	   8 : LiCor7500 IR H20/CO2 sensor
 	   9 : Kaijo Denki TR90 3-D sonic
 	   10: Kaijo Denki TR61 3-D sonic
+	   11: Gill Solent anomemeter (45 degree angle with vertical, wind direction might still be incorrect: not tested)
 QQX, QQY and QQZ:
            are used for frequency response corrections
 QQFunc:    Two types of fit functions are available
@@ -478,7 +479,7 @@ Frequency response correction
 .............................
 Due to lack of information on the cospectra of u and v with scalars
 and of different scalars, the frequency respsonse correction is
-only applied to variances and to covariances of scalars with 
+only applied to variances and to covariances of scalars with
 the vertical velocity w.
 
 Thermo couple

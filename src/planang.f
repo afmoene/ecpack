@@ -213,6 +213,7 @@ C Read time-interval from file
 C
  36   READ(PlfIntFile,*,END=37) (StartTime(i),i=1,3),
      &  (StopTime(i),i=1,3)
+      write(*,*) (StartTime(i),i=1,3),  (StopTime(i),i=1,3)
      
       EndInter = .FALSE.
       NPF = 0

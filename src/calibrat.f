@@ -149,8 +149,20 @@ C Here the Schotanus et al. correction for sensitivity of the sonic for
 C lateral velocity is applied directly to the raw data. This is only
 C half of the Schotanus-correction. Humidity-correction comes later.
 C
-           Sample(TSonic) = Sample(TSonic)
+	   IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
+               Sample(TSonic) = Sample(TSonic) +
+     &         ((7./8.)*(Sample(U)**2 + Sample(V)**2) +
+     &          (1./4.)* Sample(W)**2
+     &         )/GammaR
+           ELSE IF (CalSonic(QQType) .EQ. ApGillSolent) THEN
+           Sample(TSonic) = Sample(TSonic) +
+     &         ((3./4.)*(Sample(U)**2 + Sample(V)**2) +
+     &          (1./2.)* Sample(W)**2
+     &         )/GammaR
+           ELSE
+             Sample(TSonic) = Sample(TSonic)
      &         + (Sample(U)**2 + Sample(V)**2)/GammaR
+           ENDIF
 C
 C Following correction is implemented to correct for the true length of the
 C sonic, which is estimated from the ratio of mean sonic temperatures and
