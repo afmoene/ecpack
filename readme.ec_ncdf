@@ -301,10 +301,10 @@ T       PPF       = Print intermediate results after planar fit untilting
 ------------end----------------
 
 If you use planar fit untilting, the 'classic' axis rotation should be switched
-of (using both planar fit and 'classic' doesn't make sense, since in
+off (using both planar fit and 'classic' doesn't make sense, since in
 the end you would only see the effect of the 'classic ' method.
 However, the planar fit method does not turn the system into
-the mean wind. herefore, it is practical to keep the Yaw correction switched on.
+the mean wind. Therefore, it is practical to keep the Yaw correction switched on.
 This will ensure that mean(v) becomes zero (please refer to the
 definition of the specfile given above to find the correct line where 
 the Yaw correction is switched on or off, there has been confusion about what is

@@ -354,3 +354,8 @@ Revision : 2.5.10: April 21, 2004 (Arnold.moene@wur.nl)
         have overlooked that the CSAT does this correction online (see CSAT
         manual, page 1, section 2, sentence 3). Thanks to Ed Swiatek for the
         detailed information.
+Revision : 2.5.11: May 10, 2004 (Arnold.Moene@wur.nl)
+      - in ec_file.f, routine EC_F_GetPF: at end also *close* PlfFile. Not
+        closing this file did not give problems under windows, but did under
+        Linux: for the next interval the routine didn't start at the beginning
+        of the planar fit angles file

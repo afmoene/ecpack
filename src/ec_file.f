@@ -1011,6 +1011,10 @@ C
       IF (.NOT. AnglesFound) THEN
          WRITE(*,*) 'No planar fit angles found for requested interval'
       ENDIF      
+C
+C     Close the planar fit angles file again
+C
+      Close(PlfFile)
       END
       
 C     ****f* ec_file.f/EC_F_GetPF
