@@ -18,7 +18,9 @@ C                                before interation (change in ec_pack)
 C             October 30, 2000:  check for validity of reference temperature
 C                                for thermocouple: Tref is in Celcius (not
 C                                Kelvin !)
-C Current version: 1.08
+C             November 1, 2000:  fixed error in sonic calibration (azimuth
+C                                angle replaced elevation angle)
+C Current version: 1.09
 C...........................................................................
       PROGRAM EC_NCDF
 

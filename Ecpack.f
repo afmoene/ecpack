@@ -3676,7 +3676,7 @@ C...........................................................................
      &              )**2        )
      &                     )
             VCorr =  VDum*(1 - VC1*Abs(ElevNew/0.5236D0))
-            WCorr =  WDum/(WC1*(1 - 0.5*(AziNew*WC2)**2))
+            WCorr =  WDum/(WC1*(1 - 0.5*(ElevNew*WC2)**2))
    
             AziOld = AziNew
             ElevOld = ElevNew

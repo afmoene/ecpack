@@ -14,7 +14,9 @@ Revision: October 18, 2000: in calibration of wind tunnel calibrated
           sonic: check for valid wind direction before interation
 Revision: October 30, 2000: check for validity of Tref (for thermocouple
           calibration) -> Tref is in Celcius, not Kelvin !
-Current version: 1.08
+Revision: November 1, 2000:  fixed error in sonic calibration (azimuth
+	  angle replaced elevation angle)
+Current version: 1.09
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
