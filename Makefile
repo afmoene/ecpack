@@ -19,31 +19,28 @@
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
+
+
+FC=g77
+AR=ar
 #
+# For some Unix
+INCDIR=-I/usr/include
+LIBDIR=-L/usr/lib
+EXT=
+#
+# For DJGPP
+# INCDIR=-Ic:/djgpp/include
+# LIBDIR=-Lc:/djgpp/lib
+# EXT=.exe
+#
+# For MingW
+#INCDIR=-Ic:/gcc-2.95.2/include
+#LIBDIR=-Lc:/gcc-2.95.2/lib
+#EXT=.exe
+
 FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g
 LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
-LIBSRC=../libsrc
-SRC=../src
-
-# For some Unix
-BUILD-LINUX=build-linux
-LEXT=
-LFC=g77
-LAR=ar
-LRANLIB=ranlib
-LINCDIR='-I/usr/include -I$(LIBSRC)/'
-LLIBDIR=-L/usr/lib
-
-# For MingW
-BUILD-WIN32=build-win32
-WFC=/usr/local/bin/i386-mingw32-g77
-WAR=/usr/local/bin/i386-mingw32-ar
-WRANLIB=/usr/local/bin/i386-mingw32-ranlib
-WEXT=.exe
-WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/'
-WLIBDIR=-L/usr/local/i386-mingw32/lib
-WEXT=.exe
-
 
 # For Robodoc
 ROBODOC=robodoc
@@ -56,27 +53,14 @@ SED=sed
 RM=rm -f
 RMDIR=rm -rf
 MV=mv
-DOCFILES=$(LIBSRC)/ec_corr.f $(LIBSRC)/ec_phys.f $(LIBSRC)/ec_math.f $(LIBSRC)/ec_gene.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc
+DOCFILES=ec_corr.f ec_phys.f ec_math.f ec_gene.f physcnst.inc parcnst.inc
 PDFLATEX=pdflatex
 
-
-all: win32 linux win32-programs linux-programs docs
-
-win32: 
-	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) libecpack.a)
-win32-programs:
-	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) ec_ncdf.exe planang.exe)
-
-linux: 
-	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) libecpack.a)
-linux-programs:
-	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) ec_ncdf planang)
-
-
 # By default, just the library
+all: libecpack.a
+
 libecpack.a: slatec.o ec_corr.o ec_math.o ec_phys.o ec_gene.o
 	$(AR) r $@ $?
-	$(RANLIB) $@
 
 # The ec_ncdf program
 ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_text.o ec_nc.o libecpack.a calibrat.o
@@ -86,61 +70,55 @@ ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_text.o ec_nc.o libecpack.a calibrat.o
 planang$(EXT): planang.o ec_file.o ec_text.o ec_nc.o calibrat.o
 	$(FC) -o planang$(EXT) planang.o ec_file.o ec_text.o ec_nc.o calibrat.o $(LDFLAGS)
 
-# This individual files of library
-slatec.o: $(LIBSRC)/slatec.f
-	$(FC) $(FFLAGS) -c $(LIBSRC)/slatec.f
+# This individual files
+ec_ncdf.o: ec_ncdf.f physcnst.inc parcnst.inc calcomm.inc version.inc
+	$(FC) $(FFLAGS) -c ec_ncdf.f
 
-ec_corr.o: $(LIBSRC)/ec_corr.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc
-	$(FC) $(FFLAGS) -c $(LIBSRC)/ec_corr.f
+slatec.o: slatec.f
+	$(FC) $(FFLAGS) -c slatec.f
 
-ec_text.o: $(SRC)/ec_text.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(SRC)/ec_text.f
+ec_corr.o: ec_corr.f physcnst.inc parcnst.inc
+	$(FC) $(FFLAGS) -c ec_corr.f
 
-ec_math.o: $(LIBSRC)/ec_math.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(LIBSRC)/ec_math.f
+ec_file.o: ec_file.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_file.f
 
-ec_phys.o: $(LIBSRC)/ec_phys.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(LIBSRC)/ec_phys.f
+ec_text.o: ec_text.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_text.f
 
-ec_gene.o: $(LIBSRC)/ec_gene.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(LIBSRC)/ec_gene.f
+ec_math.o: ec_math.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_math.f
 
-# Other individual files
-ec_file.o: $(SRC)/ec_file.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(SRC)/ec_file.f
+ec_phys.o: ec_phys.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_phys.f
 
-ec_ncdf.o: $(SRC)/ec_ncdf.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc $(LIBSRC)/calcomm.inc $(LIBSRC)/version.inc
-	$(FC) $(FFLAGS) -c $(SRC)/ec_ncdf.f
+ec_gene.o: ec_gene.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_gene.f
 
-ec_nc.o: $(SRC)/ec_nc.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(SRC)/ec_nc.f
+ec_nc.o: ec_nc.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c ec_nc.f
 
-calibrat.o: $(SRC)/calibrat.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc 
-	$(FC) $(FFLAGS) -c $(SRC)/calibrat.f
+calibrat.o: calibrat.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c calibrat.f
 
-planang.o: $(SRC)/planang.f $(LIBSRC)/physcnst.inc $(LIBSRC)/parcnst.inc  $(LIBSRC)/version.inc
-	$(FC) $(FFLAGS) -c $(SRC)/planang.f
+planang.o: planang.f physcnst.inc parcnst.inc  version.inc
+	$(FC) $(FFLAGS) -c planang.f
 
 # The docs
-docs: 
-	$(MKDIR) $(DOCDIR)
-	(cd $(DOCDIR) ; make -f ../Makefile dochtml docpdf)
-
 dochtml: $(DOCFILES)
 	$(MKDIR) $(TMPDIR)
+	$(MKDIR) $(DOCDIR)
 	cp $(DOCFILES) $(TMPDIR)
-	$(ROBODOC) --multidoc --doc ./  --src $(TMPDIR) --html --index
+	$(ROBODOC) --multidoc --doc $(DOCDIR)  --src $(TMPDIR) --html --index
 	$(RMDIR) $(TMPDIR)
 
 docpdf: $(DOCFILES)
 	$(MKDIR) $(TMPDIR)
+	$(MKDIR) $(DOCDIR)
 	cp $(DOCFILES) $(TMPDIR)
 	$(ROBODOC) --singledoc --doc $(PROJECT)  --src $(TMPDIR) --latex --index --sections --toc
 	$(PDFLATEX) $(PROJECT).tex
 	$(PDFLATEX) $(PROJECT).tex
 	$(RM) $(PROJECT).tex *.aux *.toc *.idx
 	$(RMDIR) $(TMPDIR)
-
-clean:
-	$(RMDIR) $(BUILD-WIN32) $(BUILD-LINUX) $(DOCDIR)
-
+	$(MV) $(PROJECT).pdf $(DOCDIR)
