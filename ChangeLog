@@ -385,3 +385,5 @@ Revision : 2.5.14: March 22, 2005 (arnold.Moene@wur.nl)
       - fixed bug in calculation of error in u* and Tau. If you have data from
       a previous version of ecpack, just divide d(u*) by the square of u*, and
       divide d(tau) by square of u*
+      - in ec_file: EC_F_Params is now called from EC_F_GetConf and no longer
+      from the application (ec_ncdf or planang) directly
