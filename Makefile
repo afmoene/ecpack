@@ -114,6 +114,7 @@ dochtml: $(DOCFILES)
 
 docpdf: $(DOCFILES)
 	$(MKDIR) $(TMPDIR)
+	$(MKDIR) $(DOCDIR)
 	cp $(DOCFILES) $(TMPDIR)
 	$(ROBODOC) --singledoc --doc $(PROJECT)  --src $(TMPDIR) --latex --index --sections --toc
 	$(PDFLATEX) $(PROJECT).tex
