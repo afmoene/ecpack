@@ -12,7 +12,9 @@ Revision: September 26, 2000: added support for wind tunnel calibrated
           sonic anemometer (see description at end of this readme)
 Revision: October 18, 2000: in calibration of wind tunnel calibrated
           sonic: check for valid wind direction before interation
-Current version: 1.07
+Revision: October 30, 2000: check for validity of Tref (for thermocouple
+          calibration) -> Tref is in Celcius, not Kelvin !
+Current version: 1.08
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
@@ -346,7 +348,8 @@ determined as:
   T = f(voltage + f^-1(reference T))
 where f is the calibration function given in the calibration file, and
 f^-1 is the inverse of the calibration function. It is assumed that 
-the calibration function yields a temperature in degrees Celsius.
+the calibration function yields a temperature in degrees Celsius. The
+reference temperature is also supposed to be in degrees Celcius.
 
 This procedure is
 in accordance with what is done in the P14 instruction of the Campbell

@@ -15,7 +15,10 @@ C                                iteration used in thermocouple calibration
 C             October 18, 2000:  in calibration of wind tunnel calibrated
 C                                sonic: check for valid wind direction 
 C                                before interation (change in ec_pack)
-C Current version: 1.07
+C             October 30, 2000:  check for validity of reference temperature
+C                                for thermocouple: Tref is in Celcius (not
+C                                Kelvin !)
+C Current version: 1.08
 C...........................................................................
       PROGRAM EC_NCDF
 
@@ -559,15 +562,16 @@ C
 C This is calibration according to Campbells P14 instruction
 C      T =  Calibration(voltage +
 C                       inverse calibration(reference temperature))
+C Reference temperature is supposed to be in CELCIUS !!
 C
             DO i=0,CalTherm(QQOrder)
               c(i) = CalTherm(QQC0+i)
             ENDDO
             Dum = RawSampl(ColTref)
             Error(TCouple) = 
-     &           ((DUM .GT.(Kelvin+MaxT))
-     &             .OR. (DUM.LT.(Kelvin+MinT)))
-	    IF (.NOT. Error(TCouple)) THEN 
+     &           (((Kelvin + DUM) .GT.(Kelvin+MaxT))
+     &             .OR. ((Kelvin + DUM) .LT.(Kelvin+MinT)))
+            IF (.NOT. Error(TCouple)) THEN
                UPLIMIT = (DUM + 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
                DNLIMIT = (DUM - 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
                ESTIM = (Dum - CalTherm(QQC0))/CalTherm(QQC1)
@@ -578,8 +582,8 @@ C
                CALL DFZERO(DUMFUNC, DNLIMIT, UPLIMIT, ESTIM, RELERROR,
      &                    ABSERROR, IFLG)
                IF (IFLG .GT. 3) THEN
-	          ERROR(TCouple) = .TRUE.
-	       ENDIF
+	                ERROR(TCouple) = .TRUE.
+	            ENDIF
                Sample(Tcouple) = Kelvin +
      &             ECBaseF(DNLIMIT + RawSampl(Tcouple),
      &              NINT(CalTherm(QQFunc)),
