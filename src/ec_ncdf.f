@@ -7,6 +7,12 @@ C Interface : a configuration file is read from standard input
 C Author    : Arjan van Dijk
 C             Arnold Moene
 C Date      : May 24, 2000
+C Updates   : September 27 2000: added option for wind tunnel calibration
+C                                of sonic (for EBEX data)
+C             October 11 2000:   check for validity of reference temperature
+C                                for thermocouple and for validity of
+C                                iteration used in thermocouple calibration
+C Current version: 1.06
 C...........................................................................
       PROGRAM EC_NCDF
 
@@ -55,10 +61,11 @@ C...........................................................................
 C
 C Open and read configuration file
 C
+
       IF (ECConfFile .NE. 5) THEN
          OPEN(ECConfFile, FILE='ecconf')
       ENDIF
-
+      
       CALL GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName,
@@ -162,6 +169,7 @@ C Set delays, gains and offset of all channels in raw datafile
 C At reading time all channels are corrected by mapping:
 C                x --> (x/Gain) + Offset
 C
+
       Delay(U)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
       Delay(V)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
       Delay(W)        = NINT(CalSonic(QQDelay)*0.001D0*Freq)
@@ -493,7 +501,7 @@ C
             Sample(W) = WDum
          ENDIF
    
-C This is he construction when we have a diagnostic variable
+C This is the construction when we have a diagnostic variable
 C      IF (((Error(U).OR.Error(V)).OR.Error(W)).OR.
 C     &  ((RawSampl(ColDiagnostic).LT.0.D0).OR.
 C     &   (RawSampl(ColDiagnostic).GT.100.D0))) THEN
@@ -553,19 +561,27 @@ C
               c(i) = CalTherm(QQC0+i)
             ENDDO
             Dum = RawSampl(ColTref)
-            UPLIMIT = (DUM + 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
-            DNLIMIT = (DUM - 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
-            ESTIM = (Dum - CalTherm(QQC0))/CalTherm(QQC1)
-            RELERROR = 1e-4
-            ABSERROR = (0.001)/CalTherm(QQC1)
-            DUMORDER = CalTherm(QQOrder)
-            DUMTYP = CalTherm(QQFunc)
-            CALL DFZERO(DUMFUNC, DNLIMIT, UPLIMIT, ESTIM, RELERROR,
-     &                 ABSERROR, IFLG)
-            Sample(Tcouple) = Kelvin +
-     &         ECBaseF(DNLIMIT + RawSampl(Tcouple),
-     &           NINT(CalTherm(QQFunc)),
-     &           NINT(CalTherm(QQOrder)),c)
+            Error(TCouple) = 
+     &           ((DUM .GT.(Kelvin+MaxT))
+     &             .OR. (DUM.LT.(Kelvin+MinT)))
+	    IF (.NOT. Error(TCouple)) THEN 
+               UPLIMIT = (DUM + 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
+               DNLIMIT = (DUM - 3.0 - CalTherm(QQC0))/CalTherm(QQC1)
+               ESTIM = (Dum - CalTherm(QQC0))/CalTherm(QQC1)
+               RELERROR = 1e-4
+               ABSERROR = (0.001)/CalTherm(QQC1)
+               DUMORDER = CalTherm(QQOrder)
+               DUMTYP = CalTherm(QQFunc)
+               CALL DFZERO(DUMFUNC, DNLIMIT, UPLIMIT, ESTIM, RELERROR,
+     &                    ABSERROR, IFLG)
+               IF (IFLG .GT. 3) THEN
+	          ERROR(TCouple) = .TRUE.
+	       ENDIF
+               Sample(Tcouple) = Kelvin +
+     &             ECBaseF(DNLIMIT + RawSampl(Tcouple),
+     &              NINT(CalTherm(QQFunc)),
+     &              NINT(CalTherm(QQOrder)),c)
+            ENDIF
          ELSE
 C
 C Suppose that sample is already temperature

@@ -16,6 +16,7 @@ C $Id$
 
       INTEGER         IOCODE, KINDEX
       CHARACTER*255   LINE, TOKLINE, VALLINE, DUMSTRING
+      CHARACTER       ONECHAR
       INTEGER         STRLEN
       EXTERNAL        STRLEN
 
@@ -36,7 +37,7 @@ C $Id$
       IOCODE = 0
       DO 4000, WHILE (IOCODE .EQ. 0)
 C     Read one line from configuration file
-         READ(ConfUnit, '(A)', IOSTAT=IOCODE, END=9000) LINE
+         READ(Confunit, '(A)', IOSTAT=IOCODE, END=9000) LINE
          IF (IOCODE .NE. 0) THEN
             WRITE(*,*) 'ERROR in reading of configuration file'
             STOP

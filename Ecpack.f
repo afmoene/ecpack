@@ -3666,9 +3666,9 @@ C...........................................................................
       VCorr = VDum
       WCorr = WDum
 
-      DO WHILE ((ABS(AziNew-AziOld) .GT. 1./60) .OR.
-     &          (ABS(ElevNew-ElevOld) .GT. 1./60) .AND.
-     &          (NITER .LT. ITMAX))
+      DO WHILE (((ABS(AziNew-AziOld) .GT. 1./60) .OR.
+     &           (ABS(ElevNew-ElevOld) .GT. 1./60)) .AND.
+     &           (NITER .LT. ITMAX))
          UCorr =  UDum/(UC1*(1 - 0.5*
      &           ((AziNew + (ElevNew/0.5236D0)*UC2)*
      &            (1 - UC3*Abs(ElevNew/0.5236D0))
