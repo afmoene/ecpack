@@ -1,3 +1,5 @@
+C Changes:
+C 14-09-1999: Arnold Moene: changed check on time in reading of netcdf data
 C###########################################################################
 C
 C
@@ -830,10 +832,26 @@ C
 
         x(i,M) = DBLE(Dum)/Gain(i) + Offset(i)
       ENDDO
-      Started = ((ANINT(StartTime(1)).LE.ANINT(x(1,M))).AND.
-     &  (HMStart.LE.ANINT(x(2,M))))
-      NotStopped = ((ANINT(StopTime(1)).GE.ANINT(x(1,M))).AND.
-     &  (HMStop.GE.ANINT(x(2,M))))
+C
+C Either
+C - the sample has the correct day and the requested start time is
+C   less than the time of the sample, or
+C - the sample has a day that is past the requested start time
+C
+      Started = ((( ANINT(StartTime(1)).EQ.ANINT(x(1,M)) ) .AND.
+     &            ( HMStart.LE.ANINT(x(2,M)) )
+     &           ) .OR.
+     &           ( ANINT(StartTime(1)).LT. ANINT(x(1,M)) ))
+C
+C Either
+C - the sample has the correct day and the requested stop time is
+C   larger than the time of the sample, or
+C - the sample has a day that is before the requested stop time
+C
+      NotStopped = ((( ANINT(StopTime(1)).EQ.ANINT(x(1,M)) ) .AND.
+     &               ( HMStop.GE.ANINT(x(2,M)) )
+     &              ) .OR.
+     &              ( ANINT(StopTime(1)).GT.ANINT(x(1,M)) ))
       IF (Started) M = M + 1
       Counter = Counter + 1
       IF ((M.LE.MMMax).AND.(NotStopped)) GOTO 81
