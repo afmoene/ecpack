@@ -48,7 +48,7 @@ C
 
 
       LOGICAL       HAVE_UNCAL(NNNMax),Flag(NNMAx,MMMax),
-     &        TrustWilczak, SingleRun
+     &        DoWBias, SingleRun
       LOGICAL ENDINTERVAL, BadTc, DoPrint, HAVE_SAMP, DoPf, DoClassic
       INTEGER EC_G_STRLEN
 C
@@ -318,9 +318,9 @@ C
             CLOSE(PlfIntFile)
             Nruns = i
 	    SingleRun = (.FALSE.)
-	    TrustWilczak = (.TRUE.)
-	    TrustWilczak = (.FALSE.)
-            CALL EC_C_T01(TrustWilczak, SingleRun, uMean,Nruns,
+	    DoWBias = (.TRUE.)
+	    DoWBias = (.FALSE.)
+            CALL EC_C_T01(DoWBias, SingleRun, uMean,Nruns,
      &                  Apf,Alpha,Beta,Gamma,WBias)
 C Turn back the Gamma rotation
             CosGamma = COS(GAMMA*pi/180)
@@ -466,7 +466,7 @@ C
 C Compute the residual angles per run
 C
             IF (RUNLENGTH .GT. 0) THEN
-               CALL EC_C_T02(TrustWilczak, SingleRun,uSum,UUSum,RApf,
+               CALL EC_C_T02(DoWBias, SingleRun,uSum,UUSum,RApf,
      &                RAlpha,
      &                RBeta,RGamma,RWBias)
             ENDIF
