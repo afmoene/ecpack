@@ -24,7 +24,10 @@ C             February 28, 2001: fixed error in computation of density of
 C                                dry air (it was correct in the original
 C                                version of ECpack, but incorrectly changed
 C                                by me (AM)
-C Current version: 1.10
+C             April 3, 2001:     get mean W and its tolerance (before tilt
+C                                correction) from ECMain and write it flux
+C                                file in two added columns
+C Current version: 1.11
 C...........................................................................
       PROGRAM EC_NCDF
 
@@ -55,6 +58,7 @@ C...........................................................................
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq
+      REAL*8 MeanW, TolMeanW
       CHARACTER*6 QName(NNMax)
       CHARACTER*9 UName(NNMax)
       CHARACTER*255 SonName,CoupName,HygName, DUMSTRING
@@ -147,7 +151,8 @@ C
      &  'CTCop2         dCTCop2           ',
      &  'Cq2            dCq2              ',
      &  'CTSonq         dCTSonq           ',
-     &  'CTCopq         dCTCopq           '
+     &  'CTCopq         dCTCopq           ',
+     &  'MeanW          dMeanW            '
      &  )
 C
 C Number of quantities involved in this experiment
@@ -302,7 +307,8 @@ C
      &    Mean,TolMean,Cov,TolCov,
      &    HSonic,dHSonic,HTc,dHTc,
      &    LvE,dLvE,LvEWebb,dLvEWebb,
-     &    UStar,dUStar,Tau,dTau)
+     &    UStar,dUStar,Tau,dTau,
+     &    MeanW, TolMeanW)
 C
 C Calculate structure parameters
 C
@@ -374,13 +380,14 @@ C
      &    UStar,dUStar,Tau,dTau,
      &    R,dR,
      &    CTSon2,dCTSon2,CTCop2,dCTCop2,Cq2,dCq2,CTSonq,dCTSonq,
-     &    CTCopq,dCTCopq
- 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),62(2(G14.5:,1X),3X))
+     &    CTCopq,dCTCopq,
+     &    MeanW, TolMeanW
+ 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),64(2(G14.5:,1X),3X))
       ELSE
         WRITE(FluxFile,55)
      &    (NINT(StartTime(i)),i=1,3),
      &    (NINT(StopTime(i)),i=1,3),
-     &    M,(0,i=1,8),-9999,-9999,(-9999.0,i=1,56)
+     &    M,(0,i=1,8),-9999,-9999,(-9999.0,i=1,58)
       ENDIF
 
       IF (DoPrint) CLOSE(OutFile)

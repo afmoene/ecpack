@@ -100,7 +100,8 @@ C###########################################################################
      &	Mean,TolMean,Cov,TolCov,
      &	HSonic,dHSonic,HTc,dHTc,
      &	LvE,dLvE,LvEWebb,dLvEWebb,
-     &	UStar,dUStar,Tau,dTau)
+     &	UStar,dUStar,Tau,dTau,
+     &   MEANW, TOLMEANW)
 C
 C EC-Pack Library for processing of Eddy-Correlation data
 C Subroutine		: ECMain
@@ -126,6 +127,8 @@ C    effects selected by the user
 C  - Estimates, from the final mean values and covariances, the surface-
 C    fluxes with tolerances.
 C
+C Revision: 03-04-2001: get mean W and its tolerance before tilt
+C                       correction; export via interface (AM)
 
       INCLUDE 'physcnst.for'
       INCLUDE 'calcomm.inc'
@@ -147,6 +150,7 @@ C
      &	LvE,dLvE,LvEWebb,dLvEWebb,
      &	UStar,dUStar,Tau,dTau,Speed(3),DumCov(3,3)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ)
+      REAL*8 MEANW, TOLMEANW
       CHARACTER*6 QName(NMax)
       CHARACTER*9 UName(NMax)
       LOGICAL HAVE_CAL(NMax)
@@ -327,6 +331,11 @@ C
      &	DoO2,PO2,O2Factor,
      &	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,FrCor,
      &	DoWebb,PWebb,P)
+C
+C Get the mean W before we do tilt correction
+C
+      MEANW = MEAN(W)
+      TOLMEANW = TolMean(W)
 C
 C If any transformation of coordinates was required (one of the options
 C DoTilt, DoPitch, DoYaw or DoRoll was selected), then the numbers

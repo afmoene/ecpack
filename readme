@@ -19,7 +19,10 @@ Revision: November 1, 2000:  fixed error in sonic calibration (azimuth
 Revision: February 28, 2001: fixed an error in computation of density
           of dry air (it was correct in the original version of ECpack
 	  but incorrectly changed by me (AM).
-Current version: 1.10
+Revision: April 3, 2001: added output of mean W and its tolerance (as
+          obtained before tilt correction. Data are written to additional
+	  column in flux file
+Current version: 1.11
 
 For information on NetCDF see 
   http://www.unidata.ucar.edu/packages/netcdf/docs.html
