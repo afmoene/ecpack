@@ -1,16 +1,20 @@
 //
+// Example configuration file for ec_ncdf
+//
 // directories
-OutDir='d:\data\ebex'
-DatDir='d:\data\ebex'
-Parmdir='d:\data\ebex'
+OutDir='d:\data\rapid'
+DatDir='d:\data\rapid'
+Parmdir='d:\data\rapid'
 // file names
 ParmName='speclow.dat'
-FluxName='fluxes'
+FluxName='fluxes2'
 InterName='ectimes.dat'
+PlfName = 'planang.dat'
+PlfIntName = 'planint.dat'
 //
 // calibrations
 SonName='cals296l.qq'
-CoupName='caltcopl.qq'
+// CoupName='caltcopl.qq'
 HygName='calh1334.qq'
 //
 // netcdf variable names
@@ -20,9 +24,9 @@ W_var='w_lo'
 Tsonic_var = 'Tsonic_lo'
 Humidity_var='Krypton_lo'
 Tcouple_var = 'Tcouple_lo'
-Tref_var = 'T_ref'
+// Tref_var = 'T_ref'
 Hourmin_var='hour_min'
 Doy_var='doy'
-sec_var='sec'
+// sec_var='sec'
 //
 // diag_var='diagnostic'
