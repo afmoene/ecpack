@@ -21,23 +21,101 @@ C  along with this program; if not, write to the Free Software
 C  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 C 
 
+
+C     ****f* ec_file.f/EC_F_GetConf
+C NAME
+C     EC_F_GetConf
+C SYNOPSIS
+C     CALL EC_F_GetConf(ConfUnit,
+C               DatDir, OutDir,  ParmDir,
+C               FluxName, ParmName, InterName, PlfIntName,
+C               PlfName, SonName, CoupName, HygName, CO2Name,
+C               NCVarName, NCNameLen,
+C               OutMean, OutCov, OutPh, OutStd, OutStr,
+C               Outputs)
+C INPUTS
+C     ConfUnit : [INTEGER]
+C               file unit
+C     NCNameLen: [INTEGER]
+C                Length of array NCVarName
+C OUTPUT
+C     DatDir   : [CHARACTER*(*)]
+C                Directory with data files
+C     OutDir   : [CHARACTER*(*)]
+C                Directory for output
+C     ParmDir  : [CHARACTER*(*)]
+C                Directory for parameter/calibration files
+C     FluxName : [CHARACTER*(*)]
+C                file name for flux file
+C     ParmName : [CHARACTER*(*)]
+C                file name for parameter file (which corrections etc.)
+C     InterName: [CHARACTER*(*)]
+C                file name for interval file
+C     PlfIntName: [CHARACTER*(*)]
+C                file name for planar fit interval file
+C     PlfName  : [CHARACTER*(*)]
+C                file name for planar fit angles file
+C     SonName  : [CHARACTER*(*)]
+C                Sonic calibration file name
+C     CoupName : [CHARACTER*(*)]
+C                Thermocouple calibration file name
+C     HygName  : [CHARACTER*(*)]
+c                Hygrometer calibration file name
+C     CO2Name  : [CHARACTER*(*)]
+C                CO2 sensor calibration file
+C     NCVarName: [CHARACTER*(*)](NCNameLen)
+C                array with NetCDF variables names
+C     OutMean  : [LOGICAL](NNMax)
+C                which means to write to output
+C     OutCov   : [LOGICAL](NNMax, NNMax)
+C                which covariances to write to output
+C     OutPh    : [LOGICAL](NMaxPhys)
+C                which physical quantities to write to output 
+C     OutStd   : [LOGICAL](NNMax)
+C                which standard deviations to write to output
+C     OutStr   : [LOGICAL](NNMax, NNMax)
+C                which structure parameters to write to output,
+C     OutPuts  : [LOGICAL](NMaxOS)
+C                further info about output
+C FUNCTION
+C     Routine to read info with respect to input and output files
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_T_ClearSTR
+C     EC_T_StripSTR
+C     EC_T_UpCase
+C     EC_T_StrCat
+C     EC_T_GOut1
+C     EC_T_GOut2
+C     EC_T_GPhys
+C     EC_T_GOutS
+C     parcnst.inc
+C     ***
+
       SUBROUTINE EC_F_GetConf(ConfUnit,
      &           DatDir, OutDir,  ParmDir,
      &           FluxName, ParmName, InterName, PlfIntName,
-     &           PlfName,
-     &           SonName, CoupName, HygName, CO2Name,
-     &           NCVarName,
-     &           NCNameLen)
+     &           PlfName, SonName, CoupName, HygName, CO2Name,
+     &           NCVarName, NCNameLen,
+     &           OutMean, OutCov, OutPh, OutStd, OutStr,
+     &           Outputs)
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
       
       
-      INTEGER         ConfUnit, NCNameLen, I
+      INTEGER         ConfUnit, NCNameLen, I, J
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
      &                InterName, SonName, CoupName, HygName, 
      &                CO2Name, PlfName, PlfIntName
       CHARACTER*(*)   NCVarName(NCNameLen)
+      LOGICAL         OutMean(NNMax), OutCov(NNMax, NNMax), 
+     &                OutStd(NNMax), OutStr(NNMax, NNMax), 
+     &                OutPh(NMaxPhys), Outputs(NMaxOS)
 
       INTEGER         IOCODE, KINDEX
       CHARACTER*255   LINE, TOKLINE, VALLINE, DUMSTRING
@@ -76,7 +154,7 @@ C     Check for comment (should start with //
 C     Find the equality sign
             KINDEX = INDEX(LINE, '=')
             IF (KINDEX .EQ. 0) THEN
-                WRITE(*,*) 'ERROR no equality sign found'
+                WRITE(*,*) 'ERROR no equality sign found in ', LINE
                 STOP
             ENDIF
 c     Split into token and value
@@ -143,6 +221,29 @@ C NetCdF variable names
      &            VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'TREF_VAR') .GT. 0) THEN
                NCVarName(QUTref) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+C Output definitions
+            ELSE IF (INDEX(TOKLINE, 'OUT_MEAN') .GT. 0) THEN
+               CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutMean)
+            ELSE IF (INDEX(TOKLINE, 'OUT_COV') .GT. 0) THEN
+               CALL EC_T_GOut2(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutCov)
+            ELSE IF (INDEX(TOKLINE, 'OUT_PHYS') .GT. 0) THEN
+               CALL EC_T_GPhys(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutPh)
+            ELSE IF (INDEX(TOKLINE, 'OUT_STRUCT') .GT. 0) THEN
+               CALL EC_T_GOut2(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutStr)
+            ELSE IF (INDEX(TOKLINE, 'OUT_STD') .GT. 0) THEN
+               CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutStd)
+            ELSE IF (INDEX(TOKLINE, 'OUTPUT') .GT. 0) THEN
+               CALL EC_T_GOutS(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            Outputs)
+            ELSE 
+               write(*,*) 'ERROR: unkown token: ', 
+     &                    TOKLINE(:INDEX(TOKLINE, CHAR(0))-1)
+               STOP
             ENDIF
          ENDIF
  4000 CONTINUE
@@ -220,103 +321,66 @@ C NetCdF variable names
       ENDIF
       CO2Name = DUMSTRING
 
-
+C
+C Set output flags for structure functions, if 'old' output is needed
+C (structure functions are too expensive to just compute it without
+C using it
+C
+      IF (Outputs(OSOld)) THEN
+         DO I=1,NNMax
+            DO J=1,NNMax
+               OutStr(I,J) = .FALSE.
+            ENDDO
+         ENDDO
+         OutStr(TSonic,TSonic) = .TRUE.
+         OutStr(TCouple,TCouple) = .TRUE.
+         OutStr(SpecHum,SpecHum) = .TRUE.
+         OutStr(TCouple,Spechum) = .TRUE.
+         OutStr(TSonic,Spechum) = .TRUE. 
+      ENDIF
       END
-C###########################################################################
-C
-C
-C
-C      EEEEE   CCCC        PPPPP        A         CCCC   K    K
-C      E      C    C       P    P      A A       C    C  K   K
-C      E      C	           P     P    A   A     C	 K  K
-C      EEEE   C     ------ PPPPPP    A     A    C	 K K
-C      E      C		   P	    AAAAAAAAA   C	 KK K
-C      E      C    C	   P	   A         A   C    C  K   K
-C      EEEEE   CCCC 	   P      A	      A   CCCC   K    K
-C
-C	     Library for processing Eddy-Correlation data
-C     EC Special Interest Group of Wag-UR-METAIR Wageningen and KNMI
-C
-C
-C
-C Version of release    : 1.10
-C (note that version numbers of subroutines are not maintained)
-C Date	   : September 26 2000
-C Author		: Arjan van Dijk
-C             Arnold Moene
-C For : EC Special Interest Group of Wag-UR-METAIR Wageningen
-C	and KNMI (Henk de Bruin, Arjan van Dijk, Wim Kohsiek,
-C	Fred Bosveld, Cor Jacobs and Bart van de Hurk)
-C Contact address	: Duivendaal 2
-C			  6701 AP  Wageningen
-C			  The Netherlands
-C			  WWW.MetAir.WAU.nl
-C			  WWW.MetAir.Wag-UR.nl (in due time...)
-C			  Tel. +31 317 483981 (secretary)
-C			  Fax. +31 317 482811
-C
-C Purpose :
-C
-C The aim of the special interest group is to develop a standard processing
-C method for eddycorrelation data. With such a standard method results will
-C become better comparable. All important corrections can be carried out.
-C These are:
-C
-C  - Correction of sonic-temperature for lateral velocity (deferred to
-C    calibration routine).
-C  - Correction of sonic-temperature for presence of humidity.
-C  - Correction of sonic path length to make mean sonic temperature match
-C    mean temperature according to a different device (e.g. thermocouple).
-C  - Time-delay in the datafile between the different columns
-C  - Yaw-correction to make Mean(V) --> 0
-C  - Pitch-correction to make Mean(W) --> 0
-C  - Roll-correction to make Cov(W,V) --> 0
-C  - Frequency-reponse corrections for slow apparatus and path length
-C    integration.
-C  - Oxygen-correction for hygrometers which are sensitive for O2.
-C  - Inclusion of the mean vertical velocity according to Webb.
-C
-C If you process your data using EC-Pack, please make a reference
-C of the kind: "This data has been processed using EC-PACK version XX".
-C This will make your data better exchangeable and comparable.
-C
-C If you have suggestions for additional functionalities, comments
-C or questions concerning EC-Pack, please contact us at the above
-C address. To prevent the formation of EC-Pack dialects, and to bring
-C bright insights to the attention and disposal of fellow researchers:
-C		  Share your knowledge via us!
-C
-C DISCLAIMER/COPYRIGHT: The routines in EC-Pack are provided for free
-C and may freely be copied. We would appreciate acknowledgement in your
-C publications. Furthermore: EC-Pack is provided as is. No responsibility
-C can be taken for consequences of the use of EC-Pack. Any use of EC-Pack
-C is done at your own risk.
-C
-C
-C Developments :
-C - Better accessibility of frequency-response corrections
-C - Separation of calibration routine from library
-C - Detection of different trends and subsequent handling
-C - Better documentation of all input/output variables and functionality
-C   of subroutines
-C
-C
-C###########################################################################
 
-C ########################################################################
-C ########################################################################
-C ########################################################################
-C ########################################################################
-C ########################################################################
-C
-C General routines
-C
-C ########################################################################
-C ########################################################################
-C ########################################################################
-C ########################################################################
-C ########################################################################
 
+
+C     ****f* ec_file.f/EC_F_Params
+C NAME
+C     EC_F_Params
+C SYNOPSIS
+C     CALL EC_F_Params(InName, ExpVar,
+C             DoCorr, PCorr,
+C             PRaw,PCal,PIndep)
+C INPUTS
+C     InName   : [CHARACTER*(*)]
+C                Name of parameter file
+C OUTPUT
+C     ExpVar   : [REAL*8](NMaxExp)
+C                array with Experimental settings
+C     DoCorr   : [LOGICAL](NMaxCorr)
+C                Switch for corrections
+C     PCorr    : [LOGICAL](NMaxCorr)
+C                Switch for printing intermediate results after
+C                corrections
+C     PRaw     : [LOGICAL]
+C                write intermediate results with respect to
+C                raw data
+C     PCal     : [LOGICAL]
+C                write intermediate results with respect to
+C                calibrated data
+C     PIndep     : [LOGICAL]
+C                write intermediate results with respect to
+C                number of independent samples
+C FUNCTION
+C     Routine to read info with respect to corrections and writing
+C     of intermediate results
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     parcnst.inc
+C     physcnst.inc
+C     ***
       SUBROUTINE EC_F_Params(InName, ExpVar,
      &	DoCorr, PCorr,
      &	DoStruct, DoPrint,
@@ -932,4 +996,625 @@ C
       IF (.NOT. AnglesFound) THEN
          WRITE(*,*) 'No planar fit angles found for requested interval'
       ENDIF      
+      END
+      
+C     ****f* ec_file.f/EC_F_GetPF
+C NAME
+C     EC_F_WFlux
+C SYNOPSIS
+C     CALL  EC_F_WFlux(Outunit, Header,
+C                      StartTime, StopTime,
+C                      M, Mok, Mean, dMean, Cov, dCov,
+C                      Phys, dPhys, Std, dStd, Struct,
+C                      dStruct, R, dR,
+C                      OutMean, OutCov, OutPh, 
+C                      OutStd, OutStr, Outputs)
+C INPUTS
+C     Outunit   : [INTEGER]
+C                 output file unit
+c     Header    : [LOGICAL]
+C                 write header in this call?
+C     StartTime : [REAL*8](3)
+C                 starting time of interval
+C     StopTime  : [REAL*8](3)
+C                 end time of interval
+C     M         : [INTEGER]
+C                 total number of samples in interval
+C     Mok       : [INTEGER](NNMax)
+C                 number of valid samples for each calibrated channel
+C     Mean      : [REAL*8](NNMax)
+C                 mean for each calibrated channel
+C     dMean     : [REAL*8](NNMax)
+C                 tol. in mean for each calibrated channel
+C     Cov       : [REAL*8](NNMax,NNMax)
+C                 covariances
+C     dCov      : [REAL*8](NNMax,NNMax)
+C                 tol. in covariances
+C     Phys      : [REAL*8](NMaxPhys)
+C                 physical (derived) quantities
+C     dPhys     : [REAL*8](NMaxPhys)
+C                 tol. in physical (derived) quantities
+C     Std       : [REAL*8](NNMax)
+C                 standard deviations
+C     dStd      : [REAL*8](NNMax)
+C                 tol. in standard deviations
+C     Struct    : [REAL*8](NNMax,NNMax)
+C                 (cross-) structure parameters
+C     dStruct   : [REAL*8](NNMax,NNMax)
+C                 tol. in (cross-) structure parameters
+C     R         : [REAL*8] 
+C                 separation in meters at which one wants to estimate
+C     dR        : [REAL*8]  
+C                 separation in meters corresponding with a delay
+C                 of one sample (i.e. tolerance in R)
+C     DiagFlag  : [INTEGER](NMaxDiag)
+C                 count of error flags of CSAT
+C     OutMean   : [LOGICAL](NNMax)
+C                 flags for output of means
+C     OutCov    : [LOGICAL](NNMax,NNMax)
+C                 flags for output of covariances
+C     OutPh,    : [LOGICAL](NMaxPhys)
+C                 flags for output of physical quantities
+C     OutStd    : [LOGICAL](NNMax)
+C                 flags for output of standard deviations
+C     OutStr    : [LOGICAL](NNMax,NNMax)
+C                 flags for output of structure parameters
+C     Outputs   : [LOGICAL](NMAxOS)
+C                 general output flags
+C FUNCTION
+C     Routine to write results
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     parcnst.inc
+C     EC_T_STRLEN
+C     EC_T_STRIPSTR
+C     ***
+C  
+      SUBROUTINE  EC_F_WFlux(Outunit, Header,
+     &                 StartTime, StopTime,
+     &                 M, Mok, Mean, dMean, Cov, dCov,
+     &                 Phys, dPhys, Std, dStd, Struct,
+     &                 dStruct, R, dR,DiagFlag,
+     &                 OutMean, OutCov, OutPh, 
+     &                 OutStd, OutStr, Outputs)
+      IMPLICIT NONE
+      include 'parcnst.inc'
+      
+      INTEGER OutUnit, StartTime(3), StopTime(3), M, Mok(NNMax),
+     &        I, J, DiagFlag(NMaxDiag)
+      LOGICAL Header, OutMean(NNMax), OutCov(NNMax,NNMax),
+     &        OutPh(NMaxPhys), OutStd(NNMax), OutStr(NNMax,NNMax),
+     &        Outputs(NMaxOS), AnyStruct
+      REAL*8  Mean(NNMax), dMean(NNMax), 
+     &        Cov(NNMax,NNMax), dCov(NNMax,NNMax),
+     &        Std(NNMax),dStd(NNMax),
+     &        Struct(NNMax,NNMax), dStruct(NNMax,NNMax),
+     &        Phys(NMaxPHys), dPhys(NMaxPhys), R, dR
+      CHARACTER*20  FRM, NAME, NAME1, NAME2, OUTNAME
+      
+      INTEGER EC_T_STRLEN
+      EXTERNAL EC_T_STRLEN
+      
+C You really want the old format !!?
+      IF (Outputs(OSOLD)) THEN
+         IF (Header) THEN
+           WRITE(FluxFile,56)
+           WRITE(FluxFile,57)
+         ELSE
+           IF (M .GT. 0) THEN
+             WRITE(OutUnit,55)
+     &       (StartTime(i),i=1,3),
+     &       (StopTime(i),i=1,3),
+     &       M,(Mok(i),i=1,7), Mok(TTime),
+     &       NINT(Phys(QPDirFrom)), NINT(dPhys(QPDirFrom)),
+     &       Phys(QPVectWind), dPhys(QPVectWind),
+     &       Mean(TSonic),dMean(TSonic),
+     &       Mean(TCouple),dMean(TCouple),
+     &       Mean(SpecHum),dMean(SpecHum),
+     &       Std(Tsonic), dStd(TSonic),
+     &       Std(Tcouple), dStd(Tcouple),
+     &       Std(SpecHum), dStd(SpecHum),
+     &       Std(U), dStd(U),
+     &       Std(V), dStd(V),
+     &       Std(W), dStd(W),
+     &       Cov(TSonic,SpecHum),dCov(TSonic,SpecHum),
+     &       Cov(TCouple,SpecHum),dCov(TCouple,SpecHum),
+     &       Cov(TSonic,U),dCov(TSonic,U),
+     &       Cov(TCouple,U),dCov(TCouple,U),
+     &       Cov(SpecHum,U),dCov(SpecHum,U),
+     &       Phys(QPHSonic),dPhys(QPHSonic),
+     &       Phys(QPHTc),dPhys(QPHTc),
+     &       Phys(QPLvE),dPhys(QPLvE),
+     &       Phys(QPLvEWebb),dPhys(QPLvEWebb),
+     &       Phys(QPSumLvE), dPhys(QPSumLvE),
+     &       Phys(QPUstar),dPhys(QPUstar),
+     &       Phys(QPTau),dPhys(QPTau),
+     &       R,dR, Struct(TSonic,TSonic), dStruct(TSonic,TSonic),
+     &       Struct(TCouple,TCouple), dStruct(TCouple,TCouple),
+     &       Struct(SpecHum,SpecHum), dStruct(SpecHum,SpecHum),
+     &       Struct(TSonic,SpecHum), dStruct(TSonic,SpecHum),
+     &       Struct(TCouple,SpecHum), dStruct(TCouple,SpecHum),
+     &       Phys(QPMeanW),dPhys(QPMeanW),
+     &       Mok(CO2),
+     &       Mean(CO2), dMean(CO2),
+     &       Mean(specCO2), dMean(specCO2),
+     &       Std(CO2), dStd(CO2),
+     &       Std(specCO2), dStd(specCO2),
+     &       Phys(QPFCO2),dPhys(QPFCO2),
+     &       Phys(QPFCO2Webb),dPhys(QPFCO2Webb),
+     &       Phys(QPSumFCO2), dPhys(QPSumFCO2),
+     &       DiagFlag(QDDelta), DiagFlag(QDLock), 
+     &       DiagFlag(QDHigh), DiagFlag(QDLow),
+     &       (Mean(I), I=1,3),
+     &       ((COV(I,J),I=1,3),J=1,3)  
+           ELSE
+             WRITE(OutUnit,55)
+     &       (StartTime(i),i=1,3),
+     &       (StopTime(i),i=1,3),
+     &       M,(0,i=1,8), INT(DUMMY),INT(DUMMY),(DUMMY,i=1,58),
+     &       0, (DUMMY,i=1,14), (INT(DUMMY), i=1,4),
+     &       ((DUMMY,I=1,3),J=1,3), (DUMMY,I=1,3)
+           ENDIF
+        ENDIF
+C Great, you want the NEW format
+      ELSE
+C Check if any structure parameter needs to be written
+        AnyStruct = .FALSE.
+        DO I=1,NNMax
+           DO J=1,NNMax
+              IF (OutStr(I,J)) AnyStruct = .TRUE.
+           ENDDO
+        ENDDO        
+        IF (HEADER) THEN
+C First line of header         
+C Special format for first column
+           IF (Outputs(OSCSV)) THEN
+              FRM='(A,$)'
+           ELSE
+              FRM='(A,$)'
+           ENDIF
+           write(OutUnit, FRM) 'Doy'
+C General format for other columns
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",A,$)'
+           ELSE
+              FRM='(" ",A20,$)'
+           ENDIF
+C Rest of time info
+           write(OutUnit, FRM) 'Hour'
+           write(OutUnit, FRM) 'Min'
+           write(OutUnit, FRM) 'Doy'
+           write(OutUnit, FRM) 'Hour'
+           write(OutUnit, FRM) 'Min'
+C Number of samples
+           write(OutUnit, FRM) '#samples'
+           DO I=1,NNMax
+             NAME = QName(I)
+             CALL EC_T_STRIPSTR(NAME)
+             WRITE(OUTNAME, "('#',A)") NAME(:EC_T_STRLEN(NAME))
+             write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+           ENDDO
+C Means
+           DO I=1,NNMax
+             IF (OutMean(I)) THEN
+                NAME = QName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "('Mean(',A,')')") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   NAME = QName(I)
+                   CALL EC_T_STRIPSTR(NAME)
+                   WRITE(OUTNAME, "('TolMean(',A,')')") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF
+           ENDDO
+C Standard deviations
+           DO I=1,NNMax
+             IF (OutStd(I)) THEN
+                NAME = QName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "('Std(',A,')')") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   WRITE(OUTNAME, "('TolStd(',A,')')") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF             
+           ENDDO
+C Covariances
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutCov(I,J)) THEN
+                   NAME1 = QName(I)
+                   NAME2 = QName(J)
+                   CALL EC_T_STRIPSTR(NAME1)
+                   CALL EC_T_STRIPSTR(NAME2)
+                   WRITE(OUTNAME, "('Cov(',A,'*',A,')')") 
+     &                NAME1(:EC_T_STRLEN(NAME1)),
+     &                NAME2(:EC_T_STRLEN(NAME2))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                   IF (Outputs(OSTol)) THEN
+                      WRITE(OUTNAME, "('TolCov(',A,'*',A,')')") 
+     &                   NAME1(:EC_T_STRLEN(NAME1)),
+     &                   NAME2(:EC_T_STRLEN(NAME2))
+                      write(OutUnit, FRM) 
+     &                  OUTNAME(:EC_T_STRLEN(OUTNAME))
+                   ENDIF
+                ENDIF             
+             ENDDO
+           ENDDO
+C Physical quantities
+           DO I=1,NMaxPhys
+             IF (OutPh(I)) THEN
+                NAME = QPName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   WRITE(OUTNAME, "('Tol(',A,')')") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF             
+           ENDDO
+C Diagnostics
+           IF (Outputs(OSDiag)) THEN
+              DO I=1,NMaxDiag
+                NAME = QDName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+              ENDDO
+           ENDIF
+C Structure parameters
+           IF (AnyStruct) THEN
+             write(OutUnit, FRM) 'R'
+             write(OutUnit, FRM) 'dR'
+             DO I=1,NNMax
+                DO J=1,NNMax
+                  IF (OutStr(I,J)) THEN
+                     NAME1 = QName(I)
+                     NAME2 = QName(J)
+                     CALL EC_T_STRIPSTR(NAME1)
+                     CALL EC_T_STRIPSTR(NAME2)
+                     WRITE(OUTNAME, "('C_(',A,'*',A,')')") 
+     &                  NAME1(:EC_T_STRLEN(NAME1)),
+     &                  NAME2(:EC_T_STRLEN(NAME2))
+                     write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                     IF (Outputs(OSTol)) THEN
+                        WRITE(OUTNAME, "('TolC_(',A,'*',A,')')") 
+     &                     NAME1(:EC_T_STRLEN(NAME1)),
+     &                     NAME2(:EC_T_STRLEN(NAME2))
+                        write(OutUnit, FRM) 
+     &                    OUTNAME(:EC_T_STRLEN(OUTNAME))
+                     ENDIF
+                  ENDIF             
+                ENDDO
+             ENDDO
+           ENDIF
+           WRITE(OutUnit,*)
+C Second line of header         
+C Special format for first column
+           IF (Outputs(OSCSV)) THEN
+              FRM='(A,$)'
+           ELSE
+              FRM='(A,$)'
+           ENDIF
+           write(OutUnit, FRM) '[-]'
+C General format for other columns
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",A,$)'
+           ELSE
+              FRM='(" ",A20,$)'
+           ENDIF
+C Rest of time info
+           write(OutUnit, FRM) '[-]'
+           write(OutUnit, FRM) '[-]'
+           write(OutUnit, FRM) '[-]'
+           write(OutUnit, FRM) '[-]'
+           write(OutUnit, FRM) '[-]'
+C # samples
+           write(OutUnit, FRM) '[-]'
+           DO I=1,NNMax
+             write(OutUnit, FRM) '[-]'
+           ENDDO
+C Means
+           DO I=1,NNMax
+             IF (OutMean(I)) THEN
+                NAME = UName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)")  NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF
+           ENDDO
+C Standard deviations
+           DO I=1,NNMax
+             IF (OutStd(I)) THEN
+                NAME = UName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)")  NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                    write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF             
+           ENDDO
+C Covariances
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutCov(I,J)) THEN
+                   NAME1 = UName(I)
+                   NAME2 = UName(J)
+                   CALL EC_T_STRIPSTR(NAME1)
+                   CALL EC_T_STRIPSTR(NAME2)
+                   WRITE(OUTNAME, "(A,A)") 
+     &                NAME1(:EC_T_STRLEN(NAME1)),
+     &                NAME2(:EC_T_STRLEN(NAME2))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                   IF (Outputs(OSTol)) THEN
+                      write(OutUnit, FRM) 
+     &                  OUTNAME(:EC_T_STRLEN(OUTNAME))
+                   ENDIF
+                ENDIF             
+             ENDDO
+           ENDDO
+C Physical quantities
+           DO I=1,NMaxPhys
+             IF (OutPh(I)) THEN
+                NAME = UPName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                IF (Outputs(OSTol)) THEN
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDIF             
+           ENDDO
+C Diagnostics
+           IF (Outputs(OSDiag)) THEN
+              DO I=1,NMaxDiag
+                NAME = UDName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)") 
+     &                NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+              ENDDO
+           ENDIF
+C Structure parameters
+           IF (AnyStruct) THEN
+             write(OutUnit, FRM) '[m]'
+             write(OutUnit, FRM) '[m]'
+             DO I=1,NNMax
+                DO J=1,NNMax
+                  IF (OutStr(I,J)) THEN
+                     NAME1 = UName(I)
+                     NAME2 = UName(J)
+                     CALL EC_T_STRIPSTR(NAME1)
+                     CALL EC_T_STRIPSTR(NAME2)
+                     WRITE(OUTNAME, "(A,A,A)") 
+     &                  NAME1(:EC_T_STRLEN(NAME1)),
+     &                  NAME2(:EC_T_STRLEN(NAME2)),
+     &                  '[m^-2/3]'
+                     write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                     IF (Outputs(OSTol)) THEN
+                        write(OutUnit, FRM) 
+     &                    OUTNAME(:EC_T_STRLEN(OUTNAME))
+                     ENDIF
+                  ENDIF             
+                ENDDO
+             ENDDO
+           ENDIF
+           WRITE(OutUnit,*)
+C The real data!
+        ELSE
+           write(OUTNAME, '(I3)') StartTime(1)
+           CALL EC_T_STRIPSTR(OUTNAME)
+           WRITE(OutUnit,'(A,$)') OUTNAME(:EC_T_STRLEN(OUTNAME))
+C General format for other columns
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",I4,$)'
+           ELSE
+              FRM='(" ",I20,$)'
+           ENDIF
+           write(OutUnit, FRM) StartTime(2)
+           write(OutUnit, FRM) StartTime(3)           
+           write(OutUnit, FRM) StopTime(1)
+           write(OutUnit, FRM) StopTime(2)
+           write(OutUnit, FRM) StopTime(3)
+           write(OutUnit, FRM) M
+           DO I=1,NNMax
+             write(OutUnit, FRM) Mok(I)
+           ENDDO
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",G20.5,$)' 
+           ELSE
+              FRM='(" ",G20.5,$)'
+           ENDIF
+           DO I=1,NNMax
+             IF (OutMean(I)) THEN
+                write(OutUnit, FRM) Mean(I)
+                IF (Outputs(OSTol)) THEN
+                   write(OutUnit, FRM) dMean(I)
+                ENDIF
+             ENDIF
+           ENDDO
+           DO I=1,NNMax
+             IF (OutStd(I)) THEN
+                write(OutUnit, FRM) Std(I)
+                IF (Outputs(OSTol)) THEN
+                    write(OutUnit, FRM) dStd(I)
+                ENDIF
+             ENDIF             
+           ENDDO
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutCov(I,J)) THEN
+                   write(OutUnit, FRM) Cov(I,J)
+                   IF (Outputs(OSTol)) THEN
+                      write(OutUnit, FRM) dCov(I,J)
+                   ENDIF
+                ENDIF             
+             ENDDO
+           ENDDO
+           DO I=1,NMaxPhys
+             IF (OutPh(I)) THEN
+                write(OutUnit, FRM) Phys(I)
+                IF (Outputs(OSTol)) THEN
+                   write(OutUnit, FRM) dPhys(I)
+                ENDIF
+             ENDIF             
+           ENDDO
+           IF (Outputs(OSDiag)) THEN
+              IF (Outputs(OSCSV)) THEN
+                 FRM='(",",I10,$)'
+              ELSE
+                 FRM='(" ",I20,$)'
+              ENDIF
+              DO I=1,NMaxDiag
+                write(OutUnit, FRM) DiagFlag(I)
+              ENDDO
+              IF (Outputs(OSCSV)) THEN
+                 FRM='(",",G20.5,$)'
+              ELSE
+                 FRM='(" ",G20.5,$)'
+              ENDIF
+           ENDIF
+           IF (AnyStruct) THEN
+             write(OutUnit, FRM) R
+             write(OutUnit, FRM) dR
+             DO I=1,NNMax
+                DO J=1,NNMax
+                  IF (OutStr(I,J)) THEN
+                     write(OutUnit, FRM) Struct(I,J)
+                     IF (Outputs(OSTol)) THEN
+                        write(OutUnit, FRM) dStruct(I,J)
+                     ENDIF
+                  ENDIF             
+                ENDDO
+             ENDDO
+           ENDIF
+           WRITE(OutUnit,*)
+        ENDIF
+      ENDIF
+ 55   FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),
+     &        29(2(G15.5:,1X)),
+     &        I13,  1X,
+     &        7(2(G15.5:,1X)), 4(I15,1X), 12(G15.5:,1X))
+ 56   FORMAT(
+     &  'DOY Hr Mn  ',
+     &  'DOY Hr Mn ',
+     &  '#samples',
+     &  '  #U     #V     #W  #TSon  #TCop  #RhoV     #q  #time   ',
+     &  'Dir d(dir)   ',
+     &  'Mean(vectorU)  dMean(vectorU)   ',
+     &  'Mean(TSon)     dMean(TSon)      ',
+     &  'Mean(TCop)     dMean(TCop)      ',
+     &  'Mean(q)        dMean(q)         ',
+     &  'sigma(TSon)    dsigma(TSon)     ',
+     &  'sigma(TCop)    dsigma(TCop)     ',
+     &  'sigma(q)       dsigma(q)        ',
+     &  'sigma(u)       dsigma(u)        ',
+     &  'sigma(v)       dsigma(v)        ',
+     &  'sigma(w)       dsigma(w)        ',
+     &  'cov(TSon,q)    dcov(TSon,q)     ',
+     &  'cov(TCop,q)    dcov(TCop,q)     ',
+     &  'cov(TSon,U)    dcov(TSon,U)     ',
+     &  'cov(TCop,U)    dcov(TCop,U)     ',
+     &  'cov(q,U)       dcov(q,U)        ',
+     &  'H(Sonic)       Tol(HSonic)      ',
+     &  'H(TCouple)     Tol(HTCouple     ',
+     &  'LvECov         dLvECov          ',
+     &  'LvEWebb        dLvEWebb         ',
+     &  'LvE            dLvE             ',
+     &  'UStar          dUStar           ',
+     &  'Tau            dTau             ',
+     &  'R(delay)       dR               ',
+     &  'CTSon2         dCTSon2          ',
+     &  'CTCop2         dCTCop2          ',
+     &  'Cq2            dCq2             ',
+     &  'CTSonq         dCTSonq          ',
+     &  'CTCopq         dCTCopq          ',
+     &  'MeanW          dMeanW           ',
+     &  '#CO2           ',
+     &  'MeanCO2        dMeanCO2         ',
+     &  'MeanspecCO2    dMeanspecCO2     ',
+     &  'stdCO2         dstdCO2          ',
+     &  'stdspecCO2     dstdspecCO2      ',
+     &  'FCO2Cov        dFCO2Cov         ',
+     &  'FCO2Webb       dFCO2Webb        ',
+     &  'FCO2           dFCO2            ',
+     &  '#DeltaTemp     #PoorSignalLock  ',
+     &  '#AmplHigh      #AmplLow         ',
+     &  'Mean(U)        Mean(V)          ',
+     &  'Mean(W)        Cov(U,U)         ',
+     &  'Cov(U,V)       Cov(U,W)         ',
+     &  'Cov(V,U)       Cov(V,V)         ',
+     &  'Cov(V,W)       Cov(W,U)         ',
+     &  'Cov(W,V)       Cov(W,W)         ')
+  57   FORMAT(     
+     &  '-  -  -   ',
+     &  '-  -  -  ',    
+     &  '[-]     ',
+     &  '  [-]    [-]    [-] [-]    [-]    [-]       [-] [-]     ',
+     &  '[degr] [degr]',
+     &  ' [m/s]         [m/s]            ',
+     &  '[K]            [K]              ',
+     &  '[K]            [K]              ',
+     &  '[kg/kg]        [kg/kg]          ',
+     &  '[K]            [K]              ',
+     &  '[K]            [K]              ',
+     &  '[kg/kg]        [kg/kg]          ',
+     &  '[m/s]          [m/s]            ',
+     &  '[m/s]          [m/s]            ',
+     &  '[m/s]          [m/s]            ',
+     &  '[K*kg/kg]      [K*kg/kg]        ',
+     &  '[K*kg/kg]      [K*kg/kg]        ',
+     &  '[K*m/s]        [K*m/s]          ',
+     &  '[K*m/s]        [K*m/s]          ',
+     &  '[kg/kg*m/s]    [kg/kg*m/s]      ',
+     &  '[W/m^2]        [W/m^2]          ',
+     &  '[W/m^2]        [W/m^2]          ',
+     &  '[W/m^2]        [W/m^2]          ',
+     &  '[W/m^2]        [W/m^2]          ',
+     &  '[W/m^2]        [W/m^2]          ',
+     &  '[m/s]          [m/s]            ',
+     &  '[N/m^2]        [N/m^2]          ',
+     &  '[m]            [m]              ',
+     &  '[K^2/m^2/3]    [K^2/m^2/3]      ',
+     &  '[K^2/m^2/3]    [K^2/m^2/3]      ',
+     &  '[1/m^2/3]      [1/m^2/3]        ',
+     &  '[K*kg/kg/m^2/3] [K*kg/kg/m^2/3] ',
+     &  '[K*kg/kg/m^2/3] [K*kg/kg/m^2/3] ',
+     &  '[m/s]          [m/s]            ',
+     &  '[-]            ',
+     &  '[kg/m^3]       [kg/m^3]         ',
+     &  '[kg/kg]        [kg/kg]          ',
+     &  '[kg/m^3]       [kg/m^3]         ',
+     &  '[kg/kg]        [kg/kg]          ',
+     &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
+     &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
+     &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
+     &  '[-]            [-]              ',
+     &  '[-]            [-]              ',
+     &  '[m/s]          [m/s]            ',
+     &  '[m/s]          [m/s]**2         ',
+     &  '[m/s]**2       [m/s]**2         ',
+     &  '[m/s]**2       [m/s]**2         ',     
+     &  '[m/s]**2       [m/s]**2         ',
+     &  '[m/s]**2       [m/s]**2         ')     
       END

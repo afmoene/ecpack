@@ -274,7 +274,13 @@ Revision 2.4.5:  January 29, 2003
 	    (and is not necessary to arrive at the same result).
 	  - fixed error in EC_Ph_Flux in computation of Ustar (bug present
 	    since 2.4.4)
-	    
+Revision 2.5: January 30, 2003 (Arnold.Moene@wur.nl)
+          - removed Doy, HourMin and Sec as calibrated quantities (all
+	    their info is in TTime)
+          - code cleaning
+	  - now flexible output is possible: in the main configuration
+	    file one can define which variables you want to see
+	    in the output file (see readme.ec_ncdf for details).
 	  
 	  
 	    

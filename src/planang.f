@@ -45,7 +45,10 @@ C...........................................................................
       CHARACTER*255 DumName1,DumName2
       LOGICAL PRaw,PCal,PIndep,
      &  DoPrint,Flag(NNMAx,MMMax),
-     &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr)
+     &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr),
+     &  OutMean(NNMax), OutCov(NNMax, NNMax), 
+     &  OutStd(NNMax), OutStr(NNMax, NNMax), 
+     &  OutPh(NMaxPhys), Outputs(NMaxOS)  
       INTEGER N,i,j,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
      &  StartTime(3),StopTime(3),
@@ -87,13 +90,14 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Name$'
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
-
       CALL EC_F_GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName, PlfIntName,
      &             PlfName,
      &             SonName, CoupName, HygName, CO2Name,
-     &             NCVarname, NNNMax)
+     &             NCVarname, NNNMax,
+     &             OutMean, OutCov, OutPh, OutStd, OutStr,
+     &             Outputs)
 C
 C Assume first we have no uncalibrated samples at all
 C
@@ -332,11 +336,13 @@ C
            EndInter = .TRUE.
            SingleRun = (.FALSE.)
 	   DoWBias = (.FALSE.)
-           CALL EC_C_T01(DoWBias, SingleRun, UMean, NPF,
-     &                   Apf,Alpha,Beta,Gamma,WBias)
-           Write(PlfFile,100) (StartTime(i),i=1,3), 
-     &           (StopTime(i),i=1,3), Alpha, Beta, Gamma, WBias,
-     &           ((Apf(i,j),i=1,3),j=1,3)
+           IF (NPF.GT.0) THEN
+             CALL EC_C_T01(DoWBias, SingleRun, UMean, NPF,
+     &                     Apf,Alpha,Beta,Gamma,WBias)
+             Write(PlfFile,100) (StartTime(i),i=1,3), 
+     &             (StopTime(i),i=1,3), Alpha, Beta, Gamma, WBias,
+     &             ((Apf(i,j),i=1,3),j=1,3)
+           ENDIF
  100       FORMAT(6(I8,1X),1X,13(F20.10,1X))
         ENDIF
       ENDDO

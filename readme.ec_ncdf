@@ -123,15 +123,20 @@ Main configuration file
 The main configuration file consits of two types of lines:
 - lines with an assigment 
 - comment lines (starting with //)
+A known issue is that the file should NOT end with an empty line.
 
 Assignments are of the form 
+
    VARNAME = VALUE
+   
 where VARNAME is one of a prescribed list of tokens and VALUE is the value
 to be assigned (VALUE may be placed between quotes, but this is not necessary
 as long as no spcaes are part of VALUE). VARNAME is case-insensitive
 (i.e. VARNAME is equivalent to VarName), but VALUE may not be (on UNIX
 path names are cases sensitive and names of variables in a NetCDF file
 are also cases-sensitive).
+As of version 2.5, one can control, through the main configuration
+file, which data are written to the output file
 
 Valid tokens are:
 DatDir        directory for data files
@@ -163,6 +168,72 @@ HourMin_var   name of hour/minute variable in NetCDF file (presently this
 	      18:45
 Doy_var       name of day of year variable in NetCDF file
 sec_var       name of seconds variable in NetCDF
+Out_mean      write mean of given calibrated signal to output file
+              (e.g. Out_mean='TSon', for a list of variable names,
+              see below)
+Out_Cov       write covariance of two calibrated signal to output file
+              (e.g. Out_Cov='TSon,w', for a list of variable names,
+              see below)
+Out_Std       write standard deviation of given calibrated signal to output file
+              (e.g. Out_Std='TSon', for a list of variable names,
+              see below)
+Out_Phys      write given physical (=derived quantity) to output file 
+              (e.g. Out_Phys='HSonic', for a list of variable names,
+              see below)
+Out_Struct    write (cross-) structure paramter of two calibrated signal 
+              to output file (e.g. Out_Struct='TSon,w', for a list of variable names,
+              see below)
+Output        other output settings:
+              'new': use new output file format (i.e. with self-defined columns
+              'old': use old output file format (pre-defined columns; 'new' and 
+                     'old' are mutually exclusive; 'old' is default (defined in
+                     ec_ncdf.f))
+              'csv': output as comma-separated values
+              'ssv': output as space-separated values ('csv' and 'ssv' are 
+                     mutually exclusive; 'ssv' is default)
+              'tol': write tolerances of all selected variabels to output file
+              'notol': write no tolerances of all selected variabels to output file
+                     ('tol' and 'notol' are mutually exclusive; 'tol' is default)
+              'diag': write info about diagnostic flags of CSAT to output file
+              'nodiag': write no info about diagnostic flags of CSAT to output file
+                     ('diag' and 'nodiag' are mutually exclusive; 'nodiag' is default) 
+
+Variable names to be used for Out_Mean, Out_Cov, Out_Std, Out_Struct (defined in
+parcnst.inc, not case-sensitive):
+u     : horizontal wind component [m/s]
+v     : horizontal wind component [m/s]
+w     : vertical wind component [m/s]
+TSon  : sonic temperature [K]
+TCop  : thermocouple temperature [K]
+rhoV  : water vapour density' [kg m^-3]
+q     : specific humdity [kg/kg]
+rhoCO2: CO2 density [kg m^-3]
+qCO2  : specific CO2 concentration [kg/kg]
+time  : time (constructed from DOY, Hour and Min) [hr]
+Tref  : reference temperature [K]
+all   : select all defined variables (e.g. Out_Cov='w,all' gives all covariances 
+        with the vertical velocity, Out_mean='all' gives means of all variables)
+
+Variable names to be used for Out_Phys (defined in
+parcnst.inc, not case-sensitive):
+
+VectWind : vector wind [m/s]     
+DirFrom  : wind direction [degr.]   
+HSonic   : sensible heat flux from sonic temperature [W/m^2]   
+HTc      : sensible heat flux from thermocouple[W/m^2]   
+LvEcov   : covariance LvE [W/m^2]   
+LvEWebb  : Webb term LvE [W/m^2]   
+SumLvE   : sum of LvEcov and LvEWebb [W/m^2]   
+Ustar    : u* [m/s]     
+Tau      : wall shear stress [N/m^2]    
+FCO2cov  : covariance CO2 flux [kg/m^2/s]
+FCO2Webb : Webb term CO2 flux [kg/m^2/s]
+SumFCO2  : sum of covariance and Webb CO2 flux [kg/m^2/s]
+RhoSon   : air density with sonic temperature[kg/m^3]  
+RhoTc    : air density with thermocouple [kg/m^3]  
+Wnorot   : vertical wind speed before any axis rotation [m/s]   
+all      : gives all defined physical quantities
+         
 
 Processing parameter file
 -------------------------
@@ -221,7 +292,6 @@ T	PWebb	  = Indicator if these intermediate results are wanted
 T       DoPF      = Do planar fit untilting (requires that untilting angles have been produced before with planang)
 T       PPF       = Print intermediate results after planar fit untilting
 0.99    PFValid   = Fraction of samples that should be valid to inclue interval in planar fit calculation (see readme.planang)
-
 ------------end----------------
 
 If you use planar fit untilting, the 'classic' axis rotation should be switched
@@ -381,6 +451,10 @@ samples read, means, variances and covariances of variables as well as
 the tolerances of those quantities. A header line explains the contents.
 For each complete run of the program (comprising various time intervals
 as defined in the interval file) the data are appended.
+One can either use a predefined set of columns (set Output='old' 
+in the main configuration file) or defined the required columns
+yourselve (set Output='new' and define the columns in the
+main configuration file).
 
 Program internals
 -----------------

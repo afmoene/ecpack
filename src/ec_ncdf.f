@@ -70,11 +70,16 @@ C...........................................................................
       LOGICAL PRaw, PCal,PIndep,
      &  DoPrint,Flag(NNMAx,MMMax),
      &  DoStruct,BadTc,
-     &  HAVE_UNCAL(NNNMax), AnglesFound, 
-     &  DoCorr(NMaxCorr), PCorr(NMaxCorr)
+     &  HAVE_UNCAL(NNNMax), HAVE_CAL(NNMax),
+     &  AnglesFound, 
+     &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
+     &  OutMean(NNMax), OutCov(NNMax, NNMax), 
+     &  OutStd(NNMax), OutStr(NNMax, NNMax), 
+     &  OutPh(NMaxPhys), Outputs(NMaxOS)     
       INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
-     &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3)
+     &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3),
+     &  DiagFlag(NMaxDiag)
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
      &  TolCov(NNMax,NNMax),FrCor(NNMax,NNMax),
@@ -89,7 +94,9 @@ C...........................................................................
      &  R,dR,CTSon2,CTCop2,Cq2,CTSonq,CTCopq,
      &  dCTSon2,dCTCop2,dCq2,dCTSonq,dCTCopq,
      &  Qphys(NMaxPhys), dQPhys(NMaxPHys),
-     &  Std(NNMax), dStd(NNMax)
+     &  Std(NNMax), dStd(NNMax),
+     &  Struct(NNMax,NNMax),
+     &  dStruct(NNMax,NNMax)
 
       INTEGER EC_T_STRLEN
 C
@@ -114,13 +121,31 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
 
+C Get defaults for configuration 
+      Outputs(OSOld) = .TRUE.
+      Outputs(OSTol) = .TRUE.
+      Outputs(OScsv) = .FALSE.
+      Outputs(OSDiag) = .FALSE.
+      DO I=1,NNMax
+         OutMean(I) = .FALSE.
+         OutStd(I) = .FALSE.
+         DO J=1,NNMax
+            OutCov(I,J) = .FALSE.
+            OutStr(I,J) = .FALSE.
+         ENDDO
+      ENDDO
+      DO I=1,NMaxPhys
+         OutPh(I) = .FALSE.
+      ENDDO
 C Get configuration (file names etc.)
       CALL EC_F_GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName, PlfIntName,
      &             PlfName,
      &             SonName, CoupName, HygName, CO2Name,
-     &             NCVarname, NNNMax)
+     &             NCVarname, NNNMax,
+     &             OutMean, OutCov, OutPh, OutStd, OutStr,
+     &             Outputs)
 C
 C Assume first we have no uncalibrated samples at all
 C
@@ -155,8 +180,14 @@ C
 C Open an output file for the fluxes and write headers to it
 C
       OPEN(FluxFile,FILE=FluxName,FORM='FORMATTED')
-      WRITE(FluxFile,56)
-      WRITE(FluxFile,57)
+      CALL  EC_F_WFlux(FluxFile, .TRUE.,
+     &                StartTime, StopTime,
+     &                M, Mok, Mean, TolMean, Cov, TolCov,
+     &                QPhys, dQPhys, Std, dStd, Struct,
+     &                dStruct, R, dR, DiagFlag,
+     &                OutMean, OutCov, OutPh, 
+     &                OutStd, OutStr, Outputs)
+      
 C
 C Number of quantities involved in this experiment
 C
@@ -376,43 +407,42 @@ C
      &    FrCor,
      &    Mean,TolMean,Cov,TolCov,
      &    QPhys, dQPhys,
-     &    HAVE_UNCAL, StartTime(1))
+     &    HAVE_UNCAL, HAVE_CAL, DiagFlag, StartTime(1))
 C
 C Calculate structure parameters
 C
         IF (DoStruct) THEN
-          R = ExpVar(QEStructSep)
-          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TSonic ,TSonic ,
-     &      R,dR,ExpVar(QEFreq),CIndep,CTSon2,dCTSon2)
-          R = ExpVar(QEStructSep)
-          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TCouple,TCouple,
-     &      R,dR,ExpVar(QEFreq),CIndep,CTCop2,dCTCop2)
-          R = ExpVar(QEStructSep)
-          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,SpecHum,SpecHum,
-     &      R,dR,ExpVar(QEFreq),CIndep,Cq2   ,dCq2   )
-          R = ExpVar(QEStructSep)
-          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TSonic ,SpecHum,
-     &      R,dR,ExpVar(QEFreq),CIndep,CTSonq,dCTSonq)
-          R = ExpVar(QEStructSep)
-          CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,TCouple,SpecHum,
-     &      R,dR,ExpVar(QEFreq),CIndep,CTCopq,dCTCopq)
+          DO I=1,NNMax
+	     DO J=1,NNMax
+	        IF ((HAVE_CAL(I) .AND. HAVE_CAL(J)) .AND.
+     &              OutStr(I,J)) THEN
+	           R = ExpVar(QEStructSep)
+                   CALL EC_Ph_Struct(Sample,NNMax,MMMax,M,Flag,
+     &                  I,J, R,dR,ExpVar(QEFreq),CIndep,
+     &                  Struct(I,J), dStruct(I,J))
+                   Struct(J,I) = Struct(I,J)
+                   dStruct(J,I) = dStruct(I,J)
+                ELSE
+                   Struct(I,J) = DUMMY
+                   dStruct(I,J) = DUMMY
+                ENDIF
+             ENDDO
+          ENDDO
         ELSE
-           CTSon2 = DUMMY
-          dCTSon2 = DUMMY
-           CTCop2 = DUMMY
-          dCTCop2 = DUMMY
-           Cq2    = DUMMY
-          dCq2    = DUMMY
-           CTSonq = DUMMY
-          dCTSonq = DUMMY
-           CTCopq = DUMMY
-          dCTCopq = DUMMY
+          DO I=1,NNMax
+	     DO J=1,NNMax
+                R = DUMMY
+                dR = DUMMY
+                Struct(I,J) = DUMMY
+                dStruct(I,J) = DUMMY
+             ENDDO
+          ENDDO
         ENDIF
 C
 C Determine standard deviations
 C
         DO I=1,NNMax
-	   IF (Cov(I,I) .EQ. DUMMY) THEN
+	   IF (HAVE_CAL(I) .AND. HAVE_CAL(J)) THEN
 	     Std(I) = DUMMY
 	     dStd(I) = DUMMY
 	   ELSE
@@ -422,79 +452,16 @@ C
            ENDIF
         ENDDO
 C
-C Count error codes of CSAT sonic        
-C
-        IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
-           NDelta = 0
-           NLock = 0
-           NHigh = 0
-           NLow = 0
-           DO I=1,M
-              NDelta = NDelta + INT(Sample(DiagDelta, I))
-              NLock = NLock + INT(Sample(DiagLock, I))
-              NHigh = NHigh + INT(Sample(DiagHigh, I))
-              NLow = NLow + INT(Sample(DiagLow, I))
-           ENDDO
-        ENDIF
-C
 C Print fluxes
-C
-        WRITE(FluxFile,55)
-     &    (StartTime(i),i=1,3),
-     &    (StopTime(i),i=1,3),
-     &    M,(Mok(i),i=1,7), Mok(TTime),
-     &    NINT(QPhys(QPDirFrom)), NINT(dQPhys(QPDirFrom)),
-     &    QPhys(QPVectWind), dQPhys(QPVectWind),
-     &    Mean(TSonic),TolMean(TSonic),
-     &    Mean(TCouple),TolMean(TCouple),
-     &    Mean(SpecHum),TolMean(SpecHum),
-     &    Std(Tsonic), dStd(TSonic),
-     &    Std(Tcouple), dStd(Tcouple),
-     &    Std(SpecHum), dStd(SpecHum),
-     &    Std(U), dStd(U),
-     &    Std(V), dStd(V),
-     &    Std(W), dStd(W),
-     &    Cov(TSonic,SpecHum),TolCov(TSonic,SpecHum),
-     &    Cov(TCouple,SpecHum),TolCov(TCouple,SpecHum),
-     &    Cov(TSonic,U),TolCov(TSonic,U),
-     &    Cov(TCouple,U),TolCov(TCouple,U),
-     &    Cov(SpecHum,U),TolCov(SpecHum,U),
-     &    QPhys(QPHSonic),dQPhys(QPHSonic),
-     &    QPhys(QPHTc),dQPhys(QPHTc),
-     &    QPhys(QPLvE),dQPhys(QPLvE),
-     &    QPhys(QPLvEWebb),dQPhys(QPLvEWebb),
-     &    QPhys(QPSumLvE), dQPhys(QPSumLvE),
-     &    QPhys(QPUstar),dQPhys(QPUstar),
-     &    QPhys(QPTau),dQPhys(QPTau),
-     &    R,dR,
-     &    CTSon2,dCTSon2,CTCop2,dCTCop2,Cq2,dCq2,CTSonq,dCTSonq,
-     &    CTCopq,dCTCopq,
-     &    QPhys(QPMeanW),dQPhys(QPMeanW),
-     &    Mok(CO2),
-     &    Mean(CO2), TolMean(CO2),
-     &    Mean(specCO2), TolMean(specCO2),
-     &    Std(CO2), dStd(CO2),
-     &    Std(specCO2), dStd(specCO2),
-     &    QPhys(QPFCO2),dQPhys(QPFCO2),
-     &    QPhys(QPFCO2Webb),dQPhys(QPFCO2Webb),
-     &    QPhys(QPSumFCO2), dQPhys(QPSumFCO2),
-     &    NDelta, NLock, NHigh, NLow,
-     &    (Mean(I), I=1,3),
-     &    ((COV(I,J),I=1,3),J=1,3)  
-        
-  
- 55     FORMAT(2(I3,1X,2(I2,1X)),9(I6,1X),2(I5,1X),
-     &        29(2(G15.5:,1X)),
-     &        I13,  1X,
-     &        7(2(G15.5:,1X)), 4(I15,1X), 12(G15.5:,1X))
-      ELSE
-        WRITE(FluxFile,55)
-     &    (StartTime(i),i=1,3),
-     &    (StopTime(i),i=1,3),
-     &    M,(0,i=1,8), INT(DUMMY),INT(DUMMY),(DUMMY,i=1,58),
-     &    0, (DUMMY,i=1,14), (INT(DUMMY), i=1,4),
-     &    ((DUMMY,I=1,3),J=1,3), (DUMMY,I=1,3)
-      ENDIF
+C     
+      ENDIF 
+      CALL  EC_F_WFlux(FluxFile, .FALSE.,
+     &                StartTime, StopTime,
+     &                M, Mok, Mean, TolMean, Cov, TolCov,
+     &                QPhys, dQPhys, Std, dStd, Struct,
+     &                dStruct, R, dR, DiagFlag,
+     &                OutMean, OutCov, OutPh, 
+     &                OutStd, OutStr, Outputs)
 
       IF (DoPrint) CLOSE(OutFile)
 
@@ -512,108 +479,6 @@ C######################################################################
 C
       CLOSE(IntervalFile)
       CLOSE(FluxFile)
- 56   FORMAT(
-     &  'DOY Hr Mn  ',
-     &  'DOY Hr Mn ',
-     &  '#samples',
-     &  '  #U     #V     #W  #TSon  #TCop  #RhoV     #q  #time   ',
-     &  'Dir d(dir)   ',
-     &  'Mean(vectorU)  dMean(vectorU)   ',
-     &  'Mean(TSon)     dMean(TSon)      ',
-     &  'Mean(TCop)     dMean(TCop)      ',
-     &  'Mean(q)        dMean(q)         ',
-     &  'sigma(TSon)    dsigma(TSon)     ',
-     &  'sigma(TCop)    dsigma(TCop)     ',
-     &  'sigma(q)       dsigma(q)        ',
-     &  'sigma(u)       dsigma(u)        ',
-     &  'sigma(v)       dsigma(v)        ',
-     &  'sigma(w)       dsigma(w)        ',
-     &  'cov(TSon,q)    dcov(TSon,q)     ',
-     &  'cov(TCop,q)    dcov(TCop,q)     ',
-     &  'cov(TSon,U)    dcov(TSon,U)     ',
-     &  'cov(TCop,U)    dcov(TCop,U)     ',
-     &  'cov(q,U)       dcov(q,U)        ',
-     &  'H(Sonic)       Tol(HSonic)      ',
-     &  'H(TCouple)     Tol(HTCouple     ',
-     &  'LvECov         dLvECov          ',
-     &  'LvEWebb        dLvEWebb         ',
-     &  'LvE            dLvE             ',
-     &  'UStar          dUStar           ',
-     &  'Tau            dTau             ',
-     &  'R(delay)       dR               ',
-     &  'CTSon2         dCTSon2          ',
-     &  'CTCop2         dCTCop2          ',
-     &  'Cq2            dCq2             ',
-     &  'CTSonq         dCTSonq          ',
-     &  'CTCopq         dCTCopq          ',
-     &  'MeanW          dMeanW           ',
-     &  '#CO2           ',
-     &  'MeanCO2        dMeanCO2         ',
-     &  'MeanspecCO2    dMeanspecCO2     ',
-     &  'stdCO2         dstdCO2          ',
-     &  'stdspecCO2     dstdspecCO2      ',
-     &  'FCO2Cov        dFCO2Cov         ',
-     &  'FCO2Webb       dFCO2Webb        ',
-     &  'FCO2           dFCO2            ',
-     &  '#DeltaTemp     #PoorSignalLock  ',
-     &  '#AmplHigh      #AmplLow         ',
-     &  'Mean(U)        Mean(V)          ',
-     &  'Mean(W)        Cov(U,U)         ',
-     &  'Cov(U,V)       Cov(U,W)         ',
-     &  'Cov(V,U)       Cov(V,V)         ',
-     &  'Cov(V,W)       Cov(W,U)         ',
-     &  'Cov(W,V)       Cov(W,W)         ')
-  57   FORMAT(     
-     &  ' -  -  -  ',
-     &  ' -  -  - ',    
-     &  '[-]     ',
-     &  '  [-]    [-]    [-] [-]    [-]    [-]       [-] [-]     ',
-     &  '[degr] [degr]',
-     &  ' [m/s]         [m/s]            ',
-     &  '[K]            [K]              ',
-     &  '[K]            [K]              ',
-     &  '[kg/kg]        [kg/kg]          ',
-     &  '[K]            [K]              ',
-     &  '[K]            [K]              ',
-     &  '[kg/kg]        [kg/kg]          ',
-     &  '[m/s]          [m/s]            ',
-     &  '[m/s]          [m/s]            ',
-     &  '[m/s]          [m/s]            ',
-     &  '[K*kg/kg]      [K*kg/kg]        ',
-     &  '[K*kg/kg]      [K*kg/kg]        ',
-     &  '[K*m/s]        [K*m/s]          ',
-     &  '[K*m/s]        [K*m/s]          ',
-     &  '[kg/kg*m/s]    [kg/kg*m/s]      ',
-     &  '[W/m^2]        [W/m^2]          ',
-     &  '[W/m^2]        [W/m^2]          ',
-     &  '[W/m^2]        [W/m^2]          ',
-     &  '[W/m^2]        [W/m^2]          ',
-     &  '[W/m^2]        [W/m^2]          ',
-     &  '[m/s]          [m/s]            ',
-     &  '[N/m^2]        [N/m^2]          ',
-     &  '[m]            [m]              ',
-     &  '[K^2/m^2/3]    [K^2/m^2/3]      ',
-     &  '[K^2/m^2/3]    [K^2/m^2/3]      ',
-     &  '[1/m^2/3]      [1/m^2/3]        ',
-     &  '[K*kg/kg/m^2/3] [K*kg/kg/m^2/3] ',
-     &  '[K*kg/kg/m^2/3] [K*kg/kg/m^2/3] ',
-     &  '[m/s]          [m/s]            ',
-     &  '[-]            ',
-     &  '[kg/m^3]       [kg/m^3]         ',
-     &  '[kg/kg]        [kg/kg]          ',
-     &  '[kg/m^3]       [kg/m^3]         ',
-     &  '[kg/kg]        [kg/kg]          ',
-     &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
-     &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
-     &  '[kg/m^2/s^1]   [kg/m^2/s^1]     ',
-     &  '[-]            [-]              ',
-     &  '[-]            [-]              ',
-     &  '[m/s]          [m/s]            ',
-     &  '[m/s]          [m/s]**2         ',
-     &  '[m/s]**2       [m/s]**2         ',
-     &  '[m/s]**2       [m/s]**2         ',     
-     &  '[m/s]**2       [m/s]**2         ',
-     &  '[m/s]**2       [m/s]**2         ')     
 
       END
 

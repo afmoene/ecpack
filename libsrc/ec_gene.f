@@ -50,7 +50,7 @@ C ########################################################################
      &  Apf, SonFactr, O2Factor, FrCor,
      &	Mean,TolMean,Cov,TolCov,
      &  QPhys, dQPhys,
-     &  HAVE_UNCAL, FirstDay)
+     &  HAVE_UNCAL, HAVE_CAL, DiagFlag, FirstDay)
 C     ****f* ec_gene.f/EC_G_Main
 C NAME
 C     EC_G_Main
@@ -65,7 +65,7 @@ C        DirYaw, DirPitch, DirRoll,
 C        Apf, SonFactr, O2Factor, FrCor,
 C        Mean,TolMean,Cov,TolCov,
 C        QPhys, dQPhys,
-C        HAVE_UNCAL, FirstDay)
+C        HAVE_UNCAL, Have_cal, DiagFlag, FirstDay)
 C FUNCTION
 C     Integrated routine which:
 C     - Calibrates raw samples
@@ -174,6 +174,11 @@ C     QPhys     : [REAL*8](NMaxPhys)] (in/out)
 C                 array with physical quantities
 C     dQPhys    : [REAL*8](NMaxPhys)] (in/out)
 C                 array with tolerances physical quantities
+C     HAVE_CAL  : [LOGICAL(NNMax)]
+C                 switch whether data for calibrated data
+C                 are available for each channel
+C     DiagFlag  : [INTEGER](NMaxDiag)
+C                 count of flags occuring in diagnostic word of CSAT
 C AUTHOR
 C     Arjan van Dijk, Arnold Moene
 C HISTORY
@@ -188,6 +193,8 @@ C     Revision: 13-01-2003: added vectorwind and dirfrom to interface
 C     Revision: 27-01-2003: removed physical quantities from interface
 C                           and replace by QPhys
 C                           Put all correction info into DoCorr and PCorr, ExpVar
+C     REvision: 29-01-2003: added have_cal to interface to
+C                           have it available in ec_ncdf
 C     $Name$
 C     $Id$
 C USES
@@ -211,7 +218,7 @@ C     ***
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
      &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
-     &  WhichTemp, FirstDay
+     &  WhichTemp, DiagFlag(NMaxDiag), FirstDay, DIAG_WORD
       LOGICAL PCal,PIndep,
      &	DoPrint,Flag(NMAx,MMax),
      &	AnyTilt,BadTc,
@@ -240,7 +247,21 @@ C
       IF (HAVE_UNCAL(QUU)) HAVE_CAL(U) = .TRUE.
       IF (HAVE_UNCAL(QUV)) HAVE_CAL(V) = .TRUE.
       IF (HAVE_UNCAL(QUW)) HAVE_CAL(W) = .TRUE.
-
+      IF (CalSonic(QQType) .EQ. ApCSATSonic) THEN
+        IF (Have_Uncal(QUDiagnost)) THEN
+            DO I=1,M
+               DIAG_WORD = INT(RawSampl(QUDiagnost, I)/4096)
+               DiagFlag(QDDelta) = 
+     &            DiagFlag(QDDelta) + MOD(INT(DIAG_WORD/8),2)
+               DiagFlag(QDLock) = 
+     &            DiagFlag(QDLock) + MOD(INT(DIAG_WORD/4),2)
+               DiagFlag(QDHigh) = 
+     &            DiagFlag(QDHigh) + MOD(INT(DIAG_WORD/2),2)
+               DiagFlag(QDLow) = 
+     &            DiagFlag(QDLow) + MOD(INT(DIAG_WORD),2)
+            ENDDO
+        ENDIF
+      ENDIF
       WhichTemp = 0
       IF (HAVE_UNCAL(QUTSonic)) THEN
          HAVE_CAL(TSonic) = .TRUE.

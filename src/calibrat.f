@@ -102,10 +102,6 @@ C
 C This is the construction when we have a diagnostic variable
          IF (Have_Uncal(QUDiagnost)) THEN
             DIAG_WORD = INT(RawSampl(QUDiagnost)/4096)
-            Sample(DiagDelta) = MOD(INT(DIAG_WORD/8),2)
-            Sample(DiagLock ) = MOD(INT(DIAG_WORD/4),2)
-            Sample(DiagHigh) =  MOD(INT(DIAG_WORD/2),2)
-            Sample(DiagLow) =   MOD(INT(DIAG_WORD),2)
             IF ((Error(U).OR.Error(V).OR.Error(W)).OR.
      &          (DIAG_WORD.NE.0.D0)) THEN
                Error(U) = (.TRUE.)

@@ -84,10 +84,9 @@ C These constants are used to indicate calibrated quantities
 C If you add a variable here, increase NNMax as well!
 C
       INTEGER U,V,W,TSonic,Tcouple,Humidity,SpecHum,TTime,
-     &        Doy, HourMin, Sec, Diagnost, Tref, CO2, SpecCO2,
-     &        DiagLock, DiagDelta, DiagLow, DiagHigh
+     &        Tref, CO2, SpecCO2
 
-      PARAMETER(NNMax	  = 19) ! Maximum number of calibrated quantities in 1 sample
+      PARAMETER(NNMax	  = 11) ! Maximum number of calibrated quantities in 1 sample
 
       PARAMETER(U	 = 1)
       PARAMETER(V	 = 2)
@@ -99,15 +98,7 @@ C
       PARAMETER(CO2      = 8)
       PARAMETER(SpecCO2  = 9)
       PARAMETER(TTime	 = 10)
-      PARAMETER(DiagDelta= 11)
-      PARAMETER(DiagLock = 12)
-      PARAMETER(DiagHigh = 13)
-      PARAMETER(DiagLow  = 14)
-      PARAMETER(Doy   	 = 15)
-      PARAMETER(HourMin	 = 16)
-      PARAMETER(Sec   	 = 17)
-      PARAMETER(Diagnost = 18)
-      PARAMETER(Tref     = 19)
+      PARAMETER(Tref     = 11)
 
 
       CHARACTER*6 QName(NNMax) 
@@ -115,21 +106,13 @@ C
      &                  /'     u',
      &                   '     v',
      &                   '     w',
-     &                   'T(Son)',
-     &                   'T(Cpl)',
+     &                   '  TSon',
+     &                   '  TCop',
      &                   '  rhoV',
      &                   '     q',
-     &                   'RhoCO2',
+     &                   'rhoCO2',
      &                   '  qCO2',
      &                   '  time',
-     &                   'Ddelta',
-     &                   'D lock',
-     &                   'D high',
-     &                   'D  low',
-     &                   '   doy',
-     &                   'hr min',
-     &                   '   sec',
-     &                   ' diagn',
      &                   '  Tref'/
 
       CHARACTER*9 UName(NNMax) 
@@ -139,40 +122,94 @@ C
      &                   '    [m/s]',
      &                   '      [K]',
      &                   '      [K]',
-     &                   '[kg ^m-3]',
+     &                   '[kg/m^3]',
      &                   '  [kg/kg]',
-     &                   '[kg m^-3]',
+     &                   '[kg/m^3]',
      &                   '  [kg/kg]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
-     &                   '      [-]',
+     &                   '     [hr]',
      &                   '      [K]'/
       INTEGER QPHSonic, QPHTc, QPLvE, QPLvEWebb,
      &        QPUstar, QPTau, QPFCO2, QPFCO2Webb,
      &        QPMeanW, QPVectWind, QPDirFrom, QPSumLvE,
-     &        QPSumFCO2
-      PARAMETER(NMaxPhys  = 13) ! Maximum number of physical quantities
-
-      PARAMETER (QPHSonic   = 1)
-      PARAMETER (QPHTc      = 2)
-      PARAMETER (QPLvE      = 3)
-      PARAMETER (QPLvEWebb  = 4)
-      PARAMETER (QPUstar    = 5)
-      PARAMETER (QPTau      = 6)
-      PARAMETER (QPFCO2     = 7)
-      PARAMETER (QPFCO2Webb = 8)
-      PARAMETER (QPMeanW    = 9)
-      PARAMETER (QPVectWind = 10)
-      PARAMETER (QPDirFrom  = 11)
-      PARAMETER (QPSumLvE   = 12)
-      PARAMETER (QPSumFCO2  = 13)
+     &        QPSumFCO2, QPRhoSon, QPRhoTc
+      PARAMETER(NMaxPhys  = 15) ! Maximum number of physical quantities
       
+      PARAMETER (QPVectWind = 1)
+      PARAMETER (QPDirFrom  = 2)
+      PARAMETER (QPHSonic   = 3)
+      PARAMETER (QPHTc      = 4)
+      PARAMETER (QPLvE      = 5)
+      PARAMETER (QPLvEWebb  = 6)
+      PARAMETER (QPSumLvE   = 7)
+      PARAMETER (QPUstar    = 8)
+      PARAMETER (QPTau      = 9)
+      PARAMETER (QPFCO2     = 10)
+      PARAMETER (QPFCO2Webb = 11)
+      PARAMETER (QPSumFCO2  = 12)      
+      PARAMETER (QPRhoSon   = 13)
+      PARAMETER (QPRhoTc    = 14)
+      PARAMETER (QPMeanW    = 15)
+      
+ 
+      
+      CHARACTER*9 QPName(NMaxPhys) 
+      DATA QPName
+     &                  /'VectWind',
+     &                   'DirFrom ',
+     &                   'HSonic  ',
+     &                   'HTc     ',
+     &                   'LvEcov  ',
+     &                   'LvEWebb ',
+     &                   'SumLvE  ',
+     &                   'Ustar   ',
+     &                   'Tau     ',
+     &                   'FCO2cov ',
+     &                   'FCO2Webb',
+     &                   'SumFCO2 ',
+     &                   'RhoSon  ',
+     &                   'RhoTc   ',
+     &                   'Wnorot  '/
+     
+      CHARACTER*10 UPName(NMaxPhys) 
+      DATA UPName
+     &                  /'[m/s]     ',
+     &                   '[degr.]   ',
+     &                   '[W/m^2]   ',
+     &                   '[W/m^2]   ',
+     &                   '[W/m^2]   ',
+     &                   '[W/m^2]   ',
+     &                   '[W/m^2]   ',
+     &                   '[m/s]     ',
+     &                   '[N/m^2]   ',
+     &                   '[kg/m^2/s]',
+     &                   '[kg/m^2/s]',
+     &                   '[kg/m^2/s]',
+     &                   '[kg/m^3]  ',
+     &                   '[kg/m^3]  ',
+     &                   '[m/s]     '/
+
+      INTEGER QDDelta, QDLock, QDHigh, QDLow, NMaxDiag
+      PARAMETER(NMaxDiag  = 4) ! Maximum number of diagnostic flags
+
+      PARAMETER (QDDelta    = 1)
+      PARAMETER (QDLock     = 2)
+      PARAMETER (QDHigh     = 3)
+      PARAMETER (QDLow      = 4)
+      
+      CHARACTER*9 QDName(NMaxDiag) 
+      DATA QDName
+     &                  /'DDelta  ',
+     &                   'DLock   ',
+     &                   'DHigh   ',
+     &                   'DLow    '/
+     
+      CHARACTER*10 UDName(NMaxDiag) 
+      DATA UDName
+     &                  /'[-]      ',
+     &                   '[-]      ',
+     &                   '[-]      ',
+     &                   '[-]      '/
+     
 C
 C Constants used to indicate corrections
 C
@@ -193,6 +230,17 @@ C
       PARAMETER(QCWebb     = 10)
       PARAMETER(QCMean     = 11)
 
+C
+C Constants used to indicate output
+C
+      INTEGER NMaxOS
+      INTEGER OSOLD, OSTol, OScsv, OSDiag
+      PARAMETER(NMaxOS   = 4)
+      
+      PARAMETER(OSOld   = 1)
+      PARAMETER(OSTol   = 2)
+      PARAMETER(OScsv   = 3)
+      PARAMETER(OSDiag  = 4)
 C
 C Constants to indicate settings for this experiment
 C

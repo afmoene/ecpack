@@ -123,8 +123,8 @@ C
         QPhys(QPHSonic) = Cp*RhoSon*Cov(W,TSonic)
         dQPhys(QPHSonic) = Cp*RhoSon*TolCov(W,TSonic)
       ELSE
-        QPhys(QPHSonic) = 0
-        dQPhys(QPHSonic) = 0
+        QPhys(QPHSonic) = DUMMY
+        dQPhys(QPHSonic) = DUMMY
       ENDIF        
       
       IF ((.NOT. BadTC) .AND.
@@ -288,6 +288,26 @@ C
          QPhys(QPDirFrom) = DUMMY
          dQPhys(QPDirFrom) = DUMMY         
       ENDIF
+      
+      IF ((Mean(Humidity) .NE. DUMMY) .AND.
+     &    (Mean(TSonic) .NE. DUMMY)) THEN
+        QPhys(QPRhoSon) = EC_Ph_RhoWet(Mean(Humidity),Mean(TSonic),p)
+        dQPhys(QPRhoSon) = DUMMY
+      ELSE
+        QPhys(QPRhoSon) = DUMMY
+        dQPhys(QPRhoSon) = DUMMY
+      ENDIF        
+      
+      IF ((.NOT. BadTC) .AND.
+     &    (Mean(Humidity) .NE. DUMMY) .AND.
+     &    (Mean(TCouple) .NE. DUMMY)) THEN
+        QPhys(QPRhoTC) = EC_Ph_RhoWet(Mean(Humidity),Mean(TCouple),p)
+        dQPhys(QPRhoTC) = DUMMY
+      ELSE
+        QPhys(QPRhoTC) = DUMMY
+        dQPhys(QPRhoTC) = DUMMY
+      ENDIF
+      
       RETURN
       END
 
