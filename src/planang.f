@@ -47,7 +47,7 @@ C...........................................................................
      &  DoPrint,Flag(NNMAx,MMMax),
      &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  OutMean(NNMax), OutCov(NNMax, NNMax), 
-     &  OutStd(NNMax), OutStr(NNMax, NNMax), 
+     &  OutStd(NNMax), OutNum(NNMax),  OutStr(NNMax, NNMax), 
      &  OutPh(NMaxPhys), Outputs(NMaxOS)  
       INTEGER N,i,j,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
@@ -96,7 +96,7 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
      &             PlfName,
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
-     &             OutMean, OutCov, OutPh, OutStd, OutStr,
+     &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
      &             Outputs)
 C
 C Assume first we have no uncalibrated samples at all
