@@ -234,13 +234,14 @@ C
 C Constants used to indicate output
 C
       INTEGER NMaxOS
-      INTEGER OSOLD, OSTol, OScsv, OSDiag
-      PARAMETER(NMaxOS   = 4)
+      INTEGER OSOLD, OSTol, OScsv, OSDiag, OSVers
+      PARAMETER(NMaxOS   = 5)
       
       PARAMETER(OSOld   = 1)
       PARAMETER(OSTol   = 2)
       PARAMETER(OScsv   = 3)
       PARAMETER(OSDiag  = 4)
+      PARAMETER(OSVers  = 5)
 C
 C Constants to indicate settings for this experiment
 C

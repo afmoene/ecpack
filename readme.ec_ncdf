@@ -197,7 +197,10 @@ Output        other output settings:
               'diag': write info about diagnostic flags of CSAT to output file
               'nodiag': write no info about diagnostic flags of CSAT to output file
                      ('diag' and 'nodiag' are mutually exclusive; 'nodiag' is default) 
-
+              'version': write version number of software to output file
+              'noversion': write no version number to output file
+                     ('version' and 'noversion' are mutually exclusive; 'version' is default) 
+        
 Variable names to be used for Out_Mean, Out_Cov, Out_Std, Out_Struct (defined in
 parcnst.inc, not case-sensitive):
 u     : horizontal wind component [m/s]

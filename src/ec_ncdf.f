@@ -100,9 +100,17 @@ C...........................................................................
 
       INTEGER EC_T_STRLEN
 C
+C This may not be portable: works on gnu-fortran
+C
+C      CHARACTER*(*) FDATE
+C
 C The name of the calibration routine specified at the end of this file
 C
       EXTERNAL Calibrat, EC_T_STRLEN
+C
+C This may not be portable: works on gnu-fortran
+C
+      INTRINSIC FDATE
 
 C...........................................................................
 C Start of executable statements
@@ -126,6 +134,7 @@ C Get defaults for configuration
       Outputs(OSTol) = .TRUE.
       Outputs(OScsv) = .FALSE.
       Outputs(OSDiag) = .FALSE.
+      Outputs(OSVers) = .TRUE.
       DO I=1,NNMax
          OutMean(I) = .FALSE.
          OutStd(I) = .FALSE.
@@ -180,6 +189,15 @@ C
 C Open an output file for the fluxes and write headers to it
 C
       OPEN(FluxFile,FILE=FluxName,FORM='FORMATTED')
+C
+C The call to FDATE may not be portable: works on gnu-fortran.
+C just remove the call, if you have problems. Or find something
+C better or more portable.
+C
+      IF (Outputs(OSVers)) THEN
+         WRITE(FluxFile,'(A, A, A, A)') 'EC_NCDF Version: ', 
+     &                     VERSION, ' run at ', FDATE()
+      ENDIF
       CALL  EC_F_WFlux(FluxFile, .TRUE.,
      &                StartTime, StopTime,
      &                M, Mok, Mean, TolMean, Cov, TolCov,

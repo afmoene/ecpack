@@ -403,7 +403,19 @@ C
          FLAGS(OSDiag) = .FALSE.
          OneFound = .TRUE.
       ENDIF
-     
+C
+C Version number in output file?
+C
+      IF (INDEX('VERSION',
+     &          STRING(:EC_T_STRLEN(STRING))) .GT. 0) THEN
+         FLAGS(OSVers) = .TRUE.
+         OneFound = .TRUE.
+      ELSE IF (INDEX('NOVERSION',
+     &          STRING(:EC_T_STRLEN(STRING))) .GT. 0) THEN
+         FLAGS(OSVers) = .FALSE.
+         OneFound = .TRUE.
+      ENDIF
+      
             
       IF (.NOT. OneFound) THEN
          WRITE(*,*) 'Cannot find variable ', STRING

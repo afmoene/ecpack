@@ -281,6 +281,12 @@ Revision 2.5: January 30, 2003 (Arnold.Moene@wur.nl)
 	  - now flexible output is possible: in the main configuration
 	    file one can define which variables you want to see
 	    in the output file (see readme.ec_ncdf for details).
+Revision 2.5.1: February 3, 2003 (Arnold.Moene@wur.nl)
+          - added option (on by default) to write version number of
+	    program and data of processing to flux output file of ec_ncdf
+	    (output='version' or output='noversion' in configuration file).
+	    Makes debugging easier if someone has a problem, but
+	    doesn't know with what version the results were produced.
 	  
 	  
 	    
