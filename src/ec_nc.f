@@ -65,10 +65,12 @@ C...........................................................................
       STATUS = NF_INQ_VARDIMID(NCID,NChmID,DIMID)
       STATUS = NF_INQ_DIMLEN(NCID, DIMID,MAXIND )
       IF (MAXIND .GT. 0) THEN
+         
          IND1 = 1
          IND3 = MAXIND
          OK = .FALSE.
          DO WHILE (.NOT. OK)
+           
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NCdoyID, IND1, DOY1)
            STATUS = NF_GET_VAR1_DOUBLE(NCID,NChmID, IND1, HM1)
 	   IF ((DOY1 .GT. 0) .AND. (HM1 .GE. 0) .OR.
@@ -120,6 +122,7 @@ C Check whether point is before start or beyond end of file
 
          DO WHILE ((ABS(CURCH) .GT. 0) .AND. (ATTEMPTS .LT. 50))
 C Determine time difference between current sample and required time
+            
             DOYD = FDOY - DOY2
             HOURD = EC_NCDF_CSI2HOUR(DBLE(FHOURMIN)) - 
      +              EC_NCDF_CSI2HOUR(HM2)
@@ -347,7 +350,7 @@ C
 
       INTEGER STATUS
       IF (STATUS .NE. NF_NOERR) THEN
-         WRITE(*,*) NF_STRERROR(STATUS)
+         WRITE(*,*) 'NetCDF lib error: ', NF_STRERROR(STATUS)
          STOP 'Stopped'
       ENDIF
       END

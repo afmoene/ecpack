@@ -745,6 +745,15 @@ C is more robust
          WRITE(*,5500) MMMAX, NSAMPLE
 	 STOP
       ENDIF
+      Do I=1,NMax
+         IF (STOPIND + Delay(i) .GT. DIMLEN) THEN
+            NSAMPLE = STOPIND - Delay(i) - STARTIND
+            write(*,*) 'WARNING: Shortened all series, since ', 
+     +                 NCVarName(I)(:EC_T_STRLEN(NCVarName(I))), 
+     +                ' overruns array by extra delay of ', Delay(i),
+     +                ' samples'
+         ENDIF
+      ENDDO
 C
 C Read all data from file
 C
