@@ -626,7 +626,7 @@ C This is the construction when we have a diagnostic variable
                Error(V) = (.TRUE.)
                Error(W) = (.TRUE.)
             ENDIF
-C This is the construction when we hno not have a diagnostic variable
+C This is the construction when we do not have a diagnostic variable
          ELSE 
 	    IF ((Error(U).OR.Error(V)).OR.Error(W)) THEN
                Error(U) = (.TRUE.)

@@ -769,14 +769,22 @@ C
          ENDIF
    
 C This is the construction when we have a diagnostic variable
-C      IF (((Error(U).OR.Error(V)).OR.Error(W)).OR.
-C     &  ((RawSampl(ColDiagnostic).LT.0.D0).OR.
-C     &   (RawSampl(ColDiagnostic).GT.100.D0))) THEN
-         IF ((Error(U).OR.Error(V)).OR.Error(W)) THEN
-           Error(U) = (.TRUE.)
-           Error(V) = (.TRUE.)
-           Error(W) = (.TRUE.)
-         ENDIF
+         IF (Have_Uncal(Diagnost)) THEN
+            IF ((Error(U).OR.Error(V).OR.Error(W)).OR.
+     &          ((RawSampl(ColDiagnostic).LT.0.D0).OR.
+     &           (RawSampl(ColDiagnostic).GT.100.D0))) THEN
+               Error(U) = (.TRUE.)
+               Error(V) = (.TRUE.)
+               Error(W) = (.TRUE.)
+            ENDIF
+C This is the construction when we do not have a diagnostic variable
+         ELSE 
+	    IF ((Error(U).OR.Error(V)).OR.Error(W)) THEN
+               Error(U) = (.TRUE.)
+               Error(V) = (.TRUE.)
+               Error(W) = (.TRUE.)
+             ENDIF
+	 ENDIF
    
          IF (.NOT.((Error(U).OR.Error(V)).OR.Error(W))) THEN
 
