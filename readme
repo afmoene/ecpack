@@ -104,4 +104,5 @@ Which should produce the file libecpack.a
 
 Two sample programs are included that use libecpack.a:
    ec_ncdf
-   planfit (very preliminary)
+   planang
+See the respective readme-files for explanations of those programs.

@@ -220,5 +220,23 @@ Revision 2.4.1: October 9, 2002 (arnold.moene@wur.nl)
 Revision 2.4.2: October 10, 2002 (arnold.moene@wur.nl)
           - fixed bug in call to EC_C_Main in EC_G_Main (pressure and
 	    web velocity were interchanged -> wrong density in EC_Ph_Flux
+Revision 2.4.3:
+          - added 4 columns in output: counters for occurrence of CSAT diagnostic
+            flags
+          - added extra line in output: units per column
+          - changes in ec_gene.f, ec_ncdf.f and ec_file.f to
+            accomodate the use of planar fit untilting
+          - new program (planang) added that calculates untilting matrix. The
+            priods for which matrix is to be determined is read from 
+            text file. Matrix is written to a text file, to be read by 
+            ec_ncdf.
+          - interface changed of ec_f_getconf, ec_f_params, ec_g_main
+          - changes neede in the configureation file (names of files) and
+            the parameter file (or 'spec' file): also info
+            on planar fit rotation is read.
+          - repaired validity limits for temperature (thermocouple). Were changed
+            to Kevlin, now in Celcius again.
+          - converted StartTime and StopTime into integers (in ec_ncdf, planang
+            EC_F_ReadNCDF and EC_F_GetPF
 
 

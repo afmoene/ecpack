@@ -9,6 +9,8 @@ Parmdir='d:\data\rapid'
 ParmName='speclow.dat'
 FluxName='fluxes2'
 InterName='ectimes.dat'
+PlfName = 'planang.dat'
+PlfIntName = 'planint.dat'
 //
 // calibrations
 SonName='cals296l.qq'
@@ -25,9 +27,6 @@ Tcouple_var = 'Tcouple_lo'
 // Tref_var = 'T_ref'
 Hourmin_var='hour_min'
 Doy_var='doy'
-sec_var='sec'
+// sec_var='sec'
 //
 // diag_var='diagnostic'
-
-
-

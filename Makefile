@@ -65,12 +65,12 @@ libecpack.a: slatec.o ec_corr.o ec_math.o ec_phys.o ec_gene.o
 	$(AR) r $@ $?
 
 # The ec_ncdf program
-ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_text.o ec_nc.o libecpack.a
-	$(FC) -o ec_ncdf$(EXT) ec_ncdf.o ec_file.o ec_text.o ec_nc.o  $(LDFLAGS)
+ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_text.o ec_nc.o libecpack.a calibrat.o
+	$(FC) -o ec_ncdf$(EXT) ec_ncdf.o ec_file.o ec_text.o ec_nc.o  calibrat.o $(LDFLAGS)
 
 # The planar fit program
-planfit$(EXT): planfit.o ec_file.o ec_text.o ec_nc.o
-	$(FC) -o planfit$(EXT) planfit.o ec_file.o ec_text.o ec_nc.o  $(LDFLAGS)
+planang$(EXT): planang.o ec_file.o ec_text.o ec_nc.o calibrat.o
+	$(FC) -o planang$(EXT) planang.o ec_file.o ec_text.o ec_nc.o calibrat.o $(LDFLAGS)
 
 # This individual files
 ec_ncdf.o: ec_ncdf.f physcnst.inc parcnst.inc calcomm.inc version.inc
@@ -99,6 +99,12 @@ ec_gene.o: ec_gene.f physcnst.inc parcnst.inc
 
 ec_nc.o: ec_nc.f physcnst.inc parcnst.inc 
 	$(FC) $(FFLAGS) -c ec_nc.f
+
+calibrat.o: calibrat.f physcnst.inc parcnst.inc 
+	$(FC) $(FFLAGS) -c calibrat.f
+
+planang.o: planang.f physcnst.inc parcnst.inc  version.inc
+	$(FC) $(FFLAGS) -c planang.f
 
 # The docs
 

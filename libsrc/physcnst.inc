@@ -259,7 +259,7 @@ C FUNCTION
 C     Lower limit for acceptance of temperature sample
 C SOURCE
       REAL*8 MinT
-      PARAMETER(MinT	= 253.D0) ! [Kelvin]
+      PARAMETER(MinT	= 243.D0) ! [Kelvin]
 C     ***
 
 c     ****d* physcnst.inc/MaxT
@@ -269,7 +269,7 @@ C FUNCTION
 C     Upper limit for acceptance of temperature sample
 C SOURCE
       REAL*8 MaxT
-      PARAMETER(MaxT	=  333.D0) ! [Kelvin]
+      PARAMETER(MaxT	= 333.D0) ! [Kelvin]
 C     ***
 
 c     ****d* physcnst.inc/MinRhov

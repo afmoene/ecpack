@@ -32,7 +32,8 @@ C
 C Constants to indicate files
 C
       INTEGER InFile,OutFile,TempFile,DumpFile,FluxFile,DataFile,
-     &	TrendFile,IntervalFile, ECConfFile, PlfIntFile, PlfFile
+     &	TrendFile,IntervalFile,  ECConfFile, 
+     &  PlfIntFile, PlfFile
       PARAMETER(InFile	  = 13)
       PARAMETER(OutFile   = 14)
       PARAMETER(TempFile  = 15)
@@ -42,7 +43,8 @@ C
       PARAMETER(TrendFile = 19)
       PARAMETER(IntervalFile = 20)
       PARAMETER(PlfIntFile = 21)  ! File in which intermediate mean velocities are written
-      PARAMETER(PlfFile = 22)     ! File to which planerfit results are written
+      PARAMETER(PlfFile   = 22)     ! File to which planerfit results are written
+      
 C If Ecconffile is set to 5, input is read from standard input
 C else a file named 'ecconf' is opened
       PARAMETER(ECConfFile = 5)
@@ -52,15 +54,16 @@ C
       INTEGER MMMax,NNMax,MMaxDelay,NNNMax, NMaxOrder
 
       PARAMETER(MMMax = 100000) ! Maximum number of samples allowed
-      PARAMETER(NNNMax	  = 15) ! Maximum number of uncalibrated quantities in 1 sample
-      PARAMETER(NNMax	  =  10) ! Maximum number of calibrated quantities in 1 sample
+      PARAMETER(NNNMax	  = 19) ! Maximum number of uncalibrated quantities in 1 sample
+      PARAMETER(NNMax	  =  14) ! Maximum number of calibrated quantities in 1 sample
       PARAMETER(MMaxDelay =  8) ! Largest allowed delay between channels [number of samples]
       PARAMETER(NMaxOrder =  6) ! Maximum order of calibration polynomial
 C
 C These constants are used to indicate quantities
 C
       INTEGER U,V,W,TSonic,Tcouple,Humidity,SpecHum,TTime,
-     &        Doy, HourMin, Sec, Diagnost, Tref, CO2, SpecCO2
+     &        Doy, HourMin, Sec, Diagnost, Tref, CO2, SpecCO2,
+     &        DiagLock, DiagDelta, DiagLow, DiagHigh
 
       PARAMETER(U	 = 1)
       PARAMETER(V	 = 2)
@@ -72,11 +75,15 @@ C
       PARAMETER(CO2      = 8)
       PARAMETER(SpecCO2  = 9)
       PARAMETER(TTime	 = 10)
-      PARAMETER(Doy   	 = 11)
-      PARAMETER(HourMin	 = 12)
-      PARAMETER(Sec   	 = 13)
-      PARAMETER(Diagnost = 14)
-      PARAMETER(Tref     = 15)
+      PARAMETER(DiagDelta= 11)
+      PARAMETER(DiagLock = 12)
+      PARAMETER(DiagHigh = 13)
+      PARAMETER(DiagLow  = 14)
+      PARAMETER(Doy   	 = 15)
+      PARAMETER(HourMin	 = 16)
+      PARAMETER(Sec   	 = 17)
+      PARAMETER(Diagnost = 18)
+      PARAMETER(Tref     = 19)
 
 
       CHARACTER*6 QName(NNNMax) 
@@ -90,6 +97,10 @@ C
      &                   'RhoCO2',
      &                   '  qCO2',
      &                   '  time',
+     &                   'Ddelta',
+     &                   'D lock',
+     &                   'D high',
+     &                   'D  low',
      &                   '   doy',
      &                   'hr min',
      &                   '   sec',
@@ -106,6 +117,10 @@ C
      &                   '  [kg/kg]',
      &                   '[kg m^-3]',
      &                   '  [kg/kg]',
+     &                   '      [-]',
+     &                   '      [-]',
+     &                   '      [-]',
+     &                   '      [-]',
      &                   '      [-]',
      &                   '      [-]',
      &                   '      [-]',

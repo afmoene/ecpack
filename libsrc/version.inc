@@ -19,5 +19,5 @@ C  You should have received a copy of the GNU General Public License
 C  along with this program; if not, write to the Free Software
 C  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 C 
-       CHARACTER*3 VERSION
-       PARAMETER (VERSION='2.4.2')
+       CHARACTER*9 VERSION
+       PARAMETER (VERSION='2.4.3')

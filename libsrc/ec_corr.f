@@ -711,7 +711,7 @@ C     	BadTc,
 C     	DoTilt,PTilt,PreYaw,PrePitch,PreRoll,
 C     	DoYaw,PYaw,DirYaw,
 C     	DoPitch,PPitch,PitchLim,DirPitch,
-C     	DoRoll,PRoll,RollLim,DirRoll,: 
+C     	DoRoll,PRoll,RollLim,DirRoll,
 C     	DoSonic,PSonic,SonFactr,
 C     	DoO2,PO2,O2Factor,
 C     	DoFreq,PFreq,LLimit,ULimit,Freq,CalSonic,CalTherm,CalHyg,
@@ -885,13 +885,13 @@ C     ***
      &	DoYaw,DoPitch,DoRoll,DoFreq,DoO2,DoWebb,PSonic,
      &	DoSonic,DoTilt,PTilt,DoPrint,BadTc,
      &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
-     &  Have_Uncal(NMax), QSchot
+     &  Have_Uncal(NMax), QSchot, DoPF, PPF
       REAL*8 P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &	TolCov(NMax,NMax),LLimit,ULimit,FrCor(NMax,NMax),
      &	PitchLim,RollLim,DirYaw,O2Factor(NMax),
      &	NSTA,NEND,TAUV,TauD,Freq,DirPitch,DirRoll,
      &	SonFactr(NMax),PreYaw,PrePitch,PreRoll,TSonFact,
-     &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs, WebVel
+     &  Yaw(3,3), Roll(3,3), Pitch(3,3), Dirs, WebVel, Apf(3,3)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
 C
 C
@@ -996,7 +996,7 @@ C
 	  WRITE(OutF,*)
 	  WRITE(OutF,*) 'After roll-correction (Cov(V,W) -> 0) : '
 	  WRITE(OutF,*)
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
       ENDIF
 C

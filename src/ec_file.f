@@ -23,7 +23,7 @@ C
 
       SUBROUTINE EC_F_GetConf(ConfUnit,
      &           DatDir, OutDir,  ParmDir,
-     &           FluxName, ParmName, InterName,
+     &           FluxName, ParmName, InterName, PlfIntName,
      &           PlfName,
      &           SonName, CoupName, HygName, CO2Name,
      &           NCVarName,
@@ -36,7 +36,7 @@ C
       INTEGER         ConfUnit, NCNameLen
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
      &                InterName, SonName, CoupName, HygName, 
-     &                CO2Name, PlfName
+     &                CO2Name, PlfName, PlfIntName
       CHARACTER*(*)   NCVarName(NCNameLen)
 
       INTEGER         IOCODE, KINDEX
@@ -55,6 +55,7 @@ C
       CALL EC_T_CLEARSTR(FluxName)
       CALL EC_T_CLEARSTR(ParmName)
       CALL EC_T_CLEARSTR(InterName)
+      CALL EC_T_CLEARSTR(PlfIntName)
       CALL EC_T_CLEARSTR(SonName)
       CALL EC_T_CLEARSTR(CoupName)
       CALL EC_T_CLEARSTR(HygName)
@@ -98,6 +99,8 @@ C     See which token this is
                ParmName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'INTERNAME') .GT. 0) THEN
                InterName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+            ELSE IF (INDEX(TOKLINE, 'PLFINTNAME') .GT. 0) THEN
+               PlfIntName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'SONNAME') .GT. 0) THEN
                SonName = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
             ELSE IF (INDEX(TOKLINE, 'COUPNAME') .GT. 0) THEN
@@ -169,7 +172,15 @@ C NetCdF variable names
          CALL EC_T_STRCAT(DUMSTRING,InterName)
       ENDIF
       InterName = DUMSTRING
-      
+   
+      CALL EC_T_CLEARSTR(DUMSTRING)
+      IF (EC_T_STRLEN(PlfIntName) .GT. 0) THEN
+         DUMSTRING = ParmDir
+         CALL EC_T_STRCAT(DUMSTRING,'/')
+         CALL EC_T_STRCAT(DUMSTRING,PlfIntName)
+      ENDIF
+      PlfIntName = DUMSTRING
+
       CALL EC_T_CLEARSTR(DUMSTRING)
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
          DUMSTRING = ParmDir
@@ -304,9 +315,9 @@ C ########################################################################
       SUBROUTINE EC_F_Params(InName,
      &	Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,
      &	LLimit,ULimit,DoCrMean,DoDetren,DoSonic,DoTilt,DoYaw,DoPitch,
-     &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct,DoPrint,
+     &	DoRoll,DoFreq,DoO2,DoWebb,DoStruct, DoPF, DoPrint,
      &	PRaw,PCal,PDetrend,PIndep,PTilt,PYaw,PPitch,
-     &	PRoll,PSonic,PO2,PFreq,PWebb, StructSep)
+     &	PRoll,PSonic,PO2,PFreq,PWebb, PPF, PFValid, StructSep)
 C
 C Purpose : Read settings for this particular session from file
 C
@@ -315,10 +326,10 @@ C
       INCLUDE 'parcnst.inc'
 
       REAL*8 Freq,PitchLim,RollLim,PreYaw,PrePitch,PreRoll,LLimit,
-     &       ULimit, StructSep
+     &       ULimit, StructSep, PFValid
       LOGICAL DoCrMean,DoSonic,DoTilt,DoYaw,DoPitch,DoRoll,DoFreq,DoO2,
      &	DoWebb,DoPrint,PRaw,PCal,PIndep,PTilt,PYaw,PPitch,PRoll,PSonic,
-     &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct
+     &	PO2,PFreq,PWebb,DoDetren,PDetrend,DoStruct, DoPF, PPF
       CHARACTER*(*) InName
       INTEGER      IOCODE
 
@@ -327,7 +338,12 @@ C
          WRITE(*,*) 'ERROR: could not open parameter file ', InName
          STOP
       ENDIF
-
+C
+C Default values for planar fit settings
+C
+      DoPF = .FALSE.
+      PPF = .FALSE.
+      PFValid = 0.0D0
       READ(TempFile,*) Freq	  ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
       READ(TempFile,*) PitchLim	  ! [degree] Limit when Mean(W) is turned to zero
@@ -369,8 +385,11 @@ correction factor
       READ(TempFile,*) PFreq	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PWebb	  ! Indicator if these intermediate results are wanted
       READ(TempFile,*) StructSep! Separation (meter) for which to calculate structure parameter
-
-
+      READ(TempFile, *, END=5500) DoPF ! Do Planar fit ?
+      READ(TempFile, *, END=5500) PPF ! Print planar fit intermediate results ?
+      READ(TempFile, *, END=5500) PFValid ! Minimum part (<= 1) of samples that should be valid to incorporate interval in angle PF calculation
+      
+5500  CONTINUE
       CLOSE(TempFile)
 
       RETURN
@@ -533,8 +552,8 @@ C
       INTEGER NMax,MMax,M,Delay(NMax),HMStart,HMStop,Counter
       REAL Dum
       LOGICAL ok,Ready,Started,NotStopped
-      REAL*8 x(NMax,MMax),Gain(NMax),Offset(NMax),StartTime(3),
-     &  StopTime(3)
+      REAL*8 x(NMax,MMax),Gain(NMax),Offset(NMax)
+      INTEGER StartTime(3), StopTime(3)
       CHARACTER*(*) NCVarName(NMax)
       LOGICAL       Have_Uncal(NMax)
 
@@ -546,8 +565,8 @@ C
       INTEGER       EC_T_STRLEN
       EXTERNAL      EC_T_STRLEN
 
-      HMStart = 100*ANINT(StartTime(2))+ANINT(StartTime(3))
-      HMStop  = 100*ANINT(StopTime( 2))+ANINT(StopTime( 3))
+      HMStart = 100*StartTime(2)+StartTime(3)
+      HMStop  = 100*StopTime( 2)+StopTime( 3)
 C
 C Open file (NF_NOWRITE and NF_NOERR are defined in netcdf.inc)
 C
@@ -636,8 +655,8 @@ C
 C
 C Find start and stop index in file
 C
-      DOYStart = ANINT(StartTime(1))
-      DOYStop = ANINT(StopTime(1))
+      DOYStart = StartTime(1)
+      DOYStop = StopTime(1)
 C For security: always use time search routine without seconds:
 C is more robust
       CALL EC_NCDF_FINDNOSEC(DoyStart, HMSTART, NCID, NCVarID(Doy),
@@ -796,4 +815,117 @@ C
       M = M-MaxDelay
 
       RETURN
+      END
+
+      
+
+
+
+      
+C     ****f* ec_file.f/EC_F_GetPF
+C NAME
+C     EC_F_GetPF
+C SYNOPSIS
+C     CALL  EC_F_GetPF(PlfName, StartTime, StopTime, 
+C                      Alpha, Beta, Gamma, 
+C                      WBias, Apf)C     
+C INPUTS
+C     PlfName : [CHARACTER(*)]
+C               name of file with planar fit matrix
+C     StartTime: [INTEGER(3)]
+C               Starttime of interval
+C     StoptTime: [INTEGER(3)]
+C               Ebdtime of interval
+C OUTPUT
+C     Alpha    : [REAL*8]
+C               first tilt angle (degrees)
+C     Beta     : [REAL*8]
+C               second tilt angle (degrees)
+C     Gamma    : [REAL*8]
+C               third tilt angle (degrees)
+C     Wbias    : [REAL*8]
+C               bias in vertical windspeed (m/s)
+C     Apf     : [REAL*8(3,3)]
+C               untilt matrix
+C     AnglesFound: [LOGICAL]
+C               true if angles for this interval found
+C FUNCTION
+C     Routine to read planar fit until matrix from file.
+C     File has probably been produced by program planang
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     parcnst.inc
+C     ***
+C  
+      SUBROUTINE EC_F_GetPF(PlfName, StartTime, StopTime, 
+     &                  Alpha, Beta, Gamma, 
+     &                  WBias, Apf, AnglesFound)
+      INCLUDE 'parcnst.inc'
+      
+      CHARACTER*(*) PlfName
+      REAL*8        Alpha, Beta, Gamma,
+     &              Wbias, Apf(3,3)
+      INTEGER       FOO, I, J, StartTime(3), StopTime(3), 
+     &              LStartTime(3), LStopTime(3)
+      LOGiCAL       PastStart, BeforeEnd, AnglesFound
+     
+C
+C By default we didn't find anything
+C
+      AnglesFound = .FALSE.
+C
+C Open Planar fit angles file
+C
+      OPEN(PlfFile,FILE = PlfName,IOSTAT=FOO,STATUS='Unknown')
+      IF (FOO.NE.0) THEN
+        WRITE(*,*) 'Could not open planar fit angles-file ',PlfName
+        STOP'- Fatal: no planar fit angles could be read -'
+      ENDIF
+      
+C
+C Loop over file to see if we have an untilt matrix valid
+C for our interval
+C
+      DO While (.NOT. AnglesFound)
+            READ(PlfFile,*,END=37) (LStartTime(i),i=1,3),
+     &       (LStopTime(i),i=1,3),Alpha, Beta, Gamma, WBias,
+     &       ((Apf(I,J),I=1,3), J=1,3)
+C
+C Check if we are past start
+C
+        IF ((StartTime(1) .GT. LStartTime(1)) .OR.
+     &      ((StartTime(1) .EQ. LStartTime(1)) .AND.
+     &       (StartTime(2) .GT. LStartTime(2))) .OR.
+     &      ((StartTime(1) .EQ. LStartTime(1)) .AND.
+     &       (StartTime(2) .EQ. LStartTime(2)) .AND.
+     &       (StartTime(3) .GE. LStartTime(3)))) THEN
+           PastStart = .TRUE.
+        ELSE
+           PastStart = .FALSE.
+        ENDIF
+C
+C Check if we are before end
+C
+        IF ((StopTime(1) .LT. LStopTime(1)) .OR.
+     &      ((StopTime(1) .EQ. LStopTime(1)) .AND.
+     &       (StopTime(2) .LT. LStopTime(2))) .OR.
+     &      ((StopTime(1) .EQ. LStopTime(1)) .AND.
+     &       (StopTime(2) .EQ. LStopTime(2)) .AND.
+     &       (StopTime(3) .LE. LStopTime(3)))) THEN
+           BeforeEnd = .TRUE.
+        ELSE
+           BeforeEnd = .FALSE.
+        ENDIF
+        IF (PastStart .AND. BeforeEnd) THEN
+           AnglesFound = .TRUE.
+        ENDIF
+      ENDDO
+ 37   CONTINUE
+      IF (.NOT. AnglesFound) THEN
+         WRITE(*,*) 'No planar fit angles found for requested interval'
+      ENDIF      
       END
