@@ -22,6 +22,7 @@
 
 
 FC=g77
+AR=ar
 #
 # For some Unix
 #INCDIR=-I/usr/local/include
@@ -39,15 +40,18 @@ LIBDIR=-Lc:/gcc-2.95.2/lib
 EXT=.exe
 
 FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none
-LDFLAGS=$(LIBDIR) -lnetcdf 
+LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
 
-all: ec_ncdf$(EXT) planfit$(EXT)
+all: ec_ncdf$(EXT) planfit$(EXT) libecpack.a
 
-ec_ncdf$(EXT): ec_ncdf.o slatec.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o
-	$(FC) -o ec_ncdf$(EXT) slatec.o ec_ncdf.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o  $(LDFLAGS)
+libecpack.a: slatec.o ec_corr.o ec_math.o ec_phys.o ec_gene.o
+	$(AR) r $@ $?
 
-planfit$(EXT): planfit.o slatec.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o
-	$(FC) -o planfit$(EXT) slatec.o planfit.o ec_corr.o ec_file.o ec_math.o ec_phys.o ec_gene.o ec_nc.o  $(LDFLAGS)
+ec_ncdf$(EXT): ec_ncdf.o  ec_file.o ec_nc.o libecpack.a
+	$(FC) -o ec_ncdf$(EXT) ec_ncdf.o ec_file.o ec_nc.o  $(LDFLAGS)
+
+planfit$(EXT): planfit.o ec_file.o ec_nc.o
+	$(FC) -o planfit$(EXT) planfit.o ec_file.o ec_nc.o  $(LDFLAGS)
 
 ec_ncdf.o: ec_ncdf.f physcnst.inc parcnst.inc calcomm.inc version.inc
 	$(FC) $(FFLAGS) -c ec_ncdf.f
