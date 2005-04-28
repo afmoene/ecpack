@@ -156,7 +156,7 @@ C Get configuration (file names etc.)
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
      &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
-     &             Outputs, DoCorr, ExpVar, CorrPar,
+     &             Outputs, DoCorr, CorrPar, ExpVar, 
      &             DoStruct, DoPrint,
      &             PCorr, PRaw, PCal, PIndep)
 

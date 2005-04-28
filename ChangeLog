@@ -387,3 +387,5 @@ Revision : 2.5.14: March 22, 2005 (arnold.Moene@wur.nl)
       divide d(tau) by square of u*
       - in ec_file: EC_F_Params is now called from EC_F_GetConf and no longer
       from the application (ec_ncdf or planang) directly
+Revision : 2.5.15: April 28, 2005 (arnold.Moene@wur.nl)
+      - fixed bug in invocation of EC_get_conf in ec_ncdf (corrpar and expvar were interchanged)
