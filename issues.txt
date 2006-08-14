@@ -1,9 +1,0 @@
-- in EC_C_MAIN: QSchot now just gets a fake value: PSchot should be
-  added to interface.
-- Changed NSize in call to EC_C_F01 and EC_C_F02 in routine  EC_C_MAIN
-  to N
-- Changed NS in call to EC_C_F01 to Freq
-- Changed WXT in call to EC_C_F01 and EC_C_F02 to FrCor
-- Changed Lower and Upper in call to ec_C_F02 to LLimit and ULimit
-- Changed some calls in ec_ncdf to routines that changed names
-
