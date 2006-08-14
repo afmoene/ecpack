@@ -146,7 +146,7 @@ C
            IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
-     &         (CalSonic(QQType) .NE. ApKaijoT61)  .AND.
+     &         (CalSonic(QQType) .NE. ApKaijoTR61)  .AND.
      &         (CalSonic(QQType) .NE. ApGillSolent)) THEN
                WRITE(*,*) 'ERROR: Calibration file ',SonName,
      &                    'does not contain sonic info'
