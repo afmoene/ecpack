@@ -48,7 +48,7 @@ C...........................................................................
      &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  OutMean(NNMax), OutCov(NNMax, NNMax), 
      &  OutStd(NNMax), OutNum(NNMax),  OutStr(NNMax, NNMax), 
-     &  OutPh(NMaxPhys), Outputs(NMaxOS)  
+     &  OutPh(NMaxPhys), OutTime(NMaxOST), Outputs(NMaxOS)  
       INTEGER N,i,j,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
      &  StartTime(3),StopTime(3),
@@ -97,7 +97,8 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
      &             PlfName,
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
-     &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
+     &             OutMean, OutCov, OutPh, OutTime, 
+     &             OutStd, OutNum, OutStr,
      &             Outputs, DoCorr, CorrPar, ExpVar,
      &             DoStruct, DoPrint,
      &             PCorr, PRaw, PCal, PIndep)
@@ -145,7 +146,8 @@ C
            IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
-     &         (CalSonic(QQType) .NE. ApKaijoTR61)) THEN
+     &         (CalSonic(QQType) .NE. ApKaijoT61)  .AND.
+     &         (CalSonic(QQType) .NE. ApGillSolent)) THEN
                WRITE(*,*) 'ERROR: Calibration file ',SonName,
      &                    'does not contain sonic info'
                STOP 'Rewrite your calibration file'

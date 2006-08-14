@@ -1734,3 +1734,101 @@ C     ***
       END DO
       RETURN
       END
+
+
+      REAL*8 FUNCTION  EC_M_DECDAY(DOY,HOUR,MINUTE)
+C     ****f* ec_math.f/EC_M_DECDAY
+C NAME
+C     EC_M_DECDAY
+C SYNOPSIS
+C     TIME_DOY =  EC_M_DECDOY(DOY, HOUR, MINUTE)
+C FUNCTION
+C     Converts combination of DOY, hour, minutes to
+C     decimal days (starting at 0 at January 1, 00:00)
+C INPUTS
+C     DOY    : [INTEGER]
+C              DOY
+C     HOUR   : [INTEGER]
+C              hours
+C     MINUTE : [INTEGER]
+C              hours
+C RETURN VALUE
+C            : [REAL*8]
+C              decimal days 
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
+      INTEGER DOY, HOUR, MINUTE
+  
+      EC_M_DECDAY = DOY +
+     +              HOUR/24D0 + 
+     +              MINUTE/(24D0*60D0) 
+      END
+
+      REAL*8 FUNCTION  EC_M_DECHOUR(HOUR,MINUTE)
+C     ****f* ec_math.f/EC_M_DECHOUR
+C NAME
+C     EC_M_DECHOUR
+C SYNOPSIS
+C     TIME_HOUR =  EC_M_DECHOUR(HOUR, MINUTE)
+C FUNCTION
+C     Converts combination of hour and minute to
+C     decimal hours (starting at 0 at 00:00)
+C INPUTS
+C     HOUR   : [INTEGER]
+C              hours
+C     MINUTE : [INTEGER]
+C              MINUTE
+C RETURN VALUE
+C            : [REAL*8]
+C              decimal days 
+C AUTHOR
+C     Arnold Moene
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
+      INTEGER HOUR, MINUTE
+  
+      EC_M_DECHOUR = HOUR + 
+     +               MINUTE/(60D0)
+      END
+
+      REAL*8 FUNCTION  EC_M_DECSEC(HOUR,MINUTE)
+C     ****f* ec_math.f/EC_M_DECSEC
+C NAME
+C     EC_M_DECSEC
+C SYNOPSIS
+C     TIME_SEC =  EC_M_DECSEC(HOUR, MINUTE)
+C FUNCTION
+C     Converts combination of hour, minute to
+C     decimal seconds (starting at 0 at 00:00)
+C INPUTS
+C     HOUR   : [INTEGER]
+C              hours
+C     MINUTE : [INTEGER]
+C              minutes
+C RETURN VALUE
+C            : [REAL*8]
+C              decimal days 
+C AUTHOR
+C     Arnold Moene
+C USES
+C     EC_M_DECHOUR
+C HISTORY
+C     $Name$
+C     $Id$
+C     ***
+      IMPLICIT NONE
+      INTEGER HOUR, MINUTE
+      REAL*8 EC_M_DECHOUR
+      EXTERNAL EC_M_DECHOUR
+  
+      EC_M_DECSEC = 3600D0*EC_M_DECHOUR(HOUR,MINUTE)
+      END
+

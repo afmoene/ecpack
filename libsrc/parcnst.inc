@@ -207,7 +207,9 @@ C
      &                   '[kg/m^2/s]',
      &                   '[kg/m^2/s]',
      &                   '[kg/m^2/s]'/
-
+C
+C Constants to indicate diagnostics 
+C
       INTEGER QDDelta, QDLock, QDHigh, QDLow, NMaxDiag
       PARAMETER(NMaxDiag  = 4) ! Maximum number of diagnostic flags
 
@@ -229,7 +231,38 @@ C
      &                   '[-]      ',
      &                   '[-]      ',
      &                   '[-]      '/
+
+C
+C Constants to indicate time output
+C
+      INTEGER OSTDecDayB, OSTDecHrB, OSTDecSecB, 
+     +        OSTDecDayE, OSTDecHrE, OSTDecSecE, 
+     +        NMaxOST
+      PARAMETER(NMaxOST = 6)
+
+      PARAMETER (OSTDecDayB = 1)
+      PARAMETER (OSTDecDayE = 2)
+      PARAMETER (OSTDecHrB  = 3)
+      PARAMETER (OSTDecHrE  = 4)
+      PARAMETER (OSTDecSecB = 5)
+      PARAMETER (OSTDecSecE = 6)
      
+      CHARACTER*9 QTName(NMaxOST) 
+      DATA QTName
+     &                  /'DecDayB ',
+     &                   'DecDayE ',
+     &                   'DecHourB',
+     &                   'DecHourE',
+     &                   'DecSecB ',
+     &                   'DecSecE '/
+      CHARACTER*10 UTName(NMaxOST) 
+      DATA UTName
+     &                  /'[day]    ',
+     &                   '[day]    ',
+     &                   '[hr]     ',
+     &                   '[hr]     ',
+     &                   '[s]      ',
+     &                   '[s]      '/
 C
 C Constants used to indicate corrections
 C

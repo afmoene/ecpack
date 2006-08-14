@@ -185,6 +185,14 @@ Out_Num       write number of samples of  given calibrated signal to output file
 Out_Phys      write given physical (=derived quantity) to output file 
               (e.g. Out_Phys='HSonic', for a list of variable names,
               see below)
+Out_Time      write some extra time columns regarding start and stop of interval: e.g. Out_Time='DecHourB'
+              DecDayB: starttime in decimal days (starting on January 1)
+              DecDayE: stoptime in decimal days (starting on January 1)
+              DecHourB: startttime in decimal hours (starting at midnight)
+              DecHourE: stoptime in decimal hours (starting at midnight)
+              DecSecB: startttime in decimal seconds (starting at midnight)
+              DecSecE: stoptime in decimal seconds (starting at midnight)
+              
 Out_Struct    write (cross-) structure paramter of two calibrated signal 
               to output file (e.g. Out_Struct='TSon,w', for a list of variable names,
               see below). Note that for the moment if you request structure paramters through

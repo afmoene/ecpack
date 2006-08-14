@@ -31,7 +31,7 @@ C               DatDir, OutDir,  ParmDir,
 C               FluxName, ParmName, InterName, PlfIntName,
 C               PlfName, SonName, CoupName, HygName, CO2Name,
 C               NCVarName, NCNameLen,
-C               OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
+C               OutMean, OutCov, OutPh, OutTime, OutStd, OutNum, OutStr,
 C               Outputs, DoCorr, CorrPars, ExpVar, DoStruct, DoPrint,
 C               PCorr, PRaw, PCal, PIndep)
 C INPUTS
@@ -72,6 +72,8 @@ C     OutCov   : [LOGICAL](NNMax, NNMax)
 C                which covariances to write to output
 C     OutPh    : [LOGICAL](NMaxPhys)
 C                which physical quantities to write to output 
+C     OutTime  : [LOGICAL](NMaxOST)
+C                which time variables to output 
 C     OutStd   : [LOGICAL](NNMax)
 C                which standard deviations to write to output
 C     OutNum   : [LOGICAL](NNMax)
@@ -130,7 +132,8 @@ C     ***
      &           FluxName, ParmName, InterName, PlfIntName,
      &           PlfName, SonName, CoupName, HygName, CO2Name,
      &           NCVarName, NCNameLen,
-     &           OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
+     &           OutMean, OutCov, OutPh, OutTime, 
+     &           OutStd, OutNum, OutStr,
      &           Outputs, DoCorr, CorrPars, ExpVar, 
      &           DoStruct, DoPrint,
      &           PCorr, PRaw, PCal, PIndep)
@@ -150,7 +153,8 @@ C     ***
       LOGICAL         OutMean(NNMax), OutCov(NNMax, NNMax), 
      &                OutStd(NNMax), OutNum(NNMax),  
      &                OutStr(NNMax, NNMax), 
-     &                OutPh(NMaxPhys), Outputs(NMaxOS),
+     &                OutPh(NMaxPhys), OutTime(NMaxOST),
+     &                Outputs(NMaxOS),
      &                Docorr(NMaxCorr) 
       REAL*8          CorrPars(NMaxCorrPar), ExpVar(NMaxExp)
 
@@ -195,8 +199,8 @@ C     Check for comment (should start with //
 C     Find the equality sign
             KINDEX = INDEX(LINE, '=')
             IF (KINDEX .EQ. 0) THEN
-                WRITE(*,*) 'ERROR no equality sign found in ', LINE
-                STOP
+                WRITE(*,*) 'WARNING: no equality sign found in ', LINE
+                WRITE(*,*) 'assuming an empty line'
             ENDIF
 c     Split into token and value
             WRITE(TOKLINE,*) LINE(:KINDEX-1)
@@ -282,6 +286,9 @@ C Output definitions
             ELSE IF (INDEX(TOKLINE, 'OUT_PHYS') .GT. 0) THEN
                CALL EC_T_GPhys(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            OutPh)
+            ELSE IF (INDEX(TOKLINE, 'OUT_TIME') .GT. 0) THEN
+               CALL EC_T_GTime(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutTime)
             ELSE IF (INDEX(TOKLINE, 'OUT_STRUCT') .GT. 0) THEN
                CALL EC_T_GOut2(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            OutStr)
@@ -579,7 +586,8 @@ C Now read the correct number of specs
       DO i=2,ApNQQ(INT(CalSpec(1)))
        	READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
          IF (IOCODE .NE. 0) THEN
-            WRITE(*,*) 'ERROR in reading of configuration file'
+            WRITE(*,*) 'ERROR in reading of calibration file ', 
+     &               InName(:EC_T_STRLEN(InName))
             STOP
          ENDIF
       ENDDO
@@ -1090,7 +1098,7 @@ C                      StartTime, StopTime,
 C                      M, Mok, Mean, dMean, Cov, dCov,
 C                      Phys, dPhys, Std, dStd, Struct,
 C                      dStruct, R, dR,
-C                      OutMean, OutCov, OutPh, 
+C                      OutMean, OutCov, OutPh, OutTime,
 C                      OutStd, OutNum, OutStr, Outputs)
 C INPUTS
 C     Outunit   : [INTEGER]
@@ -1138,6 +1146,8 @@ C     OutCov    : [LOGICAL](NNMax,NNMax)
 C                 flags for output of covariances
 C     OutPh,    : [LOGICAL](NMaxPhys)
 C                 flags for output of physical quantities
+C     OutTime,  : [LOGICAL](NMaxOST)
+C                 flags for output of time variables
 C     OutStd    : [LOGICAL](NNMax)
 C                 flags for output of standard deviations
 C     OutNum    : [LOGICAL](NNMax)
@@ -1157,6 +1167,9 @@ C USES
 C     parcnst.inc
 C     EC_T_STRLEN
 C     EC_T_STRIPSTR
+C     EC_M_DECDAY
+C     EC_M_DECHOUR
+C     EC_M_DECSEC
 C     ***
 C
       SUBROUTINE  EC_F_WFlux(Outunit, Header,
@@ -1164,7 +1177,7 @@ C
      &                 M, Mok, Mean, dMean, Cov, dCov,
      &                 Phys, dPhys, Std, dStd, Struct,
      &                 dStruct, R, dR,DiagFlag,
-     &                 OutMean, OutCov, OutPh,
+     &                 OutMean, OutCov, OutPh, OutTime,
      &                 OutStd, OutNum, OutStr, Outputs)
       IMPLICIT NONE
       include 'parcnst.inc'
@@ -1172,7 +1185,8 @@ C
       INTEGER OutUnit, StartTime(3), StopTime(3), M, Mok(NNMax),
      &        I, J, DiagFlag(NMaxDiag)
       LOGICAL Header, OutMean(NNMax), OutCov(NNMax,NNMax),
-     &        OutPh(NMaxPhys), OutStd(NNMax), OutNum(NNMax),
+     &        OutPh(NMaxPhys), OutTime(NMaxOST), 
+     &        OutStd(NNMax), OutNum(NNMax),
      &        OutStr(NNMax,NNMax),
      &        Outputs(NMaxOS), AnyStruct
       REAL*8  Mean(NNMax), dMean(NNMax),
@@ -1184,6 +1198,9 @@ C
 
       INTEGER EC_T_STRLEN
       EXTERNAL EC_T_STRLEN
+
+      REAL*8 EC_M_DECDAY, EC_M_DECHOUR, EC_M_DECSEC
+      EXTERNAL EC_M_DECDAY, EC_M_DECHOUR, EC_M_DECSEC
 
 C You really want the old format !!?
       IF (Outputs(OSOLD)) THEN
@@ -1276,8 +1293,15 @@ C Rest of time info
            write(OutUnit, FRM) 'Doy'
            write(OutUnit, FRM) 'Hour'
            write(OutUnit, FRM) 'Min'
+           DO I=1,NMaxOST
+             IF (OutTime(I)) THEN
+                NAME = QTName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)") NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+             ENDIF
+           ENDDO
 C Number of samples
-           write(OutUnit, FRM) '#samples'
            DO I=1,NNMax
              IF (OutNum(I)) THEN
                 NAME = QName(I)
@@ -1412,6 +1436,15 @@ C Rest of time info
            write(OutUnit, FRM) '[-]'
            write(OutUnit, FRM) '[-]'
            write(OutUnit, FRM) '[-]'
+C Extra time columns
+           DO I=1,NMaxOST
+             IF (OutTime(I)) THEN
+                NAME = UTName(I)
+                CALL EC_T_STRIPSTR(NAME)
+                WRITE(OUTNAME, "(A)") NAME(:EC_T_STRLEN(NAME))
+                write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+             ENDIF
+           ENDDO
 C # samples
            write(OutUnit, FRM) '[-]'
            DO I=1,NNMax
@@ -1527,7 +1560,40 @@ C Time info
            write(OutUnit, FRM) StopTime(1)
            write(OutUnit, FRM) StopTime(2)
            write(OutUnit, FRM) StopTime(3)
+C Extra time columns
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",G20.8,$)'
+           ELSE
+              FRM='(" ",G20.8,$)'
+           ENDIF
+           DO I=1,NMaxOST
+             IF (OutTime(I)) THEN
+                IF (I .EQ. OSTDecDayB)
+     &             write(OutUnit, FRM) 
+     &             EC_M_DecDay(StartTime(1), StartTime(2), StartTime(3))
+                IF (I .EQ. OSTDecDayE)
+     &             write(OutUnit, FRM) 
+     &             EC_M_DecDay(StopTime(1), StopTime(2), StopTime(3))
+                IF (I .EQ. OSTDecHrB)
+     &             write(OutUnit, FRM) 
+     &             EC_M_DecHour(StartTime(2), StartTime(3))
+                IF (I .EQ. OSTDecHrE)
+     &             write(OutUnit, FRM) 
+     &             EC_M_DecHour(StopTime(2), StopTime(3))
+                IF (I .EQ. OSTDecSecB)
+     &             write(OutUnit, FRM) 
+     &             EC_M_DecSec(StartTime(2), StartTime(3))
+                IF (I .EQ. OSTDecSecE)
+     &             write(OutUnit, FRM) 
+     &             EC_M_DecSec(StopTime(2), StopTime(3))
+             ENDIF
+           ENDDO
 C Number of samples
+           IF (Outputs(OSCSV)) THEN
+              FRM='(",",I6,$)'
+           ELSE
+              FRM='(" ",I20,$)'
+           ENDIF
            write(OutUnit, FRM) M
            DO I=1,NNMax
              IF (OutNum(I)) THEN

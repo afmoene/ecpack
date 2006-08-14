@@ -389,3 +389,10 @@ Revision : 2.5.14: March 22, 2005 (arnold.Moene@wur.nl)
       from the application (ec_ncdf or planang) directly
 Revision : 2.5.15: April 28, 2005 (arnold.Moene@wur.nl)
       - fixed bug in invocation of EC_get_conf in ec_ncdf (corrpar and expvar were interchanged)
+Revision : 2.5.16: August 14, 2006 (arnold.moene@wur.nl)
+      - added option to ec_ncdf to write extra columns regarding the start and
+      stop time of the interval: switch Out_Time (see readme.ec_ncdf)
+      - if DoCrMean is set to true in the parameter file, at least the mean(q)
+      is give in the output
+      - check if sonic instrument file (named 'SonName') really contains info
+      about a sonic now also checks for ApGillSolent (i.e. number 11).

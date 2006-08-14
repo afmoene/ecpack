@@ -76,13 +76,15 @@ C...........................................................................
      &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  OutMean(NNMax), OutCov(NNMax, NNMax), 
      &  OutStd(NNMax), OutNum(NNMax), OutStr(NNMax, NNMax), 
-     &  OutPh(NMaxPhys), Outputs(NMaxOS)     
+     &  OutPh(NMaxPhys), OutTime(NMaxOST), Outputs(NMaxOS)     
       INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
      &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3),
      &  DiagFlag(NMaxDiag)
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
-     &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax),
+     &  Mean(NNMax),TolMean(NNMax),
+     &  Mins(NNMax),Maxs(NNMax),
+     &  Cov(NNMax,NNMax),
      &  TolCov(NNMax,NNMax),FrCor(NNMax,NNMax),
      &  DirYaw,RC(NNMax),O2Factor(NNMax),
      &  DirPitch,DirRoll,
@@ -148,6 +150,9 @@ C Get defaults for configuration
       DO I=1,NMaxPhys
          OutPh(I) = .FALSE.
       ENDDO
+      DO I=1,NMaxOST
+         OutTime(I) = .FALSE.
+      ENDDO
 C Get configuration (file names etc.)
       CALL EC_F_GetConf(ECConfFile,
      &             DatDir, OutDir, ParmDir,
@@ -155,7 +160,8 @@ C Get configuration (file names etc.)
      &             PlfName,
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
-     &             OutMean, OutCov, OutPh, OutStd, OutNum, OutStr,
+     &             OutMean, OutCov, OutPh, OutTime, 
+     &             OutStd, OutNum, OutStr,
      &             Outputs, DoCorr, CorrPar, ExpVar, 
      &             DoStruct, DoPrint,
      &             PCorr, PRaw, PCal, PIndep)
@@ -217,7 +223,7 @@ C
      &                M, Mok, Mean, TolMean, Cov, TolCov,
      &                QPhys, dQPhys, Std, dStd, Struct,
      &                dStruct, R, dR, DiagFlag,
-     &                OutMean, OutCov, OutPh, 
+     &                OutMean, OutCov, OutPh, OutTime,
      &                OutStd, OutNum, OutStr, Outputs)
       
 C
@@ -237,7 +243,8 @@ C
            IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
-     &         (CalSonic(QQType) .NE. ApKaijoTR61)) THEN
+     &         (CalSonic(QQType) .NE. ApKaijoTR61)  .AND.
+     &         (CalSonic(QQType) .NE. ApGillSolent)) THEN
                WRITE(*,*) 'ERROR: Calibration file ',SonName,
      &                    'does not contain sonic info'
                STOP 'Rewrite your calibration file'
@@ -431,7 +438,7 @@ C
      &    SonFactr,
      &    O2Factor,
      &    FrCor,
-     &    Mean,TolMean,Cov,TolCov,
+     &    Mean,TolMean, Mins, Maxs, Cov,TolCov,
      &    QPhys, dQPhys,
      &    HAVE_UNCAL, HAVE_CAL, DiagFlag, StartTime(1))
 C
@@ -486,7 +493,7 @@ C
      &                M, Mok, Mean, TolMean, Cov, TolCov,
      &                QPhys, dQPhys, Std, dStd, Struct,
      &                dStruct, R, dR, DiagFlag,
-     &                OutMean, OutCov, OutPh, 
+     &                OutMean, OutCov, OutPh, OutTime,
      &                OutStd, OutNum, OutStr, Outputs)
 
       IF (DoPrint) CLOSE(OutFile)

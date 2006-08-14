@@ -1,1 +1,2 @@
 - move all configuration settings to the main configuration file (the file read from standard input). This should make the parameter file (ParmName) redundant. The reason to make this move is that the main configuration file is much more flexible (no fixed order or number of items).
+- add output option to get alternative time columns: decimal days (starting at January 1), decimal hours (starting at 00:00), decimal seconds (starting at 00:00))

@@ -457,6 +457,49 @@ C...........................................................................
          STOP
       ENDIF
       END
+
+C...........................................................................
+C Routine   : EC_T_GTime
+C Purpose   : To set flag to give output of a time variable
+C Interface : STRING      intent(IN)      string to be parsed
+C             FLAGS       intent(INOUT)   array of flags to be set
+C Author    : Arnold Moene
+C Date      : April 28, 2005
+C...........................................................................
+      SUBROUTINE EC_T_GTime(String, Flags)
+      IMPLICIT NONE
+      include 'parcnst.inc'
+      
+      CHARACTER*(*) STRING
+      CHARACTER*100 DUMSTRING
+      LOGICAL       FLAGS(NMaxOST), OneFound
+      INTEGER       I
+      INTEGER EC_T_STRLEN
+      LOGICAL EC_T_EQSTRING
+      EXTERNAL EC_T_STRLEN, EC_T_EQSTRING      
+
+      CALL EC_T_STRIPSTR(STRING)
+      CALL EC_T_UPCASE(STRING)
+      OneFound = .FALSE.
+      DO I=1,NMaxOST
+	 DUMSTRING = QTName(I)
+	 CALL EC_T_STRIPSTR(DUMSTRING)
+         CALL EC_T_UPCASE(DUMSTRING)
+         IF (EC_T_EQSTRING(DUMSTRING, STRING)) THEN
+	     Flags(I) = .TRUE.
+	     OneFound = .TRUE.
+         ENDIF
+         IF (EC_T_EQSTRING('ALL', STRING)) THEN
+	     Flags(I) = .TRUE.
+	     OneFound = .TRUE.
+         ENDIF
+      ENDDO
+            
+      IF (.NOT. OneFound) THEN
+         WRITE(*,*) 'Cannot find variable ', STRING
+         STOP
+      ENDIF
+      END
  
 C...........................................................................
 C Routine   : EC_T_GOutS

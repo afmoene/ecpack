@@ -48,7 +48,9 @@ C ########################################################################
      &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
      &  DoCorr, PCorr, CorrPar, ExpVar, DirYaw, DirPitch, DirRoll,
      &  Apf, SonFactr, O2Factor, FrCor,
-     &	Mean,TolMean,Cov,TolCov,
+     &	Mean,TolMean,
+     &  Mins, Maxs,
+     &  Cov,TolCov,
      &  QPhys, dQPhys,
      &  HAVE_UNCAL, HAVE_CAL, DiagFlag, FirstDay)
 C     ****f* ec_gene.f/EC_G_Main
@@ -168,6 +170,10 @@ C     Mean      : [REAL*8(NMax)] (in/out)
 C                 Mean values of all calibrated signals
 C     TolMean   : [REAL*8(NMax)] (in/out)
 C                 Tolerances in mean values of all calibrated signals
+C     Mins      : [REAL*8(NMax)] (in/out)
+C                 Minimum value of calibrated signal
+C     Maxs      : [REAL*8(NMax)] (in/out)
+C                 Maximim value of calibrated signal
 C     Cov       : [REAL*8(NMax,NMax)] (in/out)
 C                 Covariances of all calibrated signals
 C     TolCov    : [REAL*8(NMax,NMax)] (in/out)
@@ -198,6 +204,10 @@ C                           Put all correction info into DoCorr and PCorr, ExpVa
 C     REvision: 29-01-2003: added have_cal to interface to
 C                           have it available in ec_ncdf
 C     Revision: 17-03-2005: added CorrPar to pass correction parameters
+C     Revision: 29-06-2006: added Mins and Maxs to interface to get min
+C                           and max of calibrated signal out (also added
+C                           its calculation, irrespective of the DoPrint
+C                           flag)
 C     $Name$
 C     $Id$
 C USES
@@ -238,7 +248,7 @@ C     ***
      &	SonFactr(NMax),CorMean(NNMax),
      &	Speed(3),DumCov(3,3), QPhys(NMaxPhys), dQPhys(NMaxPhys)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
-      REAL*8 MINS(NNMax), MAXS(NNMAX), WebVel
+      REAL*8 Mins(NNMax), Maxs(NNMAX), WebVel
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3), Apf(3,3), 
      &        DumOut(3) 
       INTEGER NBlock
@@ -661,6 +671,11 @@ C
      &	  WebVel, P, Have_cal)
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
+C Re-establish the mean humidity signal if needed
+      IF (.NOT. Have_cal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+      ENDIF
       
 C
 C
@@ -680,6 +695,14 @@ C
 
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
+C Re-establish the mean humidity signal if needed
+      IF (.NOT. Have_cal(Humidity)) THEN
+          Mean(Humidity) = Psychro
+          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+      ENDIF
+
+C Determine min and max of calibrated signal
+      CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
 
       RETURN
       END
