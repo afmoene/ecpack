@@ -1302,6 +1302,7 @@ C Rest of time info
              ENDIF
            ENDDO
 C Number of samples
+           write(OutUnit, FRM) '#Samples'
            DO I=1,NNMax
              IF (OutNum(I)) THEN
                 NAME = QName(I)

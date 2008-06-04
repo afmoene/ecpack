@@ -39,7 +39,7 @@ C...........................................................................
       INCLUDE 'version.inc'
 
       INTEGER MaxPF, NPF
-      PARAMETER (MaxPF = 100000)
+      PARAMETER (MaxPF = 10000000)
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
      &              ParmName,InterName, PlfName, PlfIntName
       CHARACTER*255 DumName1,DumName2

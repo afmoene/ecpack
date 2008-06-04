@@ -465,32 +465,6 @@ C
 	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
 	ENDIF
 
-C
-C
-C Estimate mean values, covariances and tolerances of both
-C for the detrended dataset
-C
-C
-	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	                 Mean,TolMean,Cov,TolCov,
-     &                   MIndep,CIndep,Mok,Cok)
-        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
-     &                MIndep,  CIndep)
-        IF (.NOT. Have_cal(Humidity)) THEN
-          Mean(Humidity) = Psychro
-          MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
-        ENDIF
-        CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-
-	IF (DoPrint.AND.PCorr(QCDetrend)) THEN
-	  CALL EC_G_ShwHead(OutF, 'After detrending : ')
-          CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
-          CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
-	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
-	  ENDIF
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
       ENDIF
 
 C

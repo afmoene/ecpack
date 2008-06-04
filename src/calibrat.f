@@ -361,15 +361,8 @@ C
          Error(CO2) = .TRUE.
          Error(SpecCO2) = .TRUE.
       ENDIF
-C
-C Time is used for detrending. Therefore we take out all samples with
-C a defect in one of the velocities.
-C I wouldnt know why so, test has been removed AM
-C
+
       Error(TTime) = (.FALSE.)
-C      DO i=U,W
-C        Error(TTime) = (Error(TTime).OR.Error(i))
-C      ENDDO
 
       RETURN
       END

@@ -396,3 +396,7 @@ Revision : 2.5.16: August 14, 2006 (arnold.moene@wur.nl)
       is give in the output
       - check if sonic instrument file (named 'SonName') really contains info
       about a sonic now also checks for ApGillSolent (i.e. number 11).
+Revision : 2.5.17: June 4, 2008 (arnold.moene@wur.nl)
+     - removed double code in ec_G_main (Statistics after deterending
+     - fixed small in writing of header (label for #samples column was
+     missing)

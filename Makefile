@@ -20,10 +20,6 @@
 #  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 #
-FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g
-LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
-LIBSRC=../libsrc
-SRC=../src
 
 # For some Unix
 BUILD-LINUX=build-linux
@@ -31,8 +27,8 @@ LEXT=
 LFC=g77
 LAR=ar
 LRANLIB=ranlib
-LINCDIR='-I/usr/include -I$(LIBSRC)/'
-LLIBDIR=-L/usr/lib
+LINCDIR='-I/home/arnold/include -I$(LIBSRC)/'
+LLIBDIR=-L/home/arnold/lib
 
 # For MingW
 BUILD-WIN32=build-win32
@@ -44,11 +40,15 @@ WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/'
 WLIBDIR=-L/usr/local/i386-mingw32/lib
 WEXT=.exe
 
+FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
+LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
+LIBSRC=../libsrc
+SRC=../src
 
 # For Robodoc
 ROBODOC=robodoc
 TMPDIR=`pwd`/tmp
-DOCDIR=`pwd`/doc
+DOCDIR=`pwd`/libdoc
 MKDIR=mkdir -p
 PROJECT=ecpack
 LS=ls
@@ -65,12 +65,12 @@ all: win32 linux win32-programs linux-programs docs
 win32: 
 	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) libecpack.a)
 win32-programs:
-	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) ec_ncdf.exe planang.exe)
+	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) LIBDIR=$(WLIBDIR) ec_ncdf.exe planang.exe)
 
 linux: 
 	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) libecpack.a)
 linux-programs:
-	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) ec_ncdf planang)
+	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) LIBDIR=$(LLIBDIR) ec_ncdf planang)
 
 
 # By default, just the library
@@ -138,7 +138,7 @@ docpdf: $(DOCFILES)
 	$(ROBODOC) --singledoc --doc $(PROJECT)  --src $(TMPDIR) --latex --index --sections --toc
 	$(PDFLATEX) $(PROJECT).tex
 	$(PDFLATEX) $(PROJECT).tex
-	$(RM) $(PROJECT).tex *.aux *.toc *.idx
+#	$(RM) $(PROJECT).tex *.aux *.toc *.idx
 	$(RMDIR) $(TMPDIR)
 
 clean:
