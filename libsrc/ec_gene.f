@@ -42,13 +42,13 @@ C ########################################################################
 
 
       SUBROUTINE EC_G_Main(OutF,DoPrint,
-     &	RawSampl,MaxChan,Channels,NMax,N,MMax,M,PCal,PIndep,
-     &	Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
-     &	Calibr,
-     &	Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
+     &  RawSampl,MaxChan,Channels,NMax,N,MMax,M,PCal,PIndep,
+     &  Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
+     &  Calibr,
+     &  Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
      &  DoCorr, PCorr, CorrPar, ExpVar, DirYaw, DirPitch, DirRoll,
      &  Apf, SonFactr, O2Factor, FrCor,
-     &	Mean,TolMean,
+     &  Mean,TolMean,
      &  Mins, Maxs,
      &  Cov,TolCov,
      &  QPhys, dQPhys,
@@ -231,22 +231,22 @@ C     ***
       INCLUDE 'parcnst.inc'
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
-     &	OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
+     &  OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
      &  WhichTemp, DiagFlag(NMaxDiag), FirstDay, DIAG_WORD
       LOGICAL PCal,PIndep,
-     &	DoPrint,Flag(NMAx,MMax),
-     &	AnyTilt,BadTc,
+     &  DoPrint,Flag(NMAx,MMax),
+     &  AnyTilt,BadTc,
      &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  DumCorr(NMaxCorr), PDumCorr(NMaxCorr)
       REAL*8 RawSampl(MaxChan,MMax), ExpVar(NMaxExp),
      &       CorrPar(NMaxCorrPar)
       REAL*8 P,Psychro,Sample(NMax,MMax),
-     &	Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),FrCor(NMax,NMax),
-     &	DirYaw,RC(NMax),O2Factor(NMax),
-     &	DirPitch,DirRoll,
-     &	SonFactr(NMax),CorMean(NNMax),
-     &	Speed(3),DumCov(3,3), QPhys(NMaxPhys), dQPhys(NMaxPhys)
+     &  Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
+     &  TolCov(NMax,NMax),FrCor(NMax,NMax),
+     &  DirYaw,RC(NMax),O2Factor(NMax),
+     &  DirPitch,DirRoll,
+     &  SonFactr(NMax),CorMean(NNMax),
+     &  Speed(3),DumCov(3,3), QPhys(NMaxPhys), dQPhys(NMaxPhys)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
       REAL*8 Mins(NNMax), Maxs(NNMAX), WebVel
       REAL*8 EC_Ph_Q,Yaw(3,3),Pitch(3,3),Roll(3,3), Apf(3,3), 
@@ -285,7 +285,7 @@ C
       WhichTemp = 0
       IF (HAVE_UNCAL(QUTSonic)) THEN
          HAVE_CAL(TSonic) = .TRUE.
-	 WhichTemp = TSonic
+         WhichTemp = TSonic
       ENDIF
       IF (HAVE_UNCAL(QUHumidity)) THEN
          HAVE_CAL(Humidity) = .TRUE.
@@ -293,7 +293,7 @@ C
       ENDIF
       IF (HAVE_UNCAL(QUTCouple)) THEN
          HAVE_CAL(TCouple) = .TRUE.
-	 WhichTemp = TCouple
+          WhichTemp = TCouple
       ENDIF
       IF (HAVE_UNCAL(QUCO2)) THEN
          HAVE_CAL(CO2) = .TRUE.
@@ -319,7 +319,7 @@ C Calibrate the raw samples for the first time ignoring drift in apparatus.
 C
 C
       DO i=1,N
-       	CorMean(i) = 0.0D0
+         CorMean(i) = 0.0D0
       ENDDO
 C
 C First try it with thermocouple
@@ -357,33 +357,33 @@ C
 C
 C Find the shift/drift in humidity of the krypton hygrometer
 C
-	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	  Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+      CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &    Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
         CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
         IF (.NOT. Have_Cal(Humidity)) THEN
-	   Mean(Humidity) = Psychro
-	   MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
-	ENDIF
-	IF (DoPrint) THEN
+            Mean(Humidity) = Psychro
+            MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
+      ENDIF
+      IF (DoPrint) THEN
            CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
            CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
-	ENDIF
+      ENDIF
 
-	CorMean(Humidity) = Psychro - Mean(Humidity)
-	IF (DoPrint.AND.PCal) THEN
-	  WRITE(OutF,*)
-	  WRITE(OutF,*) 'Added to humidity : ',
-     &	     (Psychro - Mean(Humidity)),' [kg m^{-3}]'
-	  WRITE(OutF,*)
+      CorMean(Humidity) = Psychro - Mean(Humidity)
+      IF (DoPrint.AND.PCal) THEN
+          WRITE(OutF,*)
+          WRITE(OutF,*) 'Added to humidity : ',
+     &       (Psychro - Mean(Humidity)),' [kg m^{-3}]'
+          WRITE(OutF,*)
         ENDIF
 
-	DO i=1,M
-	  CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
-     &	    CalSonic,CalTherm,CalHyg,CalCO2,
+      DO i=1,M
+          CALL Calibr(RawSampl(1,i),Channels,P,CorMean,
+     &     CalSonic,CalTherm,CalHyg,CalCO2,
      &      BadTc,Sample(1,i),N,Flag(1,i),
      &      Have_Uncal, FirstDay, i)
-	ENDDO
+      ENDDO
       ENDIF
 
       IF (DoPrint.AND.PCal) THEN
@@ -975,7 +975,7 @@ C     ***
 
       DO i=1,N
         IF (MIndep(I).EQ. INT(DUMMY)) THEN
-	  WRITE(OutF,10) QName(i),DUMMY,DUMMY
+	  WRITE(OutF,10) QName(i),INT(DUMMY),DUMMY
         ELSE
 	  WRITE(OutF,10) QName(i),MIndep(i),
      &      (DBLE(M)/(Freq*DBLE(MIndep(i))))
@@ -992,8 +992,8 @@ C     ***
  30   FORMAT(a6,20(a6:,1X))
 
       DO i=1,N
-	WRITE(OutF,20) QName(i),(CIndep(i,j),j=1,N)
- 20	FORMAT(a6,20(I6:,1X))
+        WRITE(OutF,20) QName(i),(CIndep(i,j),j=1,N)
+ 20     FORMAT(a6,20(I6:,1X))
       ENDDO
 
       WRITE(OutF,*)
@@ -1011,8 +1011,8 @@ C     ***
              TmpTime(J) = DBLE(M)/(Freq*DBLE(CIndep(i,j)))
           ENDIF
         ENDDO
-	WRITE(OutF,50) QName(i),(TmpTime(J),J=1,N)
- 50	FORMAT(a6,20(F9.3:,1X))
+        WRITE(OutF,50) QName(i),(TmpTime(J),J=1,N)
+ 50    FORMAT(a6,20(F9.3:,1X))
       ENDDO
 
       RETURN

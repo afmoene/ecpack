@@ -760,11 +760,12 @@ C     ***
 	  ENDDO
         ENDDO
       ENDDO
-      DO k=1,NBlock
-        DO j=1,N
-          write(*,*) j, k, BlockMean(j,k),Mean(j)
-        ENDDO
-      ENDDO
+c Debugging info
+c      DO k=1,NBlock
+c        DO j=1,N
+c          write(*,*) j, k, BlockMean(j,k),Mean(j)
+c        ENDDO
+c      ENDDO
 
       RETURN
       END

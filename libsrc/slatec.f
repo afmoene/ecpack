@@ -83,6 +83,22 @@ C
       EQUIVALENCE (DMACH(3),RIGHT(1))
       EQUIVALENCE (DMACH(4),DIVER(1))
       EQUIVALENCE (DMACH(5),LOG10(1))
+C     MACHINE CONSTANTS FOR THE EGCS G77 COMPILER with ix86
+C     see <float.h> at
+C     /usr/lib/gcc-lib/*/*/include/ for details
+C
+C     DATA RMACH(1) / 1.17549435E-38 /
+C     DATA RMACH(2) / 3.40282347E+38 /
+C     DATA RMACH(3) / 0.59604645E-07 /
+C     DATA RMACH(4) / 1.19209290E-07 /
+C     DATA RMACH(5) / 0.30102999566 /
+C
+      DATA SMALL(1) / Z'00800000' /
+      DATA LARGE(1) / Z'7F7FFFFF' /
+      DATA RIGHT(1) / Z'33800000' /
+      DATA DIVER(1) / Z'34000000' /
+      DATA LOG10(1) / Z'3E9A209B' /
+C
 C
 C     MACHINE CONSTANTS FOR THE AMIGA
 C     ABSOFT FORTRAN COMPILER USING THE 68020/68881 COMPILER OPTION
@@ -373,11 +389,11 @@ C     MACHINE CONSTANTS FOR THE IBM PC
 C     ASSUMES THAT ALL ARITHMETIC IS DONE IN DOUBLE PRECISION
 C     ON 8088, I.E., NOT IN 80 BIT FORM FOR THE 8087.
 C
-      DATA SMALL(1) / 2.23D-308  /
-      DATA LARGE(1) / 1.79D+308  /
-      DATA RIGHT(1) / 1.11D-16   /
-      DATA DIVER(1) / 2.22D-16   /
-      DATA LOG10(1) / 0.301029995663981195D0 /
+c     DATA SMALL(1) / 2.23D-308  /
+c     DATA LARGE(1) / 1.79D+308  /
+c     DATA RIGHT(1) / 1.11D-16   /
+c     DATA DIVER(1) / 2.22D-16   /
+c     DATA LOG10(1) / 0.301029995663981195D0 /
 C
 C     MACHINE CONSTANTS FOR THE IBM RS 6000
 C
@@ -851,6 +867,28 @@ C
       INTEGER IMACH(16),OUTPUT
       SAVE IMACH
       EQUIVALENCE (IMACH(4),OUTPUT)
+
+C     MACHINE CONSTANTS FOR THE EGCS G77 COMPILER with ix86 
+C     see <limits.h> and <float.h> at 
+C     /usr/lib/gcc-lib/*/*/include/ for details
+C
+      DATA IMACH( 1) /          5 /
+      DATA IMACH( 2) /          6 /
+      DATA IMACH( 3) /          0 /
+      DATA IMACH( 4) /          0 /
+      DATA IMACH( 5) /         32 /
+      DATA IMACH( 6) /          4 /
+      DATA IMACH( 7) /          2 /
+      DATA IMACH( 8) /         31 /
+      DATA IMACH( 9) / 2147483647 /
+      DATA IMACH(10) /          2 /
+      DATA IMACH(11) /         24 /
+      DATA IMACH(12) /       -125 /
+      DATA IMACH(13) /        128 /
+      DATA IMACH(14) /         53 /
+      DATA IMACH(15) /      -1021 /
+      DATA IMACH(16) /       1024 /
+C
 C
 C     MACHINE CONSTANTS FOR THE AMIGA
 C     ABSOFT COMPILER

@@ -157,7 +157,7 @@ C     ***
 
 
       SUBROUTINE EC_C_F01(Mean,Cov,NMax,NSize,WhichTemp,
-     &	NSta,NEnd,NumInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,
+     &  NSta,NEnd,NumInt,NS,TauD,TauV,CalSonic,CalTherm,CalHyg,
      &  CalCO2,WXT)
 C     ****f* ec_corr.f/EC_C_F01
 C NAME
@@ -251,12 +251,12 @@ C     ***
 
       INTEGER I1,I2,I3,I4,I,J,NumINT,NMax,NSize, WhichTemp
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ),CALCO2(NQQ),
-     &	GAIND,GAINV,GAINT1,GAINT2,GAINUV,GAINW,GAINQ1, GAINCO21,
-     &	TRANA,TRANQ1,TRANUV,TRANW,TRANT1,TRANT2,TRANWT1,TRANWT2,TRANWQ1,
-     &	TRANWUV,ATT,AWW,AUU,AWT,AUW,BTT,BWW,BUU,BWT,BUW,TAUD,TAUV,TAUT,
+     &  GAIND,GAINV,GAINT1,GAINT2,GAINUV,GAINW,GAINQ1, GAINCO21,
+     & TRANA,TRANQ1,TRANUV,TRANW,TRANT1,TRANT2,TRANWT1,TRANWT2,TRANWQ1,
+     & TRANWUV,ATT,AWW,AUU,AWT,AUW,BTT,BWW,BUU,BWT,BUW,TAUD,TAUV,TAUT,
      &  TRANCO21, TRANWCO21,
-     &	XI,ZETA,CW,CU,WT,UW,TT,UU,WW,F,NS,C,NSTA,NEND,N,LF,X,ZL,
-     &	INTTS(NNMax,NNMAX),G(NNMAX,NNMAX),
+     & XI,ZETA,CW,CU,WT,UW,TT,UU,WW,F,NS,C,NSTA,NEND,N,LF,X,ZL,
+     & INTTS(NNMax,NNMAX),G(NNMAX,NNMAX),
      &  WXT(NMax,NMax),Mean(NMax),Cov(NMax,NMax),Ustar, Tstar, Qstar,
      &  SEP
 
@@ -268,9 +268,9 @@ C
 C-- Declarations of constants ----------------------------------------
 C
       TAUT = CalTherm(QQTime)/
-     &	(1.D0+4.9D0*(CalTherm(QQTime)**0.5D0*Mean(U))**0.45D0)
-      LF   = (NEND-NSTA)/DBLE(NumINT-1)	    ! Interval width num. integr.
-      C    = 1.D0/(LOG(10.D0)*LF/3.D0)	    ! Constant of integration, eq.1
+     &  (1.D0+4.9D0*(CalTherm(QQTime)**0.5D0*Mean(U))**0.45D0)
+      LF   = (NEND-NSTA)/DBLE(NumINT-1)    ! Interval width num. integr.
+      C    = 1.D0/(LOG(10.D0)*LF/3.D0)     ! Constant of integration, eq.1
       LF   = 10.D0**LF
       N    = 10.D0**NSTA
       DO I=1,NNMAX
@@ -340,7 +340,7 @@ C
           I3=I3+1
           IF (I3.GT.NumInt) GOTO 200
           I4=I2
-          IF (I3.EQ.1)	I4=I4-1
+          IF (I3.EQ.1)  I4=I4-1
           IF (I3.EQ.NumInt) I4=I4-1
 C
 C-- Skip integration if frequency exceeds Nyquist frequency ------
@@ -372,7 +372,7 @@ C
 C
 C-- Thermocouple spatial averaging transfer function, eq. 7 ------
 C
-          TRANT1=1.0D0	       !spatial averaging negligible
+          TRANT1=1.0D0       !spatial averaging negligible
 C
 C-- W-T lateral separation transfer function, eq. 11 -------------
 C
@@ -386,24 +386,24 @@ C
 C-- SOLENT SONIC TEMPERATURE !!
 C-- Sonic temperature frequency response gain, eq. 2 -------------
 C
-          GAINT2=1.0D0	       !sonic temperature gain negligible
+          GAINT2=1.0D0       !sonic temperature gain negligible
 C
 C-- Sonic temperature spatial averaging transfer function, eq.7 --
 C
           TRANT2=1.0D0
           X=2.0D0*PI*N/Mean(U)*CalSonic(QQExt4)
           IF (X.GT.0.02D0) 
-     &	       TRANT2=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
+     &        TRANT2=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
 C
 C-- W-T lateral separation transfer function, eq. 11 -------------
 C
-          TRANWT2=1.0D0	       !there is no lateral separation
+          TRANWT2=1.0D0       !there is no lateral separation
 
 C
 C-- SOLENT SONIC HORIZONTAL WINDSPEED !!
 C-- UV-sensor frequency response gain, eq. 2 ---------------------
 C
-          GAINUV=1.0D0	       !sonic UV windspeed gain negligible
+          GAINUV=1.0D0       !sonic UV windspeed gain negligible
 C
 C-- UV-sensor spatial averaging transfer function, eq. 7 ---------
 C
@@ -422,20 +422,20 @@ C
 C-- SOLENT SONIC VERTICAL WINDSPEED !!
 C-- W-sensor frequency response gain, eq. 2 ----------------------
 C
-          GAINW=1.0D0	       !sonic W windspeed gain neglectible
+          GAINW=1.0D0        !sonic W windspeed gain neglectible
 C
 C-- W-sensor spatial averaging transfer function, eq. 9 ----------
 C
           TRANW=1.0D0
           X=2.0D0*PI*N/Mean(U)*CalSonic(QQPath)
           IF (X.GT.0.04D0)
-     &	    TRANW=(1.0D0+(EXP(-X)-3.D0*(1.0D0-EXP(-X))/X)/2.0D0)*4.0D0/X
+     &       TRANW=(1.0D0+(EXP(-X)-3.D0*(1.0D0-EXP(-X))/X)/2.0D0)*4.0D0/X
 
 C
 C-- LYMANN-ALPHA OPEN PATH HYGROMETER !!
 C-- hygrometer frequency response gain, eq. 2 ------------
 C
-          GAINQ1=1.0D0	       !hygrometer gain neglectible
+          GAINQ1=1.0D0        !hygrometer gain neglectible
 C
 C-- lymann-alpha spatial averaging transfer function, eq.7 ------------
 C
@@ -456,14 +456,14 @@ C
 C-- CO2 sensor !!
 C-- CO2 sensor frequency response gain, eq. 2 ------------
 C
-          GAINCO21=1.0D0	       !CO2 sensor gain neglectible
+          GAINCO21=1.0D0         !CO2 sensor gain neglectible
 C
 C-- CO2 sensor spatial averaging transfer function, eq.7 ------------
 C
           TRANCO21=1.0D0
           X=2.D0*PI*N/Mean(U)*CalCO2(QQPath)
           IF (X.GT.0.02D0) THEN
-	     TRANCO21=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
+            TRANCO21=(3.0D0+EXP(-X)-4.0D0*(1.0D0-EXP(-X))/X)/X
           ENDIF
 C
 C-- W-CO2 lateral separation transfer function, eq. 11 -------------
@@ -478,10 +478,10 @@ C
 C-- Composite transfer functions, eq. 28 -------------------------
 C
           DO I=1,NNMAX
-	     DO J=1,NNMAX
-	        G(I,J) = 0.0D0
+             DO J=1,NNMAX
+                  G(I,J) = 0.0D0
              ENDDO
-	  ENDDO
+          ENDDO
 
           G(U,U)= TRANUV / GAINUV    !UU
           G(V,V)= TRANUV / GAINUV    !VV
@@ -497,25 +497,25 @@ C
           G(V,W) = TRANWUV * SQRT (G(V,V) * G(W,W))    !WV
           G(W,V) = G(V,W)
           G(W,TCouple) = TRANWT1 * 
-     &                   SQRT (G(W,W) * G(TCouple,TCouple))	    !WTth
+     &                   SQRT (G(W,W) * G(TCouple,TCouple))      !WTth
           G(TCouple,W) = G(W,TCouple)
           G(W,TSonic) = TRANWT2 * SQRT (G(W,W) * G(TSonic,TSonic))    !WTso
           G(TSonic,W) = G(W,TSonic)
           G(W,Humidity) = TRANWQ1 * 
-     &                   SQRT (G(W,W) * G(Humidity,Humidity))	    !WQkr
+     &                   SQRT (G(W,W) * G(Humidity,Humidity))         !WQkr
           G(Humidity,W) = G(W,Humidity)
           G(W,SpecHum) = TRANWQ1 * 
-     &                   SQRT (G(W,W) * G(Humidity,Humidity))	    !WQkr
+     &                   SQRT (G(W,W) * G(Humidity,Humidity))         !WQkr
           G(SpecHum,W) = G(W,SpecHum)
           G(W,CO2) = TRANWCO21 * 
-     &                   SQRT (G(W,W) * G(CO2,CO2))	    !WCO2
+     &                   SQRT (G(W,W) * G(CO2,CO2))                   !WCO2
           G(CO2,W) = G(W,CO2)
           G(W,SpecCO2) = TRANWCO21 * 
-     &                   SQRT (G(W,W) * G(CO2,CO2))	    ! WqCO2
+     &                   SQRT (G(W,W) * G(CO2,CO2))                  ! WqCO2
           G(SpecCO2,W) = G(W,SpecCO2)
           DO I=1,NNMax
-	     DO J=1,NNMax
-	        G(I,J) = G(I,J)*TRANA/GAINV*GAIND
+             DO J=1,NNMax
+                  G(I,J) = G(I,J)*TRANA/GAINV*GAIND
              ENDDO
           ENDDO
 
@@ -524,17 +524,17 @@ C
 C
 C-- Unstable normalised spectral and co-spectral forms ---------
 C
-            UU=210.0D0*F/(1.0D0+33.0D0*F)**1.667D0		       !eq. 23
+            UU=210.0D0*F/(1.0D0+33.0D0*F)**1.667D0                    !eq. 23
             UU=UU+F*XI/(ZETA+2.2D0*F**1.667D0)
             UU=UU/CU
-            WW=16.0D0*F*XI/(1.0D0+17.0D0*F)**1.667D0		       !eq. 22
+            WW=16.0D0*F*XI/(1.0D0+17.0D0*F)**1.667D0                 !eq. 22
             WW=WW+F/(1.0D0+5.3D0*F**1.667D0)
             WW=WW/CW
-            TT=14.94D0*F/(1.0D0+24.0D0*F)**1.667D0			     !eq. 24
+            TT=14.94D0*F/(1.0D0+24.0D0*F)**1.667D0                  !eq. 24
             IF (F.GE.0.15D0) TT=6.827D0*F/(1.0D0+12.5D0*F)**1.667D0
-            WT=12.92D0*F/(1.0D0+26.7D0*F)**1.375D0		       !eq. 25
+            WT=12.92D0*F/(1.0D0+26.7D0*F)**1.375D0                  !eq. 25
             IF (F.GE.0.54D0) WT=4.378D0*F/(1.0D0+3.8D0*F)**2.4D0
-            UW=20.78D0*F/(1.0D0+31.0D0*F)**1.575D0		       !eq. 26
+            UW=20.78D0*F/(1.0D0+31.0D0*F)**1.575D0                  !eq. 26
             IF (F.GE.0.24D0) UW=12.66D0*F/(1.0D0+9.6D0*F)**2.4D0
           ELSE
 C
@@ -593,38 +593,38 @@ C
       ENDDO
 
 999   CONTINUE
-      WXT(U,U) = C/INTTS(U,U)		   !UU
-      WXT(V,V) = C/INTTS(V,V)		   !VV
-      WXT(U,V) = WXT(U,U)		   !UV
-      WXT(V,U) = WXT(U,V)		   !VU
-      WXT(W,W) = C/INTTS(W,W)		   !WW
-      WXT(W,U) = C/INTTS(U,W)		   !WU
-      WXT(U,W) = WXT(W,U)
-      WXT(W,V) = C/INTTS(V,W)		   !WV
+      WXT(U,U) = C/INTTS(U,U)              !UU
+      WXT(V,V) = C/INTTS(V,V)              !VV
+      WXT(U,V) = WXT(U,U)                  !UV
+      WXT(V,U) = WXT(U,V)                  !VU
+      WXT(W,W) = C/INTTS(W,W)              !WW
+      WXT(W,U) = C/INTTS(U,W)              !WU
+      WXT(U,W) = WXT(W,U) 
+      WXT(W,V) = C/INTTS(V,W)              !WV
       WXT(V,W) = WXT(W,V)
 
-      WXT(W,TSonic) = C/INTTS(W,TSonic)	 !WTso
+      WXT(W,TSonic) = C/INTTS(W,TSonic)    !WTso
       WXT(TSonic,W) = WXT(W,TSonic)
       WXT(TSonic,TSonic) = C/INTTS(TSonic,TSonic)  !TTso
 
-      WXT(W,TCouple) = C/INTTS(W,TCouple)	  !WTth
+      WXT(W,TCouple) = C/INTTS(W,TCouple)  !WTth
       WXT(TCouple,W) = WXT(W,TCouple)
       WXT(TCouple,TCouple) = C/INTTS(TCouple,TCouple)    !TTth
 
-      WXT(W,Humidity) = C/INTTS(W,Humidity)	  !WQly
+      WXT(W,Humidity) = C/INTTS(W,Humidity)   !WQly
       WXT(Humidity,W) = WXT(W,Humidity)
       WXT(Humidity,Humidity) = C/INTTS(Humidity,Humidity)  !QQly
 
-      WXT(W,SpecHum)	   = WXT(W,Humidity)
-      WXT(SpecHum,W)	   = WXT(Humidity,W)
+      WXT(W,SpecHum)       = WXT(W,Humidity)
+      WXT(SpecHum,W)       = WXT(Humidity,W)
       WXT(SpecHum,SpecHum) = WXT(Humidity,Humidity)
 
-      WXT(W,CO2) = C/INTTS(W,CO2)	  ! W rhoCO2
+      WXT(W,CO2) = C/INTTS(W,CO2)       ! W rhoCO2
       WXT(CO2,W) = WXT(W,CO2)
       WXT(CO2,CO2) = C/INTTS(CO2,CO2)  ! rhoCO2^2
 
-      WXT(W,SpecCO2)	   = WXT(W,CO2)
-      WXT(SpecCO2,W)	   = WXT(CO2,W)
+      WXT(W,SpecCO2)       = WXT(W,CO2)
+      WXT(SpecCO2,W)       = WXT(CO2,W)
       WXT(SpecCO2,SpecCO2) = WXT(CO2,CO2)
       RETURN
       END
@@ -697,7 +697,7 @@ C The tolerance is augmented by half the amount added by frequency-
 C response correction.
 C
             TolCov(i,j) = SQRT(TolCov(i,j)**2.D0+
-     &	      (0.5D0*Cov(i,j)*(WXT(i,j)-1.D0))**2.D0)
+     &         (0.5D0*Cov(i,j)*(WXT(i,j)-1.D0))**2.D0)
           ENDIF
         ENDDO
       ENDDO
@@ -730,22 +730,22 @@ C
 C General correction routine that calls all individual corrections
 C
       SUBROUTINE EC_C_Main(OutF,
-     &	DoPrint,
-     &	Mean,NMax,N,TolMean,
-     &	Cov,TolCov,
+     &  DoPrint,
+     &  Mean,NMax,N,TolMean,
+     &  Cov,TolCov,
      &  DoCorr, PCorr, ExpVar, 
-     &	DirYaw, DirPitch, DirRoll,
-     &	SonFactr,
-     &	O2Factor,
-     &	CalSonic,CalTherm,CalHyg,
+     &  DirYaw, DirPitch, DirRoll,
+     &  SonFactr,
+     &  O2Factor,
+     &  CalSonic,CalTherm,CalHyg,
      &  CalCo2, FrCor,
-     &	WebVel,P, Have_Cal)
+     &  WebVel,P, Have_Cal)
 C     ****f* ec_corr.f/EC_C_Main
 C NAME
 C     EC_C_MAIN
 C SYNOPSIS
 C     CALL EC_C_Main(OutF,
-C     	DoPrint, Mean,NMax,N,TolMean, Cov,TolCov,
+C     DoPrint, Mean,NMax,N,TolMean, Cov,TolCov,
 C     	DoCorr, PCorr, ExpVar,
 C     	DirYaw, DirPitch, DirRoll,
 C     	SonFactr, O2Factor,
@@ -875,14 +875,14 @@ C     ***
 
       INTEGER N,NumInt,NMAx,OutF, WhichTemp, I
       LOGICAL DoCorr(NMaxCorr), PCorr(NMaxCorr),
-     &	DoPrint,
-     &	QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
+     &  DoPrint,
+     &  QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
      &  Have_Cal(NMax), QSchot
       REAL*8  P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),FrCor(NMax,NMax),
-     &	DirYaw,O2Factor(NMax),
-     &	NSTA,NEND,TAUV,TauD,DirPitch,DirRoll, TSonFact,
-     &	SonFactr(NMax),
+     &  TolCov(NMax,NMax),FrCor(NMax,NMax),
+     &  DirYaw,O2Factor(NMax),
+     &  NSTA,NEND,TAUV,TauD,DirPitch,DirRoll, TSonFact,
+     &  SonFactr(NMax),
      &  Yaw(3,3), Roll(3,3), Pitch(3,3), WebVel,
      &  ExpVar(NMaxExp)
       REAL*8  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
@@ -923,7 +923,7 @@ C
 
         IF (QTilt) THEN
           CALL EC_G_ShwHead(OutF, 
-     &	  'Averages of data after fixed tilt-correction: ')
+     &    'Averages of data after fixed tilt-correction: ')
           CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
         ENDIF
       ENDIF
@@ -944,7 +944,7 @@ C
           WRITE(OutF,*)
           WRITE(OutF,*) 'Yaw angle = ',DirYaw,' degrees'
           CALL EC_G_ShwHead(OutF,
-     &	           'After yaw-correction (Mean(V) -> 0) : ')
+     &             'After yaw-correction (Mean(V) -> 0) : ')
           CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
         ENDIF
       ENDIF
@@ -1025,13 +1025,13 @@ C
             CALL EC_G_ShwHead(OutF,
      &          'Correction factors for H2O-sensitivity of sonic')
           DO i=1,N
-	    WRITE(OutF,45) QName(i),SonFactr(i)
+              WRITE(OutF,45) QName(i),SonFactr(i)
           ENDDO
-   45	FORMAT('For (',a6,',T(son)) : ',F10.5)
+   45     FORMAT('For (',a6,',T(son)) : ',F10.5)
           CALL EC_G_ShwHead(OutF,
      &                      'After H2O-correction for sonic : ')
           CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+        ENDIF
       ENDIF
 C
 C
@@ -1050,7 +1050,7 @@ C
             CALL EC_G_ShwHead(OutF,
      &        'Correction factors for O2-sensitivity of hygrometer')
             DO i=1,N
-	      WRITE(OutF,46) QName(i),O2Factor(i)
+                WRITE(OutF,46) QName(i),O2Factor(i)
             ENDDO
  46         FORMAT('For (',a6,',RhoV or q) : ',F10.5)
             CALL EC_G_ShwHead(OutF,
@@ -1071,11 +1071,11 @@ C
 C
 C Constants for integration routine in correction frequency response
 C
-      NSTA   = -5.0D0	 ! [?] start frequency numerical integration
+      NSTA   = -5.0D0    ! [?] start frequency numerical integration
       NEND   = 0.69897D0 ! [?] end frequency numerical integration (LOG(5))
-      NumINT = 19	 ! [1] number of intervals
-      TAUV   = 0.0D0	 ! [?] Low pass filter time constant
-      TauD   = 0.0D0	 ! [?] interval length for running mean
+      NumINT = 19        ! [1] number of intervals
+      TAUV   = 0.0D0     ! [?] Low pass filter time constant
+      TauD   = 0.0D0     ! [?] interval length for running mean
 
       IF (DoCorr(QCFreq)) THEN
         IF (WhichTemp .GT. 0) THEN
@@ -1092,7 +1092,7 @@ C
             CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
             WRITE(OutF,*) 'Factors accepted between ',
      &                     ExpVar(QELLimit),
-     &	                  ' and ',ExpVar(QEULimit)
+     &                    ' and ',ExpVar(QEULimit)
             CALL EC_G_ShwHead(OutF, 'After frequency-correction : ')
             CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
           ENDIF
@@ -1113,9 +1113,9 @@ C
            CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
      &                  DumIndep, DumCindep)
            IF (QWebb) THEN
-	     WRITE(OutF,*) 'Webb-velocity (vertical) = ',WebVel,' m/s'
+               WRITE(OutF,*) 'Webb-velocity (vertical) = ',WebVel,' m/s'
              CALL EC_G_ShwHead(OutF, 'After addition of Webb-term: ')
-	     CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,
+             CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,
      &              NMax,N)
            ENDIF
          ELSE
@@ -1205,14 +1205,14 @@ C Intialize GenKo eand GenKw
           GenKw = KwLa
       ELSE IF (HygType .EQ. ApLiCor7500) THEN
           GenKo = 0.0D0
-	  GenKw = 1.0D0
+          GenKw = 1.0D0
       ENDIF
       OXC = FracO2*MO2*P*GenKo/(RGas*MeanT**2.D0*GenKw)
 
       DO i = 1,N
-	Factor(i) = 1.D0 + OXC*Cov(i,WhichTemp)/Cov(i,Humidity)
-	IF ((i.EQ.Humidity).OR.(i.EQ.SpecHum))
-     &	  Factor(i) = Factor(i)**2.D0
+        Factor(i) = 1.D0 + OXC*Cov(i,WhichTemp)/Cov(i,Humidity)
+        IF ((i.EQ.Humidity).OR.(i.EQ.SpecHum))
+     &       Factor(i) = Factor(i)**2.D0
       ENDDO
 
       RETURN
@@ -1261,10 +1261,10 @@ C     ***
       INTEGER NMax,N,i
       REAL*8 Cov(NMax,NMax),Factor(NMax)
       DO i = 1,N
-	Cov(i,Humidity) = Factor(i)*Cov(i,Humidity)
-	Cov(i,SpecHum ) = Factor(i)*Cov(i,SpecHum )
-	Cov(Humidity,i) = Cov(i,Humidity)
-	Cov(SpecHum ,i) = Cov(i,SpecHum )
+        Cov(i,Humidity) = Factor(i)*Cov(i,Humidity)
+        Cov(i,SpecHum ) = Factor(i)*Cov(i,SpecHum )
+        Cov(Humidity,i) = Cov(i,Humidity)
+        Cov(SpecHum ,i) = Cov(i,SpecHum )
       ENDDO
 
       RETURN
@@ -1451,9 +1451,9 @@ C     ***
       REAL*8 MeanQ,MeanTSon,Cov(NMax,NMax),Factor(NMax),TSonFact
 
       DO i = 1,N
-	Factor(i) = 1.D0 - 0.51D0*MeanQ
-     &	  -0.51D0*MeanTSon*Cov(i,SpecHum)/Cov(i,TSonic)
-	IF (i.EQ.TSonic) Factor(i) = Factor(i)**2.D0
+        Factor(i) = 1.D0 - 0.51D0*MeanQ
+     &      -0.51D0*MeanTSon*Cov(i,SpecHum)/Cov(i,TSonic)
+        IF (i.EQ.TSonic) Factor(i) = Factor(i)**2.D0
       ENDDO
 
       TSonFact = 1.D0/(1.D0+0.51D0*MeanQ)
@@ -1509,8 +1509,8 @@ C     ***
       REAL*8 Cov(NMax,NMax),Factor(NMax), MeanTSon, TSonFact
 
       DO i = 1,N
-	Cov(i,TSonic) = Factor(i)*Cov(i,TSonic)
-	Cov(TSonic,i) = Cov(i,TSonic)
+         Cov(i,TSonic) = Factor(i)*Cov(i,TSonic)
+         Cov(TSonic,i) = Cov(i,TSonic)
       ENDDO
 
       MeanTSon = MeanTSon*TSonFact
@@ -1641,24 +1641,24 @@ C mean velocity components in relation W.48
 C
       DO i=1,3
         USum(i) = 0.D0
-	DO j=1,3
-	  UUSum(i,j) = 0.D0
-	ENDDO
+        DO j=1,3
+           UUSum(i,j) = 0.D0
+        ENDDO
       ENDDO
 
       DO k=1,NRuns
-	DO i=1,3
+        DO i=1,3
           USum(i) = USum(i) + UMean(i,k)
-	  DO j=1,3
-	    UUSum(i,j) = UUSum(i,j) + UMean(i,k)*UMean(j,k)
-	  ENDDO
-	ENDDO
+          DO j=1,3
+             UUSum(i,j) = UUSum(i,j) + UMean(i,k)*UMean(j,k)
+          ENDDO
+         ENDDO
       ENDDO
       DO i=1,3
- 	USum(i) = USum(i)/NRuns
-	DO j=1,3
- 	  UUSum(i,j) = UUSum(i,j)/NRuns
-	ENDDO
+        USum(i) = USum(i)/NRuns
+        DO j=1,3
+             UUSum(i,j) = UUSum(i,j)/NRuns
+        ENDDO
       ENDDO
 C
 C Call to slave-routine for details
@@ -1743,15 +1743,15 @@ C
 C
 C Make matrix in relation W.48
 C
-	  S(1,1) = 1.D0
-	  S(1,2) = USum(1)
-	  S(1,3) = USum(2)
-	  S(2,1) = USum(1)
-	  S(2,2) = UUSum(1,1)
-	  S(2,3) = UUSum(1,2)
-	  S(3,1) = USum(2)
-	  S(3,2) = UUSum(1,2)
-	  S(3,3) = UUSum(2,2)
+          S(1,1) = 1.D0
+          S(1,2) = USum(1)
+          S(1,3) = USum(2)
+          S(2,1) = USum(1)
+          S(2,2) = UUSum(1,1)
+          S(2,3) = UUSum(1,2)
+          S(3,1) = USum(2)
+          S(3,2) = UUSum(1,2)
+          S(3,3) = UUSum(2,2)
 C
 C Invert this matrix
 C
@@ -1759,9 +1759,9 @@ C
 C
 C Make RHS of relation W.48
 C
-	  x(1) = USum(3)
-	  x(2) = UUSum(1,3)
-	  x(3) = UUSum(2,3)
+          x(1) = USum(3)
+          x(2) = UUSum(1,3)
+          x(3) = UUSum(2,3)
 C
 C Calculate coefficients b0, b1 and b2 in relation W.48
 C
@@ -1795,17 +1795,17 @@ C
 C Assume that the calibration of the sonic is ok and has no bias in w
 C
           WBias = 0.D0
-	ENDIF
+        ENDIF
       ELSE
-	U = USum(1)
-	V = USum(2)
-	W = USum(3)
-	R11 = UUSum(1,1) - U*U
-	R12 = UUSum(1,2) - U*V
-	R13 = UUSum(1,3) - U*W
-	R22 = UUSum(2,2) - V*V
-	R23 = UUSum(2,3) - V*W
-	R33 = UUSum(3,3) - W*W
+         U = USum(1)
+         V = USum(2)
+         W = USum(3)
+         R11 = UUSum(1,1) - U*U
+         R12 = UUSum(1,2) - U*V
+         R13 = UUSum(1,3) - U*W
+         R22 = UUSum(2,2) - V*V
+         R23 = UUSum(2,3) - V*W
+         R33 = UUSum(3,3) - W*W
 C
 C Find the plane through both origin and mean velocity such that
 C velocity-components in the plane, perpendicular to the mean velocity
@@ -1856,8 +1856,8 @@ C
       b(2) = 0.5D0*(-v**2*R11*u+2*v*R12*u**2+v**2*R33*u
      &  -u**3*R22+u**3*R33-w**2*R22*u+w**2*R11*u
      &  +2*w**2*R12*v-2*v**2*R13*w-2*w*R13*u**2+u*SQRT(Disc))/a
-	ELSE
-	  b(1) = 0.D0
+      ELSE
+          b(1) = 0.D0
           b(2) = 0.D0
        ENDIF
       ENDIF
@@ -1970,18 +1970,18 @@ C     parcnst.inc
 
       INTEGER i,j,NMax,N,NN
       REAL*8 Stress(3,3),Speed(3),DumVecs(3,4:NN),Mean(NMax),
-     &	Cov(NMax,NMax)
+     &  Cov(NMax,NMax)
 C
 C Loop : All velocity components
 C
       DO i = U,W
-	Speed(i) = Mean(i)
-	DO j = U,W
-	  Stress(i,j) = Cov(i,j)
-	ENDDO
-	DO j = 4,N
-	  DumVecs(i,j) = Cov(i,j)
-	ENDDO
+        Speed(i) = Mean(i)
+        DO j = U,W
+          Stress(i,j) = Cov(i,j)
+        ENDDO
+        DO j = 4,N
+          DumVecs(i,j) = Cov(i,j)
+        ENDDO
       ENDDO
 
       RETURN
@@ -2028,19 +2028,19 @@ C     ***
       INCLUDE 'parcnst.inc'
       INTEGER i,j,NMax,N,NN
       REAL*8 Stress(3,3),Speed(3),DumVecs(3,4:NN),Mean(NMax),
-     &	Cov(NMax,NMax)
+     &  Cov(NMax,NMax)
 C
 C Loop : All velocity components
 C
       DO i = U,W
-	Mean(i) = Speed(i)
-	DO j = U,W
-	  Cov(i,j) = Stress(i,j)
-	ENDDO
-	DO j = 4,N
-	  Cov(i,j) = DumVecs(i,j)
-	  Cov(j,i) = Cov(i,j)
-	ENDDO
+        Mean(i) = Speed(i)
+        DO j = U,W
+          Cov(i,j) = Stress(i,j)
+        ENDDO
+        DO j = 4,N
+          Cov(i,j) = DumVecs(i,j)
+          Cov(j,i) = Cov(i,j)
+        ENDDO
       ENDDO
 
       RETURN
@@ -2438,7 +2438,7 @@ C
       Sigma = Mean(Humidity)/EC_Ph_RhoDry(Mean(Humidity),
      &                                    Mean(WhichTemp),P)
       WebVel = (1.D0+Mu*Sigma)*Cov(W,WhichTemp)/Mean(WhichTemp) +
-     &	Mu*Sigma*Cov(W,Humidity)/Mean(Humidity)
+     &  Mu*Sigma*Cov(W,Humidity)/Mean(Humidity)
 
       RETURN
       END

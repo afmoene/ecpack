@@ -144,7 +144,7 @@ C     ***
       
       LOGICAL         DoPrint,PRaw,PCal,PIndep,
      &                 DoStruct, PCorr(NMaxCorr)
-      CHARACTER*(*) InName
+c     CHARACTER*(*)   InName
       INTEGER         ConfUnit, NCNameLen, I, J
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
      &                InterName, SonName, CoupName, HygName, 
@@ -1194,7 +1194,7 @@ C
      &        Std(NNMax),dStd(NNMax),
      &        Struct(NNMax,NNMax), dStruct(NNMax,NNMax),
      &        Phys(NMaxPHys), dPhys(NMaxPhys), R, dR
-      CHARACTER*20  FRM, NAME, NAME1, NAME2, OUTNAME
+      CHARACTER*30  FRM, NAME, NAME1, NAME2, OUTNAME
 
       INTEGER EC_T_STRLEN
       EXTERNAL EC_T_STRLEN

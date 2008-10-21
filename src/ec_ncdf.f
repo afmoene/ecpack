@@ -430,7 +430,7 @@ C
      &    PCal,PIndep, Psychro,CalSonic,CalTherm,CalHyg,
      &    CalCO2, P, Calibrat,
      &    Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
-     &    DoCorr, PCorr, ExpVar, CorrPar,
+     &    DoCorr, PCorr, CorrPar, ExpVar,
      &    DirYaw,
      &    DirPitch,
      &    DirRoll,

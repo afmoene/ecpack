@@ -405,4 +405,7 @@ Revision : 2.5.18: October 21, 2008 (arnold.moene@wur.nl)
      it was called) was inconsistent (probably since version 2.5.14). One of
      the most visible effects was that no frequency response correction was
      performed. Hence a major bug (now fixed).
+     - in EC_F_Wflux: increased length of character strings FRM etc.
+     - in EC_G_ShwInd: changed format 10
+     - fixed slatec.f (precision definitions)
 
