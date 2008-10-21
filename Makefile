@@ -32,16 +32,16 @@ LLIBDIR=-L/home/arnold/lib
 
 # For MingW
 BUILD-WIN32=build-win32
-WFC=/usr/local/bin/i386-mingw32-g77
+WFC=/usr/local/bin/i386-mingw32-gfortran
 WAR=/usr/local/bin/i386-mingw32-ar
 WRANLIB=/usr/local/bin/i386-mingw32-ranlib
 WEXT=.exe
 WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/'
-WLIBDIR=-L/usr/local/i386-mingw32/lib
+WLIBDIR=-L/usr/local/lib/gcc/i386-mingw32/4.3.2
 WEXT=.exe
 
-FFLAGS=$(INCDIR)  -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
-LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack
+FFLAGS=$(INCDIR)  -ffixed-form -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
+LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack 
 LIBSRC=../libsrc
 SRC=../src
 

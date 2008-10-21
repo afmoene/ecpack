@@ -400,3 +400,9 @@ Revision : 2.5.17: June 4, 2008 (arnold.moene@wur.nl)
      - removed double code in ec_G_main (Statistics after deterending
      - fixed small in writing of header (label for #samples column was
      missing)
+Revision : 2.5.18: October 21, 2008 (arnold.moene@wur.nl)
+     - order of ExpVar and CorrPar in argument of EC_G_Main (routine and way
+     it was called) was inconsistent (probably since version 2.5.14). One of
+     the most visible effects was that no frequency response correction was
+     performed. Hence a major bug (now fixed).
+

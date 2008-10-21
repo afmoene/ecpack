@@ -180,7 +180,7 @@ Out_Std       write standard deviation of given calibrated signal to output file
               (e.g. Out_Std='TSon', for a list of variable names,
               see below)
 Out_Num       write number of samples of  given calibrated signal to output file
-              (e.g. Out_Std='TSon', for a list of variable names,
+              (e.g. Out_Num='TSon', for a list of variable names,
               see below)
 Out_Phys      write given physical (=derived quantity) to output file 
               (e.g. Out_Phys='HSonic', for a list of variable names,
@@ -382,7 +382,7 @@ corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:00
 Calibration files
 -----------------
 The structure of the calibration files is identical for all sensors.
-The file consists of 28 lines, with one number per line. The order of the 
+The file consists of 27 lines (for most sensors), with one number per line. The order of the 
 lines is significant and no blank lines should be present.
 An example of a calibration file is given below. Explantion for
 some parameters follows after the example file.
