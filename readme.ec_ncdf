@@ -429,6 +429,7 @@ QQType:    now 10 types of sensors are known:
 	   9 : Kaijo Denki TR90 3-D sonic
 	   10: Kaijo Denki TR61 3-D sonic
 	   11: Gill Solent anomemeter (45 degree angle with vertical, wind direction might still be incorrect: not tested)
+           12: Generic sonic (specfici parameter are passed as extra calibration coefficients)
 QQX, QQY and QQZ:
            are used for frequency response corrections
 QQFunc:    Two types of fit functions are available
@@ -436,9 +437,15 @@ QQFunc:    Two types of fit functions are available
 	   2 : logarithmic polynomial
 QQExt1 to QQExt5:
            These are used to specify calibration factors specific to a
-	   type of sensor (for QQType = 6, six extra calibration factors
-	   are available (QQExt6 to QQExt11) to define the wind tunnel 
-	   calibration; see Wind tunnel calibrated sonic).
+	   type of sensor 
+
+
+For QQType = 6, six extra calibration factors are available (QQExt6 to QQExt11) to define the wind tunnel 
+calibration; see Wind tunnel calibrated sonic).
+For the generic sonic (QQType = 12) five extra additional calibration coefficients are defined (see Generic Sonic)
+
+
+
 The gain and offset are used for all apparatuses (it is done directly
 after reading the samples). The calibration curve is presently only used
 for the thermocouple (QQType = 2),  hygrometer (i.e. QQType is 3, 7 or 8) 
@@ -628,4 +635,23 @@ direction from the most optimal direction (i.e. the 'open'
 side of a sonic). Samples with an absolute azimuth angle of
 more than 40 degrees are rejected.
 
+Generic Sonic
+------------
+In an attempt to make the software more flexible, a generic sonic has been defined, for
+which the most important coefficients can be set through the calibration file.
+To this end, five extra calibration coefficients are defined.
+
+For the side wind correction in Ts: Ts = T + humidity correction + Au^2 + Bv^2 + Cw^2 three coefficients
+are defined. See van Dijk et al, 2004 (internal report 2004/1) on how to compute these factors. In summary:
+For a symmetric configuration A and B are equal to 0.5*(1+cos(alpha)^2) and C = sin(alpha)^2, where alpha is the angle of the
+sonic path relative to the vertical. For a sonic with ortogonal axes of which one is vertical A, B and C are equal to 2/3
+
+For a CSAT these factor should be set to zero, since the correction is done internally in the sonic.
+QQExt5 : A factor in side wind correction
+QQExt6 : B factor in side wind correction
+QQExt7 : C factor in side wind correction
+
+For the coordinate definition, two coefficients are defined:
+QQExt8: defines the handedness (1 for right handedness like the CSAT, and -1 for left handedness, like the METEK USA-1)
+QQExt9: extra rotation to be done (in degrees); this appeared to be needed for the Kaijo's
 

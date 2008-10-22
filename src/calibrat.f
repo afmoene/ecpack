@@ -49,7 +49,7 @@ C
       REAL*8 EC_PH_Q,EC_M_BaseF, EC_Ph_QCO2, EC_Ph_SS2TS ! External function calls
 
       REAL*8 C(0:NMaxOrder)
-      INTEGER IFLG, DUMORDER, DUMTYP, DIAG_WORD, SampNum
+      INTEGER IFLG, DUMORDER, DUMTYP, DIAG_WORD, SampNum, SonDir
       REAL*8 ABSERROR, RELERROR, ESTIM, DNLIMIT, UPLIMIT
 
       REAL*8 DUMFUNC, EC_C_Schot3
@@ -82,7 +82,7 @@ C
 
       Error(TTime) = (.FALSE.)
 C
-C Take the velocity from the raw data (again assume it's a 3D sonic)
+C Take the velocity from the raw data (again assume it is a 3D sonic)
 C
       IF (HAVE_UNCAL(QUU) .AND. 
      &    HAVE_UNCAL(QUV) .AND. 
@@ -127,28 +127,51 @@ C This is the construction when we do not have a diagnostic variable
          IF (.NOT.((Error(U).OR.Error(V)).OR.Error(W))) THEN
 
 C
-C Rotate velocity according to angle of setup's north relative real north
+C Rotate velocity according to angle of setups north relative real north
 C Rotation angle as given in calibration file should be taken negative
 C
 C Sonic takes flow that blows into the sonic as positive. To get
 C the wind speed with wind to north as positive substract 180 degrees:
-C
-C Apparently V is defined other way around (explains -VDum)
-C
-           Hook = PI*(-CalSonic(QQYaw)+180)/180.D0
-           Sample(U) =  COS(Hook)*UDum + SIN(Hook)*(-VDum)
-           Sample(V) = -SIN(Hook)*UDum + COS(Hook)*(-VDum)
-C
-C Kaijos have different coordinate system
-C
-           IF ((CalSonic(QQType) .EQ. ApKaijoTR90) .OR.
-     &         (CalSonic(QQType) .EQ. ApKaijoTR61)) THEN
-               Hook = -90.D0 * PI/180.D0
+C 
+C Generic sonic
+C CalSonic(QQExt8) contains handedness: > 0: righthanded, < 0 left handed
+C CalSonic(QQExt9) contains extra rotation (in degrees)
+C 
+           IF (CalSonic(QQType) .EQ. ApGenericSonic) THEN
+               IF (CalSonic(QQExt8) .GE. 0) THEN
+                      SonDir=-1
+               ELSE 
+                      SonDir=1
+               ENDIF
+               Hook = PI*(-CalSonic(QQYaw)+180)/180.D0
+               Sample(U) =  COS(Hook)*UDum + SIN(Hook)*(SonDir*VDum)
+               Sample(V) = -SIN(Hook)*UDum + COS(Hook)*(SonDir*VDum)
+
+               Hook = CalSonic(QQExt9) * PI/180.D0
                UDum  =  Sample(U) ! U [m/s]
                VDum  =  Sample(V) ! V [m/s]
                Sample(U) =  COS(Hook)*UDum + SIN(Hook)*VDum
                Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
+           ELSE
+C
+C Apparently V is defined other way around (explains -VDum)
+C
+              Hook = PI*(-CalSonic(QQYaw)+180)/180.D0
+              Sample(U) =  COS(Hook)*UDum + SIN(Hook)*(-VDum)
+              Sample(V) = -SIN(Hook)*UDum + COS(Hook)*(-VDum)
+C
+C Kaijos have different coordinate system: extra 90 degree rotation
+C
+              IF ((CalSonic(QQType) .EQ. ApKaijoTR90) .OR.
+        &         (CalSonic(QQType) .EQ. ApKaijoTR61)) THEN
+                  Hook = -90.D0 * PI/180.D0
+                  UDum  =  Sample(U) ! U [m/s]
+                  VDum  =  Sample(V) ! V [m/s]
+                  Sample(U) =  COS(Hook)*UDum + SIN(Hook)*VDum
+                  Sample(V) = -SIN(Hook)*UDum + COS(Hook)*VDum
+              ENDIF
            ENDIF
+        
 
 C Take care that we have a sonic temperature (either directly, or
 C from the sonic speed of sound
@@ -168,6 +191,11 @@ C correction online (see CSAT  manual, page 1, section 2, 3rd sentence).
            Sample(TSonic) = Sample(TSonic) +
      &         ((3./4.)*(Sample(U)**2 + Sample(V)**2) +
      &          (1./2.)* Sample(W)**2
+     &         )/GammaR
+           ELSE IF (CalSonic(QQType) .EQ. ApGenericSonic) THEN
+           Sample(TSonic) = Sample(TSonic) +
+     &         (CalSonic(QQExt5)*Sample(U)**2 + CalSonic(QQExt6)*Sample(V)**2 +
+     &          CalSonic(QQExt7)*Sample(W)**2
      &         )/GammaR
            ELSE IF (CalSonic(QQType) .NE. ApCSATsonic) THEN
              Sample(TSonic) = Sample(TSonic)

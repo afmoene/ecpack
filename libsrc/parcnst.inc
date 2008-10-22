@@ -360,7 +360,7 @@ C with ''Ap''
 C
       INTEGER ApCSATSonic,ApTCouple,ApCampKrypton,ApPt100,ApPsychro,
      &        ApSon3Dcal, ApMierijLyma, ApLiCor7500, ApKaijoTR90,
-     &        ApKaijoTR61, ApGillSolent
+     &        ApKaijoTR61, ApGillSolent, ApGenericSonic
 
       PARAMETER(ApCSATSonic   = 1)
       PARAMETER(ApTCouple     = 2)
@@ -372,13 +372,14 @@ C
       PARAMETER(ApLiCor7500   = 8)
       PARAMETER(ApKaijoTR90   = 9)
       PARAMETER(ApKaijoTR61   = 10)
-      PARAMETER(ApGillSolent   = 11)
+      PARAMETER(ApGillSolent  = 11)
+      PARAMETER(ApGenericSonic= 12)
 
 C
 C Number of calibration data for each apparatus type
 C
-      INTEGER  ApNQQ(11)
-      DATA ApNQQ /27,27,27,27,27,33,27,27,27,27,27/
+      INTEGER  ApNQQ(12)
+      DATA ApNQQ /27,27,27,27,27,33,27,27,27,27,27,31/
 C
 C Constants to indicate calibration data, all starting with QQ
 C
