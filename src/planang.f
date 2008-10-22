@@ -147,7 +147,8 @@ C
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR61)  .AND.
-     &         (CalSonic(QQType) .NE. ApGillSolent)) THEN
+     &         (CalSonic(QQType) .NE. ApGillSolent) .AND.
+     &         (CalSonic(QQType) .NE. ApGenericSonic)) THEN
                WRITE(*,*) 'ERROR: Calibration file ',SonName,
      &                    'does not contain sonic info'
                STOP 'Rewrite your calibration file'
