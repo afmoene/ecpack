@@ -163,7 +163,7 @@ C
 C Kaijos have different coordinate system: extra 90 degree rotation
 C
               IF ((CalSonic(QQType) .EQ. ApKaijoTR90) .OR.
-        &         (CalSonic(QQType) .EQ. ApKaijoTR61)) THEN
+     &            (CalSonic(QQType) .EQ. ApKaijoTR61)) THEN
                   Hook = -90.D0 * PI/180.D0
                   UDum  =  Sample(U) ! U [m/s]
                   VDum  =  Sample(V) ! V [m/s]
