@@ -408,8 +408,8 @@ Revision : 2.5.18: October 21, 2008 (arnold.moene@wur.nl)
      - in EC_F_Wflux: increased length of character strings FRM etc.
      - in EC_G_ShwInd: changed format 10
      - fixed slatec.f (precision definitions)
-Revision: 2.5.19: 
+Revision: 2.5.19: November 3, 2008 (arnold.moene@wur.nl)
      - introduced generic sonic with extra calibration coefficients
-     thoroughly checked).
+     (not yet thoroughly checked).
 
 
