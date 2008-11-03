@@ -335,7 +335,7 @@ C-- Start Simpson's rule numerical integration -----------------------
 C     From -5 to log(5) in NumInt steps
 C
       I3=0
-      DO I1=1,10
+      DO I1=1,0.5*(NumInt+1)
         DO I2=2,4,2
           I3=I3+1
           IF (I3.GT.NumInt) GOTO 200
@@ -350,20 +350,25 @@ C
 C
 C-- ELECTRONIC / DIGITAL FILTERS !!
 C-- Auto Regressive Moving Average filter response gain, eq. 19 --
+C   Does nothing if TauD is set to zero (as above)
 C
           GAIND=1.0D0
           X=2.0D0*PI*N*TAUD
           IF (X.LT.6.D0 .AND. X.GT.0.0D0) GAIND=X*X/(1.0D0+X*X)
 C
 C-- Butterworth filter frequency response gain, eq. 5 ------------
+C   Does nothing if TauV is set to zero (as above)
 C
           GAINV = 1.0D0
           GAINV=(2.0D0*PI*N*TAUV)**2.0D0
           GAINV=1.0D0+GAINV*GAINV
 C
 C-- Data aquisition co-spectral transfer function, eq. 15 (b=3) --
-C
-          TRANA=1.0D0+(N/(NS-N))**3.0D0
+C   The documentation claims that this is not needed if one is
+C   interested in spectrally integrated quantities
+C         TRANA=1.0D0+(N/(NS-N))**3.0D0
+          TRANA=1.0D0
+
 C
 C-- LUW THERMOCOUPLE TEMPERATURE !!
 C-- Thermocouple frequency response gain, eq. 2 ------------------
@@ -515,7 +520,7 @@ C
           G(SpecCO2,W) = G(W,SpecCO2)
           DO I=1,NNMax
              DO J=1,NNMax
-                  G(I,J) = G(I,J)*TRANA/GAINV*GAIND
+                  G(I,J) = G(I,J)*TRANA*GAINV*GAIND
              ENDDO
           ENDDO
 
@@ -1072,8 +1077,8 @@ C
 C Constants for integration routine in correction frequency response
 C
       NSTA   = -5.0D0    ! [?] start frequency numerical integration
-      NEND   = 0.69897D0 ! [?] end frequency numerical integration (LOG(5))
-      NumINT = 19        ! [1] number of intervals
+      NEND   = LOG10(0.5*ExpVar(QEFreq)) ! [?] end frequency numerical integration
+      NumINT = 39        ! [1] number of intervals
       TAUV   = 0.0D0     ! [?] Low pass filter time constant
       TauD   = 0.0D0     ! [?] interval length for running mean
 

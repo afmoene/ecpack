@@ -411,5 +411,13 @@ Revision : 2.5.18: October 21, 2008 (arnold.moene@wur.nl)
 Revision: 2.5.19: November 3, 2008 (arnold.moene@wur.nl)
      - introduced generic sonic with extra calibration coefficients
      (not yet thoroughly checked).
+Revision: 2.5.20: November 3, 2008 (arnold.moene@wur.nl)
+     - Frequency response correction: 
+       * set upper limit of integration to 0.5 times sampling frequency; 
+       * switched off the data aquisition co-spectral transfer function (this has a small effect)
+       * increased number of intervals in integration to 39
+       * changed TRANA/GAINV*GAIND to TRANA*GAINV*GAIND (GAINV and GAIND have
+       always been unity so the effect is none).
+
 
 
