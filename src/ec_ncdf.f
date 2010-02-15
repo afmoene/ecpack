@@ -476,7 +476,7 @@ C
 C Determine standard deviations
 C
         DO I=1,NNMax
-	   IF (HAVE_CAL(I)) THEN
+	   IF (.NOT. HAVE_CAL(I)) THEN
 	     Std(I) = DUMMY
 	     dStd(I) = DUMMY
 	   ELSE
