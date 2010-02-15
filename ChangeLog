@@ -418,6 +418,11 @@ Revision: 2.5.20: November 3, 2008 (arnold.moene@wur.nl)
        * increased number of intervals in integration to 39
        * changed TRANA/GAINV*GAIND to TRANA*GAINV*GAIND (GAINV and GAIND have
        always been unity so the effect is none).
+Revision: 2.5.21:
+       * changed in bench/spec_test.dat: yaw limit to pitch limit
+       * changed in bench/*qq files: yaw to pitch and vice versa
+       * fixed bug in computation of standard deviations in ec_ncdf.f: were set to -9999 due to check on number of samples
+       * converted tabs to spaces in some files
 
 
 

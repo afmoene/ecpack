@@ -387,13 +387,13 @@ C
       ENDIF
 
       IF (DoPrint.AND.PCal) THEN
-	DO i=1,M
-	  DO j=1,N
-	    IF (Flag(j,i) .AND. HAVE_CAL(j) .AND. HAVE_UNCAL(J))
+        DO i=1,M
+          DO j=1,N
+            IF (Flag(j,i) .AND. HAVE_CAL(j) .AND. HAVE_UNCAL(J))
      &       WRITE(OutF,*) 'Error in sample ',i,' = ',
-     &	      QName(j),' = ',Sample(j,i)
-	  ENDDO
-	ENDDO
+     &              QName(j),' = ',Sample(j,i)
+          ENDDO
+        ENDDO
       ENDIF
 
 C
@@ -402,7 +402,7 @@ C Estimate mean values, covariances and tolerances of both
 C
 C
       CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	               Mean,TolMean,Cov,TolCov,MIndep,
+     &                       Mean,TolMean,Cov,TolCov,MIndep,
      &                 CIndep,Mok,Cok)
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
@@ -415,11 +415,11 @@ C
            CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
            CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
            IF (PIndep) THEN
-	       CALL EC_G_ShwInd(OutF,MIndep,CIndep,
-     &	                         NMax,N,M,ExpVar(QEFreq))
+               CALL EC_G_ShwInd(OutF,MIndep,CIndep,
+     &                                 NMax,N,M,ExpVar(QEFreq))
            ENDIF
            IF (PCal) THEN
-	       CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+               CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
            ENDIF
       ENDIF
 
@@ -432,11 +432,11 @@ C
 C
       IF (DoCorr(QCDetrend) .OR. DoCorr(QCBlock)) THEN
         IF (DoCorr(QCDetrend)) THEN
-	   CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,RC)
+           CALL EC_M_Detren(Sample,NMax,N,MMAx,M,Mean,Cov,RC)
         ENDIF
         IF (DoCorr(QCBlock)) THEN
            NBlock = INT(CorrPar(QCPBlock))
-	   CALL EC_M_BlockDet(Sample,NMax,N,MMAx,M,Mean,NBlock, Flag)
+           CALL EC_M_BlockDet(Sample,NMax,N,MMAx,M,Mean,NBlock, Flag)
         ENDIF
 C
 C
@@ -444,8 +444,8 @@ C Estimate mean values, covariances and tolerances of both
 C for the detrended dataset
 C
 C
-	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	                 Mean,TolMean,Cov,TolCov,
+        CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &                         Mean,TolMean,Cov,TolCov,
      &                   MIndep,CIndep,Mok,Cok)
         CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
@@ -455,15 +455,15 @@ C
         ENDIF
         CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
 
-	IF (DoPrint.AND.PCorr(QCDetrend)) THEN
-	  CALL EC_G_ShwHead(OutF, 'After detrending : ')
+        IF (DoPrint.AND.PCorr(QCDetrend)) THEN
+          CALL EC_G_ShwHead(OutF, 'After detrending : ')
           CALL EC_M_MinMax(Sample, NMax, N, MMax, M, Flag, MINS, MAXS)
           CALL EC_G_ShwMinMax(OutF, N, Mins, Maxs)
-	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
-	  ENDIF
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+          IF (PIndep) THEN
+            CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
+          ENDIF
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+        ENDIF
 
       ENDIF
 
@@ -495,11 +495,11 @@ C Feed planarfit rotated sample back into Sample array
 C
           Sample(U,i) = Dumout(1)
           Sample(V,i) = Dumout(2)
-          Sample(W,i) = Dumout(3)	  
+          Sample(W,i) = Dumout(3)          
         ENDDO
       ENDIF
       CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	               Mean,TolMean,Cov,TolCov,
+     &                       Mean,TolMean,Cov,TolCov,
      &                 MIndep,CIndep,Mok,Cok)
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
@@ -508,11 +508,11 @@ C
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
       ENDIF
       IF (DoPrint.AND. PCorr(QCPF)) THEN
-	  CALL EC_G_ShwHead(OUTF, 'After planar fit untilting : ')
-	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
-	  ENDIF
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+          CALL EC_G_ShwHead(OUTF, 'After planar fit untilting : ')
+          IF (PIndep) THEN
+            CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
+          ENDIF
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
       ENDIF
       
 C If 'classic' run-based tilt corrections are not done, 
@@ -523,18 +523,18 @@ C angles.
      &           (DoCorr(QCPitch).OR.DoCorr(QCRoll)))
       IF (AnyTilt) THen
         CALL EC_C_Main(OutF,
-     &	  DoPrint,
+     &          DoPrint,
      &    Mean,NMax,N,TolMean,
-     &	  Cov,TolCov,
+     &          Cov,TolCov,
      &    DoCorr, PCorr, ExpVar,
      &    DirYaw,
-     &	  DirPitch,
-     &	  DirRoll,
-     &	  SonFactr,
-     &	  O2Factor,
-     &	  CalSonic,CalTherm,CalHyg,
+     &          DirPitch,
+     &          DirRoll,
+     &          SonFactr,
+     &          O2Factor,
+     &          CalSonic,CalTherm,CalHyg,
      &    CalCO2, FrCor,
-     &	  WebVel, P,Have_cal)
+     &          WebVel, P,Have_cal)
         CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
       ENDIF
@@ -578,15 +578,15 @@ C
           IF (DoCorr(QCYaw)) THEN
             CALL EC_C_T06(DirYaw,Yaw)
             CALL EC_C_T05(Speed,3,3,DumCov,Yaw)
-	  ENDIF
+          ENDIF
           IF (DoCorr(QCPitch)) THEN
             CALL EC_C_T08(DirPitch,Pitch)
             CALL EC_C_T05(Speed,3,3,DumCov,Pitch)
-	  ENDIF
+          ENDIF
           IF (DoCorr(QCRoll)) THEN
             CALL EC_C_T10(DirRoll,Roll)
             CALL EC_C_T05(Speed,3,3,DumCov,Roll)
-	  ENDIF
+          ENDIF
 
           Sample(U,i) = Speed(1)
           Sample(V,i) = Speed(2)
@@ -596,8 +596,8 @@ C
 C
 C Reestablish the averages and covariances in the correct frame of reference.
 C
-	CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
-     &	                 Mean,TolMean,Cov,TolCov,
+        CALL EC_M_Averag(Sample,NMax,N,MMax,M,Flag,
+     &                         Mean,TolMean,Cov,TolCov,
      &                   MIndep,CIndep,Mok,Cok)
         CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
@@ -606,13 +606,13 @@ C
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
         ENDIF
 
-	IF (DoPrint) THEN
-	  CALL EC_G_ShwHead(OutF, 'After untilting raw data : ')
-	  IF (PIndep) THEN
-	    CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
-	  ENDIF
-	  CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-	ENDIF
+        IF (DoPrint) THEN
+          CALL EC_G_ShwHead(OutF, 'After untilting raw data : ')
+          IF (PIndep) THEN
+            CALL EC_G_ShwInd(OutF,MIndep,CIndep,NMax,N,M,ExpVar(QEFreq))
+          ENDIF
+          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+        ENDIF
 
       ENDIF
 C
@@ -632,17 +632,17 @@ C Perform all necessary corrections on the mean values and (co-)variances.
 C This is the real thing (irrespective of tilt correction)
 C
       CALL EC_C_Main(OutF,
-     &	  DoPrint,
-     &	  Mean,NMax,N,TolMean,
-     &	  Cov,TolCov,
+     &          DoPrint,
+     &          Mean,NMax,N,TolMean,
+     &          Cov,TolCov,
      &    DumCorr, PDumCorr, ExpVar,
-     &	  DirYaw,
-     &	  DirPitch,
-     &	  DirRoll,
-     &	  SonFactr,
-     &	  O2Factor,
-     &	  CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
-     &	  WebVel, P, Have_cal)
+     &          DirYaw,
+     &          DirPitch,
+     &          DirRoll,
+     &          SonFactr,
+     &          O2Factor,
+     &          CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
+     &          WebVel, P, Have_cal)
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
 C Re-establish the mean humidity signal if needed
@@ -774,13 +774,13 @@ C
 
 
       SUBROUTINE EC_G_Show(OutF,Mean,TolMean,Cov,
-     &	TolCov,NMax,N)
+     &        TolCov,NMax,N)
 C    ****f* ec_gene.f/EC_G_Show
 C NAME
 C     EC_G_Show
 C SYNOPSIS
 C     CALL EC_G_Show(OutF,Mean,TolMean,Cov,
-C     	             TolCov,NMax,N)
+C                          TolCov,NMax,N)
 C FUNCTION
 C     Prints mean values and (co-)variances plus respective 
 C     tolerances
@@ -814,14 +814,14 @@ C     ***
 
       INTEGER i,j,N,NMax,OutF
       REAL*8 Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
-     &	TolCov(NMax,NMax),Dum(NNMax)
+     &        TolCov(NMax,NMax),Dum(NNMax)
 
       WRITE(OutF,*)
       WRITE(OutF,*) 'Mean quantities : '
       WRITE(OutF,*)
 
       DO i=1,N
-	WRITE(OutF,10) QName(i),Mean(i),TolMean(i),UName(i)
+        WRITE(OutF,10) QName(i),Mean(i),TolMean(i),UName(i)
       ENDDO
  10   FORMAT(a6,' = ',F20.10,' +/- ',F20.10,1X,a10,1X)
 
@@ -834,9 +834,9 @@ C     ***
  30   FORMAT(a6,20(a11:,1X))
 
       DO i=1,N
-	WRITE(OutF,20) QName(i),(Cov(i,j),j=1,N)
-	WRITE(OutF,20) '      ',(TolCov(i,j),j=1,N)
- 20	FORMAT(a6,20(G11.4:,1X))
+        WRITE(OutF,20) QName(i),(Cov(i,j),j=1,N)
+        WRITE(OutF,20) '      ',(TolCov(i,j),j=1,N)
+ 20        FORMAT(a6,20(G11.4:,1X))
       ENDDO
 
       WRITE(OutF,*)
@@ -847,18 +847,18 @@ C     ***
  40   FORMAT(a6,20(a10:,1X))
 
       DO i=1,N
-	DO j=1,N
-	  IF ((ABS(Cov(i,i)*Cov(j,j)).GT.Epsilon) .AND.
+        DO j=1,N
+          IF ((ABS(Cov(i,i)*Cov(j,j)).GT.Epsilon) .AND.
      +        (ABS(Cov(i,i)-DUMMY) .GT. Epsilon) .AND.
      +        (ABS(Cov(j,j)-DUMMY) .GT. Epsilon) .AND.
      +        (ABS(Cov(i,j)-DUMMY) .GT. Epsilon)) THEN
-	    Dum(j) = Cov(i,j)/SQRT(Cov(i,i)*Cov(j,j))
-	  ELSE
-	    Dum(j) = DUMMY
-	  ENDIF
-	ENDDO
-	WRITE(OutF,50) QName(i),(Dum(j),j=1,N)
- 50	FORMAT(a6,20(F10.4:,1X))
+            Dum(j) = Cov(i,j)/SQRT(Cov(i,i)*Cov(j,j))
+          ELSE
+            Dum(j) = DUMMY
+          ENDIF
+        ENDDO
+        WRITE(OutF,50) QName(i),(Dum(j),j=1,N)
+ 50        FORMAT(a6,20(F10.4:,1X))
       ENDDO
 
       WRITE(OutF,*)
@@ -912,8 +912,8 @@ C     ***
  30   FORMAT(a6,20(1X,a8:))
 
       DO i=1,N
-	IF (i.NE.TTime) WRITE(OutF,20) QName(i),(FrCor(i,j),j=1,N)
- 20	FORMAT(a6,20(1X,F8.5:))
+        IF (i.NE.TTime) WRITE(OutF,20) QName(i),(FrCor(i,j),j=1,N)
+ 20        FORMAT(a6,20(1X,F8.5:))
       ENDDO
 
       RETURN
@@ -924,7 +924,7 @@ C     ***
 
 
       SUBROUTINE EC_G_ShwInd(OutF,MIndep,
-     &	CIndep,NMax,N,M,Freq)
+     &        CIndep,NMax,N,M,Freq)
 C     ****f* ec_gene.f/EC_G_ShwInd
 C NAME
 C     EC_G_ShwInd
@@ -975,9 +975,9 @@ C     ***
 
       DO i=1,N
         IF (MIndep(I).EQ. INT(DUMMY)) THEN
-	  WRITE(OutF,10) QName(i),INT(DUMMY),DUMMY
+          WRITE(OutF,10) QName(i),INT(DUMMY),DUMMY
         ELSE
-	  WRITE(OutF,10) QName(i),MIndep(i),
+          WRITE(OutF,10) QName(i),MIndep(i),
      &      (DBLE(M)/(Freq*DBLE(MIndep(i))))
         ENDIF
       ENDDO

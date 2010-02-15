@@ -24,23 +24,30 @@
 # For some Unix
 BUILD-LINUX=build-linux
 LEXT=
-LFC=g77
+LFC=gfortran
 LAR=ar
 LRANLIB=ranlib
 LINCDIR='-I/home/arnold/include -I$(LIBSRC)/'
 LLIBDIR=-L/home/arnold/lib
+LEXTRA_FFLAG=-fno-second-underscore 
 
 # For MingW
 BUILD-WIN32=build-win32
 WFC=/usr/local/bin/i386-mingw32-gfortran
+WFC=g77
 WAR=/usr/local/bin/i386-mingw32-ar
+WAR=ar
 WRANLIB=/usr/local/bin/i386-mingw32-ranlib
+WRANLIB=ranlib
 WEXT=.exe
-WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/'
-WLIBDIR=-L/usr/local/lib/gcc/i386-mingw32/4.3.2
+#WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/' 
+WINCDIR='-I$(LIBSRC)/ -I/mingw/include'
+#WLIBDIR=-L/usr/local/i386-mingw32/lib
+WLIBDIR=-L/mingw/lib
 WEXT=.exe
+WEXTRA_FFLAG=
 
-FFLAGS=$(INCDIR)  -ffixed-form -ff2c -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
+FFLAGS=$(INCDIR)  -ffixed-form -ff2c  -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
 LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack 
 LIBSRC=../libsrc
 SRC=../src
@@ -60,17 +67,17 @@ DOCFILES=$(LIBSRC)/ec_corr.f $(LIBSRC)/ec_phys.f $(LIBSRC)/ec_math.f $(LIBSRC)/e
 PDFLATEX=pdflatex
 
 
-all: win32 linux win32-programs linux-programs docs
+all: linux linux-programs docs
 
 win32: 
 	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) libecpack.a)
 win32-programs:
-	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) LIBDIR=$(WLIBDIR) ec_ncdf.exe planang.exe)
+	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) LIBDIR=$(WLIBDIR) EXTRA_FFLAG=$(WEXTRA_FFLAG) ec_ncdf.exe planang.exe)
 
 linux: 
 	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) libecpack.a)
 linux-programs:
-	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) LIBDIR=$(LLIBDIR) ec_ncdf planang)
+	($(MKDIR) $(BUILD-LINUX) ; cd $(BUILD-LINUX) ; make -f ../Makefile FC=$(LFC) AR=$(LAR) RANLIB=$(LRANLIB) EXT=$(LEXT) INCDIR=$(LINCDIR) LIBDIR=$(LLIBDIR) EXTRA_FFLAG=$(LEXTRA_FFLAG) ec_ncdf planang)
 
 
 # By default, just the library

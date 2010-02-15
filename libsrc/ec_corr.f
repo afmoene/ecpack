@@ -335,7 +335,7 @@ C-- Start Simpson's rule numerical integration -----------------------
 C     From -5 to log(5) in NumInt steps
 C
       I3=0
-      DO I1=1,0.5*(NumInt+1)
+      DO I1=1,INT(0.5*(NumInt+1))
         DO I2=2,4,2
           I3=I3+1
           IF (I3.GT.NumInt) GOTO 200

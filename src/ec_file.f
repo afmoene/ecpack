@@ -404,9 +404,9 @@ C
 C Now call EC_F_Params
 C
       CALL EC_F_Params(ParmName, ExpVar,
-     &	DoCorr, PCorr,
-     &	DoStruct, DoPrint,
-     &	PRaw,PCal,PIndep)
+     &    DoCorr, PCorr,
+     &    DoStruct, DoPrint,
+     &    PRaw,PCal,PIndep)
 
       END
 
@@ -459,9 +459,9 @@ C     parcnst.inc
 C     physcnst.inc
 C     ***
       SUBROUTINE EC_F_Params(InName, ExpVar,
-     &	DoCorr, PCorr,
-     &	DoStruct, DoPrint,
-     &	PRaw,PCal,PIndep)
+     &    DoCorr, PCorr,
+     &    DoStruct, DoPrint,
+     &    PRaw,PCal,PIndep)
 C
 C Purpose : Read settings for this particular session from file
 C
@@ -471,8 +471,8 @@ C
 
       REAL*8 ExpVar(NMaxExp)
       LOGICAL 
-     &	DoPrint,PRaw,PCal,PIndep,
-     &	DoStruct, DoCorr(NMaxCorr), PCorr(NMaxCorr)
+     &    DoPrint,PRaw,PCal,PIndep,
+     &    DoStruct, DoCorr(NMaxCorr), PCorr(NMaxCorr)
       CHARACTER*(*) InName
       INTEGER      IOCODE
 
@@ -487,46 +487,46 @@ C
       DoCorr(QCPF) = .FALSE.
       PCorr(QCPF) = .FALSE.
       ExpVar(QEPFValid) = 0.0D0
-      READ(TempFile,*) ExpVar(QEFreq)	  ! [Hz] Sample frequency datalogger
+      READ(TempFile,*) ExpVar(QEFreq)      ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
-      READ(TempFile,*) ExpVar(QEPitchLim)	  ! [degree] Limit when Mean(W) is turned to zero
-      READ(TempFile,*) ExpVar(QERollLim)	  ! [degree] Limit when Cov(V,W) is turned to zero
+      READ(TempFile,*) ExpVar(QEPitchLim)      ! [degree] Limit when Mean(W) is turned to zero
+      READ(TempFile,*) ExpVar(QERollLim)      ! [degree] Limit when Cov(V,W) is turned to zero
       READ(TempFile,*)
       READ(TempFile,*) ExpVar(QEPreYaw)   ! Fixed yaw angle for known tilt-correction
-      READ(TempFile,*) ExpVar(QEPrePitch)	  ! Fixed pitch angle for known tilt-correction
-      READ(TempFile,*) ExpVar(QEPreRoll)	  ! Fixed roll angle for known tilt-correction
+      READ(TempFile,*) ExpVar(QEPrePitch)      ! Fixed pitch angle for known tilt-correction
+      READ(TempFile,*) ExpVar(QEPreRoll)      ! Fixed roll angle for known tilt-correction
       READ(TempFile,*)
-      READ(TempFile,*) ExpVar(QELLimit)	  ! Smallest acceptable frequency-response
+      READ(TempFile,*) ExpVar(QELLimit)      ! Smallest acceptable frequency-response
 correction factor
-      READ(TempFile,*) ExpVar(QEULimit)	  ! Largest acceptable frequency-response
+      READ(TempFile,*) ExpVar(QEULimit)      ! Largest acceptable frequency-response
 correction factor
       READ(TempFile,*)
       READ(TempFile,*) DoCorr(QCMean)     ! Replace mean quantities by better estimates
       READ(TempFile,*) DoCorr(QCDetrend)  ! Correct data for linear trend
-      READ(TempFile,*) DoCorr(QCSonic)	  ! Correct sonic temperature for humidity
-      READ(TempFile,*) DoCorr(QCTilt)	  ! Perform true tilt-correction with known angles
-      READ(TempFile,*) DoCorr(QCYaw)	  ! Turn system such that Mean(V) --> 0
-      READ(TempFile,*) DoCorr(QCPitch)	  ! Turn system such that Mean(W) --> 0
-      READ(TempFile,*) DoCorr(QCRoll)	  ! Turn System such that Cov(W,V) --> 0
-      READ(TempFile,*) DoCorr(QCFreq)	  ! Correct for poor frequency response
-      READ(TempFile,*) DoCorr(QCO2)	  ! Correct hygrometer for oxygen-sensitivity
-      READ(TempFile,*) DoCorr(QCWebb)	  ! Calculate mean velocity according to Webb
-      READ(TempFile,*) DoStruct	  ! Calculate structure parameters
+      READ(TempFile,*) DoCorr(QCSonic)      ! Correct sonic temperature for humidity
+      READ(TempFile,*) DoCorr(QCTilt)      ! Perform true tilt-correction with known angles
+      READ(TempFile,*) DoCorr(QCYaw)      ! Turn system such that Mean(V) --> 0
+      READ(TempFile,*) DoCorr(QCPitch)      ! Turn system such that Mean(W) --> 0
+      READ(TempFile,*) DoCorr(QCRoll)      ! Turn System such that Cov(W,V) --> 0
+      READ(TempFile,*) DoCorr(QCFreq)      ! Correct for poor frequency response
+      READ(TempFile,*) DoCorr(QCO2)      ! Correct hygrometer for oxygen-sensitivity
+      READ(TempFile,*) DoCorr(QCWebb)      ! Calculate mean velocity according to Webb
+      READ(TempFile,*) DoStruct      ! Calculate structure parameters
       READ(TempFile,*)
-      READ(TempFile,*) DoPrint	  ! Skip printing intermediate results or not?
+      READ(TempFile,*) DoPrint      ! Skip printing intermediate results or not?
       READ(TempFile,*)
-      READ(TempFile,*) PRaw	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCal	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PRaw      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCal      ! Indicator if these intermediate results are wanted
       READ(TempFile,*) PCorr(QCDetrend)   ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PIndep	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCTilt)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCYaw)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCPitch)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCRoll)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCSonic)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCO2)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCFreq)	  ! Indicator if these intermediate results are wanted
-      READ(TempFile,*) PCorr(QCWebb)	  ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PIndep      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCTilt)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCYaw)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCPitch)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCRoll)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCSonic)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCO2)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCFreq)      ! Indicator if these intermediate results are wanted
+      READ(TempFile,*) PCorr(QCWebb)      ! Indicator if these intermediate results are wanted
       READ(TempFile,*) ExpVar(QEStructSep)! Separation (meter) for which to calculate structure parameter
       READ(TempFile, *, END=5500) DoCorr(QCPF) ! Do Planar fit ?
       READ(TempFile, *, END=5500) PCorr(QCPF) ! Print planar fit intermediate results ?
@@ -572,6 +572,8 @@ C
       INTEGER EC_T_STRLEN
       EXTERNAL EC_T_STRLEN
 
+      INTEGER SPECS_READ
+
       OPEN(TempFile,FILE=InName,STATUS='OLD', IOSTAT=IOCODE)
       IF (IOCODE .NE. 0) THEN
          WRITE(*,5100) InName(:EC_T_STRLEN(InName))
@@ -583,16 +585,18 @@ C First get the type of apparatus
       READ(TempFile,*) CalSpec(1)
 
 C Now read the correct number of specs
+      SPECS_READ=1
       DO i=2,ApNQQ(INT(CalSpec(1)))
-       	READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
+           READ(TempFile,*,IOSTAT=IOCODE, END = 9000) CalSpec(i)
          IF (IOCODE .NE. 0) THEN
             WRITE(*,*) 'ERROR in reading of calibration file ', 
      &               InName(:EC_T_STRLEN(InName))
             STOP
          ENDIF
+         SPECS_READ = SPECS_READ + 1
       ENDDO
  9000 CONTINUE
-      IF ((I-1) .NE. ApNQQ(INT(CalSpec(1)))) THEN
+      IF (SPECS_READ .NE. ApNQQ(INT(CalSpec(1)))) THEN
          WRITE(*,*) 'ERROR: did not find correct number of specs in ',
      &               InName(:EC_T_STRLEN(InName))
       ENDIF
@@ -612,15 +616,15 @@ C
 C Read raw data from file
 C
 C input : InName : CHARACTER*40 : Name of the datafile (ASCII)
-C	  NMax : INTEGER : Maximum number of quantities in this array
-C	  MMax : INTEGER : Maximum number of samples in this array
-C	  N : INTEGER : Number of quantities in file
+C      NMax : INTEGER : Maximum number of quantities in this array
+C      MMax : INTEGER : Maximum number of samples in this array
+C      N : INTEGER : Number of quantities in file
 C
 C output : x(NMax,MMax) : REAL*8 Raw data array.
-C			  First index counts quantities; second counter
-C			  counts samples. Only the first N quantities
-C			  and the first M samples are used.
-C	   M : Number of samples in file
+C              First index counts quantities; second counter
+C              counts samples. Only the first N quantities
+C              and the first M samples are used.
+C       M : Number of samples in file
 C
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
@@ -632,7 +636,7 @@ C
 
       MaxDelay = 0
       DO j=1,N
-	MaxDelay = MAX(Delay(j),MaxDelay)
+         MaxDelay = MAX(Delay(j),MaxDelay)
       ENDDO
 
       OPEN(InFile,FILE=InName)
@@ -642,8 +646,8 @@ C
 
       M = M+1
       DO j=1,N
-	IF ((M-Delay(j)).GT.0)
-     &    x(j,M-Delay(j)) = Dum(j)/Gain(j) + Offset(j)
+         IF ((M-Delay(j)).GT.0)
+     &       x(j,M-Delay(j)) = Dum(j)/Gain(j) + Offset(j)
       ENDDO
 
       IF (M.LT.MMMax) GOTO 10
@@ -661,14 +665,14 @@ C
 C Read raw data from NETCDF-file
 C
 C input : InName : CHARACTER*40 : Name of the datafile (ASCII)
-C	  NMax : INTEGER : Maximum number of quantities in this array
-C	  MMax : INTEGER : Maximum number of samples in this array
+C      NMax : INTEGER : Maximum number of quantities in this array
+C      MMax : INTEGER : Maximum number of samples in this array
 C
 C output : x(NMax,MMax) : REAL*8 Raw data array.
-C			  First index counts quantities; second counter
-C			  counts samples. Only the first N quantities
-C			  and the first M samples are used.
-C	   M : Number of samples in file
+C              First index counts quantities; second counter
+C              counts samples. Only the first N quantities
+C              and the first M samples are used.
+C       M : Number of samples in file
 C Revision 28-05-2001: added info on whether uncalibrated data are
 C                      available for a given variable (mainly important
 C                      for sonic and/or Couple temperature since that
@@ -731,7 +735,7 @@ C
          NCVarID(I) = 0
          HAS_SCALE(I) = .FALSE.
          HAS_OFFSET(I) = .FALSE.
-	 Have_Uncal(I) = .FALSE.
+         Have_Uncal(I) = .FALSE.
       ENDDO
       DO I=1,NVARS
         STATUS = NF_INQ_VAR(NCID,I,NAME,XTYPE,VARDIMS,DIMIDS,NATTS)
@@ -786,12 +790,12 @@ C
             IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
             STATUS = NF_INQ_DIMLEN(NCID, DIMIDS(1), DIMLEN)
             IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
-	    IF (DIMLEN .LT. 1) THEN
+        IF (DIMLEN .LT. 1) THEN
                WRITE(*,5120) NCVarName(I)(:EC_T_STRLEN(NCVarName(I)))
                STATUS = NF_CLOSE(NCID)
                IF (STATUS .NE. NF_NOERR) CALL EC_NCDF_HANDLE_ERR(STATUS)
                RETURN
-	    ENDIF
+        ENDIF
         ENDIF
       ENDDO
  5120 FORMAT('ERROR: no samples in variable ',A)
@@ -821,7 +825,7 @@ C is more robust
       ENDIF
       IF (NSAMPLE .GT. MMMAX) THEN
          WRITE(*,5500) MMMAX, NSAMPLE
-	 STOP
+         STOP
       ENDIF
       Do I=1,NMax
          IF (STOPIND + Delay(i) .GT. DIMLEN) THEN
@@ -901,15 +905,15 @@ C
 C Read raw data from file
 C
 C input : InName : CHARACTER*40 : Name of the datafile (binary Wouter format)
-C	  NMax : INTEGER : Maximum number of quantities in this array
-C	  MMax : INTEGER : Maximum number of samples in this array
-C	  N : INTEGER : Number of quantities in file
+C      NMax : INTEGER : Maximum number of quantities in this array
+C      MMax : INTEGER : Maximum number of samples in this array
+C      N : INTEGER : Number of quantities in file
 C
 C output : x(NMax,MMax) : REAL*8 Raw data array.
-C			  First index counts quantities; second counter
-C			  counts samples. Only the first N quantities
-C			  and the first M samples are used.
-C	   M : Number of samples in file
+C              First index counts quantities; second counter
+C              counts samples. Only the first N quantities
+C              and the first M samples are used.
+C       M : Number of samples in file
 C
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
@@ -926,7 +930,7 @@ C
 
       MaxDelay = 0
       DO j=1,N
-	MaxDelay = MAX(Delay(j),MaxDelay)
+         MaxDelay = MAX(Delay(j),MaxDelay)
       ENDDO
 
       OPEN(InFile,FILE=InName,STATUS='OLD',ACCESS='direct',recl=1)
@@ -958,7 +962,7 @@ C
           ByteBuf(2*(j-1)+1) = ByteBuf(2*(j-1)+2)
           ByteBuf(2*(j-1)+2) = C
 
-	  IF ((M-Delay(j)).GT.0)
+      IF ((M-Delay(j)).GT.0)
      &      x(j,M-Delay(j)) = DBLE(Buffer(j))/Gain(j) + Offset(j)
         ENDDO
       ENDIF
