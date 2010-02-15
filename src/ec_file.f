@@ -486,7 +486,7 @@ C Default values for planar fit settings
 C
       DoCorr(QCPF) = .FALSE.
       PCorr(QCPF) = .FALSE.
-      ExpVar(QEPFValid) = 0.0D0
+      ExpVar(QEPFValid) = 1.0D0
       READ(TempFile,*) ExpVar(QEFreq)      ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
       READ(TempFile,*) ExpVar(QEPitchLim)      ! [degree] Limit when Mean(W) is turned to zero
@@ -1084,6 +1084,12 @@ C
         ENDIF
       ENDDO
  37   CONTINUE
+C     Check if these are valid angles (any of the angles will be invalid; assume that it is sufficient to check Alpha
+      IF (AnglesFound) THEN
+          IF (INT(Alpha) .EQ. INT(DUMMY)) THEN
+             AnglesFound = .FALSE.
+          ENDIF
+      ENDIF
       IF (.NOT. AnglesFound) THEN
          WRITE(*,*) 'No planar fit angles found for requested interval'
       ENDIF      

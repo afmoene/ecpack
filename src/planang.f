@@ -317,30 +317,32 @@ C
 C Do calibration (per sample)
 C 
            N = 3
-           DO i=1,M
-               CALL Calibrat(RawSampl(1,i),Channels,P,CorMean,
-     &	          CalSonic,CalTherm,CalHyg,CalCO2, 
-     &            BadTc,Sample(1,i),N,Flag(1,i),
-     &            Have_Uncal, FirstDay, i)
-           ENDDO
+           IF (M .GT. 0) THEN
+               DO i=1,M
+                   CALL Calibrat(RawSampl(1,i),Channels,P,CorMean,
+     &	              CalSonic,CalTherm,CalHyg,CalCO2, 
+     &                BadTc,Sample(1,i),N,Flag(1,i),
+     &                Have_Uncal, FirstDay, i)
+               ENDDO
 C
 C Determine mean velocities, check if there are enough valid samples
 C
-    	   CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
-     &                      Mean, TolMean, Cov, TolCov, MIndep, CIndep,
-     &                      Mok, Cok)
-           IF ((DBLE(MOK(U))/DBLE(M) .LT. ExpVar(QEPFValid)) .OR.
-     &         (DBLE(MOK(U))/DBLE(M) .LT. ExpVar(QEPFValid)) .OR.
-     &         (DBLE(MOK(W))/DBLE(M) .LT. ExpVar(QEPFValid))) THEN
-               NPF = NPF - 1
-               write(*,*) 'Interval rejected: ', 
-     &             Min(DBLE(MOK(U))/DBLE(M), DBLE(MOK(U))/DBLE(M), 
-     &                 DBLE(MOK(W))/DBLE(M)), ' < ', ExpVar(QEPFValid)
-           ELSE
-               UMean(U,NPF) = Mean(U)
-               UMean(V,NPF) = Mean(V)
-               UMean(W,NPF) = Mean(W)
-           ENDIF
+    	       CALL EC_M_Averag(Sample, NNMax, N, MMMax, M, Flag,
+     &                          Mean, TolMean, Cov, TolCov, MIndep, CIndep,
+     &                          Mok, Cok)
+               IF ((DBLE(MOK(U))/DBLE(M) .LT. ExpVar(QEPFValid)) .OR.
+     &             (DBLE(MOK(U))/DBLE(M) .LT. ExpVar(QEPFValid)) .OR.
+     &             (DBLE(MOK(W))/DBLE(M) .LT. ExpVar(QEPFValid))) THEN
+                   NPF = NPF - 1
+                   write(*,*) 'Interval rejected: ', 
+     &                 Min(DBLE(MOK(U))/DBLE(M), DBLE(MOK(U))/DBLE(M), 
+     &                     DBLE(MOK(W))/DBLE(M)), ' < ', ExpVar(QEPFValid)
+               ELSE
+                   UMean(U,NPF) = Mean(U)
+                   UMean(V,NPF) = Mean(V)
+                   UMean(W,NPF) = Mean(W)
+               ENDIF
+            ENDIF
         ENDIF
         IF (PastStart .AND. 
      &      (.NOT. BeforeEnd .OR. LastInter)) THEN
@@ -350,6 +352,16 @@ C
            IF (NPF.GT.0) THEN
              CALL EC_C_T01(DoWBias, SingleRun, UMean, NPF,
      &                     Apf,Alpha,Beta,Gamma,WBias)
+           ELSE
+             Alpha = DUMMY
+             Beta = DUMMY
+             Gamma = DUMMY
+             WBias = DUMMY
+             DO I=1,3
+               DO J=1,3
+                  APF(I,J) = DUMMY
+               ENDDO
+             ENDDO
              Write(PlfFile,100) (StartTime(i),i=1,3), 
      &             (StopTime(i),i=1,3), Alpha, Beta, Gamma, WBias,
      &             ((Apf(i,j),i=1,3),j=1,3)

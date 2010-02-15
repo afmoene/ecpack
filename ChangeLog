@@ -423,6 +423,10 @@ Revision: 2.5.21:
        * changed in bench/*qq files: yaw to pitch and vice versa
        * fixed bug in computation of standard deviations in ec_ncdf.f: were set to -9999 due to check on number of samples
        * converted tabs to spaces in some files
+Revision: 2.5.22:
+       * ec_file.f: default value for ExpVar(QEPFValid) set to 1 (rather than 0).
+       * check if planar fit angles were valid
+       * planang.f: write dummy if planar fit angles could not be calculated
 
 
 
