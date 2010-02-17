@@ -342,7 +342,9 @@ C
                    UMean(V,NPF) = Mean(V)
                    UMean(W,NPF) = Mean(W)
                ENDIF
-            ENDIF
+           ELSE
+               NPF = NPF - 1
+           ENDIF
         ENDIF
         IF (PastStart .AND. 
      &      (.NOT. BeforeEnd .OR. LastInter)) THEN
