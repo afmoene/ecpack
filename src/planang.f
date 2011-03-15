@@ -337,6 +337,12 @@ C
                    write(*,*) 'Interval rejected: ', 
      &                 Min(DBLE(MOK(U))/DBLE(M), DBLE(MOK(U))/DBLE(M), 
      &                     DBLE(MOK(W))/DBLE(M)), ' < ', ExpVar(QEPFValid)
+               ELSE IF ((Mean(U) .NE. Mean(U)) .OR.
+     &              (Mean(V) .NE. Mean(V)) .OR.
+     &              (Mean(W) .NE. Mean(W))) THEN
+                   NPF = NPF - 1
+                   write(*,*) 'Interval rejected: mean wind is NaN'
+
                ELSE
                    UMean(U,NPF) = Mean(U)
                    UMean(V,NPF) = Mean(V)
