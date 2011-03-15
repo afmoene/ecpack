@@ -197,7 +197,9 @@ This implies that e.g.
 the interval 
   255 13 00 255 13 30 
 corresponds to all samples between (inclusive) 255,13:00:00 and 255,13:30:00
-(this different from the behaviour before version has changed as of 
+(this different from the behaviour before version has changed as of ?)
+
+Note that sometimes on Windows machines the program fails to read the last line of the calibration file (due a difference in text file format between Unix and Windows). In that case it helps to add an empty line at the end of the calibration file.
 
 Calibration files
 -----------------
