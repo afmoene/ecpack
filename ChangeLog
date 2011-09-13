@@ -427,8 +427,9 @@ Revision: 2.5.22: March 15, 2011
        * ec_file.f: default value for ExpVar(QEPFValid) set to 1 (rather than 0).
        * check if planar fit angles were valid
        * planang.f: write dummy if planar fit angles could not be calculated
-Revision: 2.5.23: 
+Revision: 2.5.23beta: 
        * included patch of Clemens Drüe in planang that checks if mean wind speeds are NaN
+       * fixed problem with finding right index for last sample when end of interval is on next day 0:00
 
 
 
