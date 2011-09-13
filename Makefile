@@ -33,19 +33,19 @@ LEXTRA_FFLAG=-fno-second-underscore
 
 # For MingW
 BUILD-WIN32=build-win32
-WFC=/usr/local/bin/i386-mingw32-gfortran
 WFC=g77
-WAR=/usr/local/bin/i386-mingw32-ar
+WFC=/usr/local/bin/i386-mingw32-gfortran
 WAR=ar
-WRANLIB=/usr/local/bin/i386-mingw32-ranlib
+WAR=/usr/local/bin/i386-mingw32-ar
 WRANLIB=ranlib
+WRANLIB=/usr/local/bin/i386-mingw32-ranlib
 WEXT=.exe
-#WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/' 
-WINCDIR='-I$(LIBSRC)/ -I/mingw/include'
-#WLIBDIR=-L/usr/local/i386-mingw32/lib
-WLIBDIR=-L/mingw/lib
+WINCDIR='-I/usr/local/i386-mingw32/include -I$(LIBSRC)/' 
+#WINCDIR='-I$(LIBSRC)/ -I/mingw/include'
+WLIBDIR=-L/usr/local/i386-mingw32/lib
+#WLIBDIR=-L/mingw/lib
 WEXT=.exe
-WEXTRA_FFLAG=
+WEXTRA_FFLAG=-fno-second-underscore
 
 FFLAGS=$(INCDIR)  -ffixed-form -ff2c  -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
 LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack 
