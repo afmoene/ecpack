@@ -32,6 +32,7 @@ C               FluxName, ParmName, InterName, PlfIntName,
 C               PlfName, SonName, CoupName, HygName, CO2Name,
 C               NCVarName, NCNameLen,
 C               OutMean, OutCov, OutPh, OutTime, OutStd, OutNum, OutStr,
+C               OutFrcor,
 C               Outputs, DoCorr, CorrPars, ExpVar, DoStruct, DoPrint,
 C               PCorr, PRaw, PCal, PIndep)
 C INPUTS
@@ -80,6 +81,8 @@ C     OutNum   : [LOGICAL](NNMax)
 C                which number of samples to write to output
 C     OutStr   : [LOGICAL](NNMax, NNMax)
 C                which structure parameters to write to output,
+C     OutFrCor : [LOGICAL](NNMax, NNMax)
+C                which frequency correction factors to write to output,
 C     OutPuts  : [LOGICAL](NMaxOS)
 C                further info about output
 C     DoCorr   : [LOGICAL](NMaxCorr)
@@ -134,6 +137,7 @@ C     ***
      &           NCVarName, NCNameLen,
      &           OutMean, OutCov, OutPh, OutTime, 
      &           OutStd, OutNum, OutStr,
+     &           OutFrcor,
      &           Outputs, DoCorr, CorrPars, ExpVar, 
      &           DoStruct, DoPrint,
      &           PCorr, PRaw, PCal, PIndep)
@@ -153,6 +157,7 @@ c     CHARACTER*(*)   InName
       LOGICAL         OutMean(NNMax), OutCov(NNMax, NNMax), 
      &                OutStd(NNMax), OutNum(NNMax),  
      &                OutStr(NNMax, NNMax), 
+     &                OutFrcor(NNMax, NNMax), 
      &                OutPh(NMaxPhys), OutTime(NMaxOST),
      &                Outputs(NMaxOS),
      &                Docorr(NMaxCorr) 
@@ -292,6 +297,9 @@ C Output definitions
             ELSE IF (INDEX(TOKLINE, 'OUT_STRUCT') .GT. 0) THEN
                CALL EC_T_GOut2(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            OutStr)
+            ELSE IF (INDEX(TOKLINE, 'OUT_FRCOR') .GT. 0) THEN
+               CALL EC_T_GOut2(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
+     &                            OutFrcor)
             ELSE IF (INDEX(TOKLINE, 'OUT_STD') .GT. 0) THEN
                CALL EC_T_GOut1(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            OutStd)
@@ -1107,9 +1115,9 @@ C     CALL  EC_F_WFlux(Outunit, Header,
 C                      StartTime, StopTime,
 C                      M, Mok, Mean, dMean, Cov, dCov,
 C                      Phys, dPhys, Std, dStd, Struct,
-C                      dStruct, R, dR,
+C                      dStruct, R, dR, DiagFlag, FrCor,
 C                      OutMean, OutCov, OutPh, OutTime,
-C                      OutStd, OutNum, OutStr, Outputs)
+C                      OutStd, OutNum, OutStr, OutFrcor, Outputs)
 C INPUTS
 C     Outunit   : [INTEGER]
 C                 output file unit
@@ -1150,6 +1158,8 @@ C                 separation in meters corresponding with a delay
 C                 of one sample (i.e. tolerance in R)
 C     DiagFlag  : [INTEGER](NMaxDiag)
 C                 count of error flags of CSAT
+C     FrCor     : [REAL*8](NNMax, NNMax)
+C                 frequency response correction factors for variances/covariances
 C     OutMean   : [LOGICAL](NNMax)
 C                 flags for output of means
 C     OutCov    : [LOGICAL](NNMax,NNMax)
@@ -1164,6 +1174,8 @@ C     OutNum    : [LOGICAL](NNMax)
 C                 flags for output of number of samples 
 C     OutStr    : [LOGICAL](NNMax,NNMax)
 C                 flags for output of structure parameters
+C     OutFrcor  : [LOGICAL](NNMax,NNMax)
+C                 flags for output of frequency response correction
 C     Outputs   : [LOGICAL](NMAxOS)
 C                 general output flags
 C FUNCTION
@@ -1186,7 +1198,7 @@ C
      &                 StartTime, StopTime,
      &                 M, Mok, Mean, dMean, Cov, dCov,
      &                 Phys, dPhys, Std, dStd, Struct,
-     &                 dStruct, R, dR,DiagFlag,
+     &                 dStruct, R, dR,DiagFlag, FrCor,
      &                 OutMean, OutCov, OutPh, OutTime,
      &                 OutStd, OutNum, OutStr, Outputs)
       IMPLICIT NONE
@@ -1198,12 +1210,14 @@ C
      &        OutPh(NMaxPhys), OutTime(NMaxOST), 
      &        OutStd(NNMax), OutNum(NNMax),
      &        OutStr(NNMax,NNMax),
-     &        Outputs(NMaxOS), AnyStruct
+     &        Outputs(NMaxOS), AnyStruct,
+     &        OutFrcor(NNmax, NNMax)
       REAL*8  Mean(NNMax), dMean(NNMax),
      &        Cov(NNMax,NNMax), dCov(NNMax,NNMax),
      &        Std(NNMax),dStd(NNMax),
      &        Struct(NNMax,NNMax), dStruct(NNMax,NNMax),
-     &        Phys(NMaxPHys), dPhys(NMaxPhys), R, dR
+     &        Phys(NMaxPHys), dPhys(NMaxPhys), R, dR,
+     &        FrCor(NNMax, NNMax)
       CHARACTER*30  FRM, NAME, NAME1, NAME2, OUTNAME
 
       INTEGER EC_T_STRLEN
@@ -1426,6 +1440,22 @@ C Physical quantities
                 ENDIF
              ENDIF
            ENDDO
+C Frequency response factors
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutFrcor(I,J)) THEN
+                   NAME1 = QName(I)
+                   NAME2 = QName(J)
+                   CALL EC_T_STRIPSTR(NAME1)
+                   CALL EC_T_STRIPSTR(NAME2)
+                   WRITE(OUTNAME, "('FrC(',A,'*',A,')')")
+     &                NAME1(:EC_T_STRLEN(NAME1)),
+     &                NAME2(:EC_T_STRLEN(NAME2))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDDO
+           ENDDO
+C New line
            WRITE(OutUnit,*)
 C Second line of header
 C Special format for first column
@@ -1553,6 +1583,22 @@ C Physical quantities
                 ENDIF
              ENDIF
            ENDDO
+C Covariances
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutFrcor(I,J)) THEN
+                   NAME1 = UName(I)
+                   NAME2 = UName(J)
+                   CALL EC_T_STRIPSTR(NAME1)
+                   CALL EC_T_STRIPSTR(NAME2)
+                   WRITE(OUTNAME, "(A,A)")
+     &                NAME1(:EC_T_STRLEN(NAME1)),
+     &                NAME2(:EC_T_STRLEN(NAME2))
+                   write(OutUnit, FRM) OUTNAME(:EC_T_STRLEN(OUTNAME))
+                ENDIF
+             ENDDO
+           ENDDO
+C New line
            WRITE(OutUnit,*)
 C The real data!
         ELSE
@@ -1679,6 +1725,15 @@ C Physical quantities
                 ENDIF
              ENDIF
            ENDDO
+C Frequency response correction factors
+           DO I=1,NNMax
+             DO J=1,NNMax
+                IF (OutFrcor(I,J)) THEN
+                   CALL EC_F_WREAL(OutUnit, FRM, FrCor(I,J), M)
+                ENDIF
+             ENDDO
+           ENDDO
+C New line
            WRITE(OutUnit,*)
         ENDIF
       ENDIF

@@ -108,16 +108,22 @@ C Check whether point is before start or beyond end of file
      +           EC_NCDF_CSI2HOUR(HM1)
          TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0
          IF (TIMED .LT. 0) THEN
-            FDOY = INT(DOY1)
-	    FHOURMIN = INT(HM1)
+c           Data is before start of file so in this file the interval might start at first sample
+c           FDOY = INT(DOY1)
+c	    FHOURMIN = INT(HM1)
+            IND = IND1
+            RETURN
          ENDIF
          DOYD = DOY3 - FDOY
          HOURD = EC_NCDF_CSI2HOUR(HM3) - 
      +           EC_NCDF_CSI2HOUR(DBLE(FHOURMIN))
          TIMED = 3600.0D0*24.0D0*DOYD + HOURD*3600.0D0
          IF (TIMED .LT. 0) THEN
-            FDOY = INT(DOY3)
-	    FHOURMIN = INT(HM3)
+c           Data is after end of file so in this file the interval might end at last sample
+c           FDOY = INT(DOY3)
+c           FHOURMIN = INT(HM3)
+            IND = IND3
+            RETURN
          ENDIF
 
          CURCH = IND2

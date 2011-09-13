@@ -286,6 +286,10 @@ C drift in the hygrometer (e.g. dirt). Compensation may be provided by
 C the difference between the mean humidity by a (slow) psychrometer's
 C output and the mean of the humidity estimated by the hygrometer.
 C
+C Note that CorMean is set ec_gene and is only non-zero if DoCrmean flag has been
+C set (which only happens on the second call to calibrat, and is only implemented
+C for hygrometers (and CO2), not necessarily only Kryptons (during BLLAST (2011) we found
+C out that LiCor 7500 can also have short term drift problems.
             DO i=0,NINT(CalHyg(QQOrder))
               c(i) = CalHyg(QQC0+i)
             ENDDO

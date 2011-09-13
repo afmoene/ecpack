@@ -76,6 +76,7 @@ C...........................................................................
      &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  OutMean(NNMax), OutCov(NNMax, NNMax), 
      &  OutStd(NNMax), OutNum(NNMax), OutStr(NNMax, NNMax), 
+     &  OutFrcor(NNMax, NNMax),
      &  OutPh(NMaxPhys), OutTime(NMaxOST), Outputs(NMaxOS)     
       INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
@@ -145,6 +146,7 @@ C Get defaults for configuration
          DO J=1,NNMax
             OutCov(I,J) = .FALSE.
             OutStr(I,J) = .FALSE.
+            OutFrcor(I,J) = .FALSE.
          ENDDO
       ENDDO
       DO I=1,NMaxPhys
@@ -161,7 +163,7 @@ C Get configuration (file names etc.)
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
      &             OutMean, OutCov, OutPh, OutTime, 
-     &             OutStd, OutNum, OutStr,
+     &             OutStd, OutNum, OutStr, OutFrcor,
      &             Outputs, DoCorr, CorrPar, ExpVar, 
      &             DoStruct, DoPrint,
      &             PCorr, PRaw, PCal, PIndep)
@@ -222,9 +224,9 @@ C
      &                StartTime, StopTime,
      &                M, Mok, Mean, TolMean, Cov, TolCov,
      &                QPhys, dQPhys, Std, dStd, Struct,
-     &                dStruct, R, dR, DiagFlag,
+     &                dStruct, R, dR, DiagFlag, FrCor,
      &                OutMean, OutCov, OutPh, OutTime,
-     &                OutStd, OutNum, OutStr, Outputs)
+     &                OutStd, OutNum, OutStr, OutFrcor, Outputs)
       
 C
 C Number of quantities involved in this experiment
@@ -493,9 +495,9 @@ C
      &                StartTime, StopTime,
      &                M, Mok, Mean, TolMean, Cov, TolCov,
      &                QPhys, dQPhys, Std, dStd, Struct,
-     &                dStruct, R, dR, DiagFlag,
+     &                dStruct, R, dR, DiagFlag, FrCor,
      &                OutMean, OutCov, OutPh, OutTime,
-     &                OutStd, OutNum, OutStr, Outputs)
+     &                OutStd, OutNum, OutStr, OutFrcor, Outputs)
 
       IF (DoPrint) CLOSE(OutFile)
 
