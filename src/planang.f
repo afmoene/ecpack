@@ -46,7 +46,7 @@ C...........................................................................
       LOGICAL PRaw,PCal,PIndep,
      &  DoPrint,Flag(NNMAx,MMMax),
      &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr),
-     &  OutMean(NNMax), OutCov(NNMax, NNMax), 
+     &  OutMean(NNMax), OutCov(NNMax, NNMax), OutFrCor(NNMax,NNMax),
      &  OutStd(NNMax), OutNum(NNMax),  OutStr(NNMax, NNMax), 
      &  OutPh(NMaxPhys), OutTime(NMaxOST), Outputs(NMaxOS)  
       INTEGER N,i,j,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
@@ -98,7 +98,7 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
      &             SonName, CoupName, HygName, CO2Name,
      &             NCVarname, NNNMax,
      &             OutMean, OutCov, OutPh, OutTime, 
-     &             OutStd, OutNum, OutStr,
+     &             OutStd, OutNum, OutStr, OutFrcor,
      &             Outputs, DoCorr, CorrPar, ExpVar,
      &             DoStruct, DoPrint,
      &             PCorr, PRaw, PCal, PIndep)

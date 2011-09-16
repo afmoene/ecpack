@@ -1200,7 +1200,7 @@ C
      &                 Phys, dPhys, Std, dStd, Struct,
      &                 dStruct, R, dR,DiagFlag, FrCor,
      &                 OutMean, OutCov, OutPh, OutTime,
-     &                 OutStd, OutNum, OutStr, Outputs)
+     &                 OutStd, OutNum, OutStr, OutFrcor, Outputs)
       IMPLICIT NONE
       include 'parcnst.inc'
 
@@ -1619,7 +1619,7 @@ C Time info
            write(OutUnit, FRM) StopTime(3)
 C Extra time columns
            IF (Outputs(OSCSV)) THEN
-              FRM='(",",G20.8,$)'
+              FRM='(",",G16.8,$)'
            ELSE
               FRM='(" ",G20.8,$)'
            ENDIF
@@ -1668,7 +1668,7 @@ C Number of samples
               ENDDO
            ENDIF
            IF (Outputs(OSCSV)) THEN
-              FRM='(",",G20.5,$)'
+              FRM='(",",G16.8,$)'
            ELSE
               FRM='(" ",G20.5,$)'
            ENDIF
