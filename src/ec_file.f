@@ -581,8 +581,8 @@ C
         IF (NSonCal.gt.0) THEN
           write(*,*) 'ERROR: Son calibration filename set',
      &               ' AND calibration data given in main config'
+          STOP
         ENDIF
-        STOP
 !         write(*,*) 'INFO: Son calibration info will be read from: ',
 !      &             SonName(:EC_T_STRLEN(SonName))
       ELSE IF (NSonCal.gt.0) THEN
@@ -597,8 +597,8 @@ C
         IF (NCoupCal.gt.0) THEN
           write(*,*) 'ERROR: Coup calibration filename set',
      &               ' AND calibration data given in main config'
+          STOP
         ENDIF
-        STOP
 !         write(*,*) 'INFO: Coup calibration info will be read from: ',
 !      &             CoupName(:EC_T_STRLEN(CoupName))
       ELSE IF (NCoupCal.gt.0) THEN
@@ -613,8 +613,8 @@ C
         IF (NHygCal.gt.0) THEN
           write(*,*) 'ERROR: Hyg calibration filename set',
      &               ' AND calibration data given in main config'
+          STOP
         ENDIF
-        STOP
 !         write(*,*) 'INFO: Hyg calibration info will be read from: ',
 !      &             HygName(:EC_T_STRLEN(HygName))
       ELSE IF (NHygCal.gt.0) THEN
@@ -629,8 +629,8 @@ C
         IF (NCO2Cal.gt.0) THEN
           write(*,*) 'ERROR: CO2 calibration filename set',
      &               ' AND calibration data given in main config'
+          STOP
         ENDIF
-        STOP
 !         write(*,*) 'INFO: CO2 calibration info will be read from: ',
 !      &             CO2Name(:EC_T_STRLEN(CO2Name))
       ELSE IF (NCO2Cal.gt.0) THEN
@@ -645,8 +645,8 @@ C
         IF (NPar.gt.0) THEN
           write(*,*) 'ERROR: Parameter filename set',
      &               ' AND parameters values given in main config'
+          STOP
         ENDIF
-        STOP
 !         write(*,*) 'INFO: Parameter values will be read from: ',
 !      &             ParmName(:EC_T_STRLEN(ParmName))
       ELSE IF (NPar.gt.0) THEN

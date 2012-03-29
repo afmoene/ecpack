@@ -43,8 +43,10 @@ C...........................................................................
       PARAMETER (MaxPF = 10000000)
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
      &              ParmName,InterName, PlfName, PlfIntName,
-     &              ConfTok(MConf),ConfVal(MConf)
-      CHARACTER*255 DumName1,DumName2
+     &              ConfTok(MConf),ConfVal(MConf),
+     &              DumName1,DumName2,
+     &              SonName,CoupName,HygName, CO2Name, DUMSTRING,
+     &              NCvarname(NNNMax)
       LOGICAL PRaw,PCal,PIndep,
      &  DoPrint,Flag(NNMAx,MMMax),
      &  DoStruct,BadTc, DoCorr(NMaxCorr), PCorr(NMaxCorr),
@@ -55,7 +57,7 @@ C...........................................................................
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
      &  StartTime(3),StopTime(3),
      &  LStartTime(3),LStopTime(3),
-     &  NConf
+     &  NConf, MaxIter
 
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax), Psychro,
@@ -66,8 +68,6 @@ C...........................................................................
      &  UMean(3, MaxPF), Apf(3,3), ExpVar(NMaxExp),
      &  CorrPar(NMaxCorrPar)
       REAL*8 CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
-      CHARACTER*255 SonName,CoupName,HygName, CO2Name, DUMSTRING
-      CHARACTER*255 NCvarname(NNNMax)
       LOGICAL       HAVE_UNCAL(NNNMax), EndInter, PastStart, BeforeEnd,
      &              SingleRun, DoWBias, LastInter
 
@@ -105,8 +105,8 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
      &             OutStd, OutNum, OutStr, OutFrcor,
      &             Outputs, DoCorr, CorrPar, ExpVar,
      &             DoStruct, DoPrint,
-     &             PCorr, PRaw, PCal, PIndep)
-
+     &             PCorr, PRaw, PCal, PIndep,
+     &             MaxIter )
 C
 C Assume first we have no uncalibrated samples at all
 C
@@ -146,7 +146,11 @@ C
         Offset(i) = 0.D0
       ENDDO
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
-           CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,SonPrefix,CalSonic) ! The sonic
+           IF (SONNAME(1:1).EQ.'-') THEN
+             CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,SonPrefix,CalSonic) ! The sonic
+           else
+             CALL EC_F_ReadAp(Sonname,CalSonic)
+           ENDIF
            IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
@@ -300,11 +304,17 @@ C
 C      
 C Set Number of uncalibrated signals
 C
-           Channels = 3
+! This cant work since calibrate uses fixed channel numbers
+!          Channels = 3
+!
+           Channels = NNNMax
 C      
 C Set Number of calibrated signals
 C
-           N = 3
+! This cant work since calibrate uses fixed channel numbers
+!           N = 3
+!
+           N = NNMax
 C
 C Reset Have_Uncal
 C
@@ -320,7 +330,9 @@ C
 C 
 C Do calibration (per sample)
 C 
-           N = 3
+! Why this ???
+!           N = 3 
+!
            IF (M .GT. 0) THEN
                DO i=1,M
                    CALL Calibrat(RawSampl(1,i),Channels,P,CorMean,

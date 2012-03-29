@@ -90,7 +90,7 @@ C Remove outer quotes
               DO 55, I = LEN(STRING),1,-1
                  IF (STRING(I:I) .EQ. QUOTE(K)) THEN
                      STRING(I:I) = CHAR(0)
-                    DO 65, J = 1,LEN(STRING)
+                    DO 65, J = 1,LEN(STRING)-1
                         STRING(J:J) = STRING(J+1:J+1)
    65               CONTINUE
                  ENDIF
