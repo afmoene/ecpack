@@ -29,6 +29,17 @@ C     include file that defines various parameters (indicating
 C     instruments etc.)
 C     ***
 C
+C Configuration Buffer
+C
+      INTEGER MConf
+      PARAMETER(MConf   = 256)
+      CHARACTER*8 SonPrefix,CoupPrefix,HygPrefix,CO2Prefix,ParPrefix
+      DATA SonPrefix /'SONCAL. '/
+      DATA CoupPrefix /'COUPCAL.'/
+      DATA HygPrefix /'HYGCAL. '/
+      DATA CO2Prefix /'CO2CAL. '/
+      DATA ParPrefix /'PAR.    '/
+C
 C Constants to indicate files
 C
       INTEGER InFile,OutFile,TempFile,DumpFile,FluxFile,DataFile,
@@ -423,6 +434,16 @@ C
       PARAMETER(QQExt9   = 31) ! Additional calibration coefficient
       PARAMETER(QQExt10  = 32) ! Additional calibration coefficient
       PARAMETER(QQExt11  = 33) ! Additional calibration coefficient
+
+      CHARACTER*8 NameQQ(NQQ)
+      DATA NameQQ /'QQType','QQIdent','QQGain','QQOffset',
+     &             'QQX','QQY','QQZ','QQC0','QQC1',
+     &             'QQC2','QQC3','QQC4','QQC5','QQC6',
+     &             'QQYaw','QQPitch','QQRoll','QQOrder','QQFunc',
+     &             'QQPath','QQTime','QQDelay',
+     &             'QQExt1','QQExt2','QQExt3','QQExt4','QQExt5',
+     &             'QQExt6',' QQExt7',' QQExt8',' QQExt9',
+     &             'QQExt10','QQExt11' /
 
       REAL*8 DUMMY
       PARAMETER(DUMMY = -9999D0)

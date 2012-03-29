@@ -21,6 +21,160 @@ C  along with this program; if not, write to the Free Software
 C  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 C 
 
+C     ****f* ec_file.f/EC_F_Conf2Buf
+C SYNOPSIS
+C     CALL EC_F_Conf2Buf(ConfUnit,NCOnf,ConfTok,ConfVal)
+C INPUTS
+C     ConfUnit : [INTEGER]
+C               file unit
+C OUTPUT
+C     NConf    : [INTEGER]
+C                number of configration statements
+C     ConfTok  : [CHARACTER*(*)]
+C                Configuration tokens
+C     ConfVal  : [CHARACTER*(*)]
+C                Configuration value strings
+C FUNCTION
+C     Routine to read configutaion into buffer array
+C AUTHOR
+C     Clemens Druee
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     C_T_CLEARSTR
+C     EC_T_STRCAT
+C     EC_T_STRLEN
+C     EC_T_STRIPSTR
+C     EC_T_UPCASE
+C     parcnst.inc
+C     ***
+      SUBROUTINE EC_F_Conf2Buf(ConfUnit,NConf,ConfTok,ConfVal)
+C
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+C
+      INTEGER         ConfUnit
+      INTEGER         NConf
+      CHARACTER*(*)   ConfTok(MConf),ConfVal(MConf)
+C
+      INTEGER         MINC,IINC
+      PARAMETER       (MINC=2)
+      INTEGER         I,KINDEX,IOSTAT
+      INTEGER         IncUnit(MINC)
+      INTEGER         EC_T_STRLEN
+      EXTERNAL        EC_T_STRLEN
+      CHARACTER*1024  Line
+      CHARACTER*255   TOKLINE, VALLINE, DUMSTRING
+      CHARACTER*255   ParmDir
+      CHARACTER*255   IncFile(MINC)
+      CHARACTER*1     CmtChar
+      DATA            CmtChar /'#'/
+C
+C     Clear arrays
+      DO I = 1,MConf
+        CALL EC_T_CLEARSTR(ConfTok(I))
+        CALL EC_T_CLEARSTR(ConfVal(I))
+      ENDDO
+      NConf=0
+      DO I = 1,MINC
+        IncUnit(I)=0
+        CALL EC_T_CLEARSTR(IncFile(I))
+      ENDDO
+      IINC=1
+      IncUnit(1)=ConfUnit
+      IncFile(1)='-'
+C
+C     Read the data
+      DO WHILE (IINC.GT.0)
+C      After reading the main config process included files
+       IF (IINC.GT.1) THEN
+         IOSTAT=0
+         CALL EC_T_CLEARSTR(DUMSTRING)
+         IF (EC_T_STRLEN(ParmDir) .GT. 0) THEN
+           DUMSTRING = ParmDir
+           CALL EC_T_STRCAT(DUMSTRING,'/')
+           CALL EC_T_STRCAT(DUMSTRING,IncFile(IINC))
+         ENDIF
+         OPEN(IncUnit(IINC),FILE=DUMSTRING, STATUS='old', IOSTAT=IOSTAT)
+         IF (IOSTAT .NE. 0) THEN
+           WRITE(*,*) 'ERROR: include file not found ',trim(DUMSTRING)
+           STOP
+         ELSE 
+           WRITE(*,*) 'INFO: reading include file ',trim(DUMSTRING)
+         ENDIF
+       ENDIF
+C
+C      Process the input
+       IOSTAT=0
+       DO WHILE (IOSTAT.EQ.0)
+        READ (IncUnit(IINC),'(A)',IOSTAT=IOSTAT) Line
+        IF (IOSTAT.EQ.0) THEN
+C
+C         Strip Comments
+          KINDEX=INDEX(Line,CmtChar)
+          IF (KINDEX.GT.1) THEN
+            LINE=LINE(:KINDEX-1)
+          ELSEIF (KINDEX.EQ.1) THEN
+            CALL EC_T_CLEARSTR(Line)
+          ENDIF
+C         Strip old-sytle main-config comments
+          KINDEX=INDEX(Line,'//')
+          IF (KINDEX.GT.1) THEN
+            LINE=LINE(:KINDEX-1)
+          ELSEIF (KINDEX.EQ.1) THEN
+            CALL EC_T_CLEARSTR(Line)
+          ENDIF
+C
+C         Only process non-empty lines
+          IF (EC_T_STRLEN(Line).GT.0) THEN
+C         Find the equality sign
+!             print *,'>',trim(line),'<'
+            KINDEX = INDEX(Line, '=')
+            IF (KINDEX .EQ. 0) THEN
+                WRITE(*,*) 'WARNING: no equality sign found in ', Line
+                WRITE(*,*) 'assuming an empty line'
+            ELSE
+C              Split into token and value
+               TOKLINE=LINE(:KINDEX-1)
+               VALLINE=LINE(KINDEX+1:)
+               CALL EC_T_STRIPSTR(TOKLINE)
+               CALL EC_T_STRIPSTR(VALLINE)
+               CALL EC_T_UPCASE(TOKLINE)
+C              Put into Buffer
+               NConf=NConf+1
+               ConfTok(NConf)=TOKLINE(:EC_T_STRLEN(TOKLINE))
+               ConfVal(NConf)=VALLINE(:EC_T_STRLEN(VALLINE))
+               WRITE (*,*) trim(ConfTok(NConf)),' = '
+     &                    ,trim(ConfVal(NConf))
+     &                    ,IINC
+C              Remember includes and where the are stored
+               IF (INDEX(TOKLINE, 'PARMDIR') .GT. 0) THEN
+                 ParmDir = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+               ELSE IF (INDEX(TOKLINE, 'INCLUDE') .GT. 0) THEN
+                 IF (IINC.GE.2) THEN 
+                   WRITE (*,*) 'ERROR: includes not allowed ',
+     &                         'in included files:',trim(IncFile(IINC))
+                   STOP
+                 ELSE
+                   IINC=IINC+1
+                   IncFile(IINC) = VALLINE(:INDEX(VALLINE, CHAR(0))-1)
+                   IncUnit(IINC) = TempFile
+!                    WRITE (*,*) 'INFO: including :',trim(IncFile(IINC))
+                   EXIT
+                 ENDIF
+               ENDIF
+            ENDIF
+          ENDIF
+        ELSE
+          CLOSE(IncUnit(IINC))
+          WRITE (*,*) 'INFO: end of include :',trim(IncFile(IINC))
+          IINC=IINC-1
+        ENDIF
+       ENDDO
+      ENDDO
+C
+      END
 
 C     ****f* ec_file.f/EC_F_GetConf
 C NAME
@@ -36,10 +190,12 @@ C               OutFrcor,
 C               Outputs, DoCorr, CorrPars, ExpVar, DoStruct, DoPrint,
 C               PCorr, PRaw, PCal, PIndep)
 C INPUTS
-C     ConfUnit : [INTEGER]
-C               file unit
-C     NCNameLen: [INTEGER]
-C                Length of array NCVarName
+C     NConf    : [INTEGER]
+C                number of configration statements
+C     ConfTok  : [CHARACTER*(*)]
+C                Configuration tokens
+C     ConfVal  : [CHARACTER*(*)]
+C                Configuration value strings
 C OUTPUT
 C     DatDir   : [CHARACTER*(*)]
 C                Directory with data files
@@ -112,7 +268,7 @@ C                number of independent samples
 C FUNCTION
 C     Routine to read info with respect to input and output files
 C AUTHOR
-C     Arnold Moene
+C     Arnold Moene, Clemens Druee
 C HISTORY
 C     $Name$ 
 C     $Id$
@@ -130,7 +286,7 @@ C     EC_T_GCorrPars
 C     parcnst.inc
 C     ***
 
-      SUBROUTINE EC_F_GetConf(ConfUnit,
+      SUBROUTINE EC_F_GetConf(NConf,ConfTok,ConfVal,
      &           DatDir, OutDir,  ParmDir,
      &           FluxName, ParmName, InterName, PlfIntName,
      &           PlfName, SonName, CoupName, HygName, CO2Name,
@@ -144,12 +300,15 @@ C     ***
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
-      
-      
+
+      INTEGER         NConf
+      CHARACTER*(*)   ConfTok(MConf),ConfVal(MConf)
       LOGICAL         DoPrint,PRaw,PCal,PIndep,
      &                 DoStruct, PCorr(NMaxCorr)
 c     CHARACTER*(*)   InName
+      INTEGER         IConf
       INTEGER         ConfUnit, NCNameLen, I, J
+      INTEGER         NSonCal,NCoupCal,NHygCal,NCO2Cal,NPar
       CHARACTER*(*)   DatDir, OutDir, ParmDir, FluxName, ParmName,
      &                InterName, SonName, CoupName, HygName, 
      &                CO2Name, PlfName, PlfIntName
@@ -186,30 +345,22 @@ C
       CALL EC_T_CLEARSTR(HygName)
       CALL EC_T_CLEARSTR(CO2Name)
       CorrPars(QCPBlock) = 1
-
-
-
-      IOCODE = 0
-      DO 4000, WHILE (IOCODE .EQ. 0)
+      NSonCal=0
+      NCoupCal=0
+      NHygCal=0
+      NCO2Cal=0
+      NPar=0
+C
+C Default values for planar fit settings
+C
+      DoCorr(QCPF) = .FALSE.
+      PCorr(QCPF) = .FALSE.
+      ExpVar(QEPFValid) = 1.0D0
+C
+      DO IConf = 1,NConf
 C     Read one line from configuration file
-         READ(Confunit,'(A)', IOSTAT=IOCODE, END=9000) LINE
-         IF (IOCODE .NE. 0) THEN
-            WRITE(*,*) 'ERROR in reading of configuration file'
-            STOP
-         ENDIF
-         CALL EC_T_STRIPSTR(LINE)
-C     Check for comment (should start with //
-         KINDEX = INDEX(LINE, '//')
-         IF (KINDEX .EQ. 0) THEN
-C     Find the equality sign
-            KINDEX = INDEX(LINE, '=')
-            IF (KINDEX .EQ. 0) THEN
-                WRITE(*,*) 'WARNING: no equality sign found in ', LINE
-                WRITE(*,*) 'assuming an empty line'
-            ENDIF
-c     Split into token and value
-            WRITE(TOKLINE,*) LINE(:KINDEX-1)
-            WRITE(VALLINE,*) LINE(KINDEX+1:)
+            TOKLINE=ConfTok(IConf)
+            VALLINE=ConfVal(IConf)
             CALL EC_T_STRIPSTR(TOKLINE)
             CALL EC_T_STRIPSTR(VALLINE)
             CALL EC_T_UPCASE(TOKLINE)
@@ -309,13 +460,27 @@ C Output definitions
             ELSE IF (INDEX(TOKLINE, 'OUTPUT') .GT. 0) THEN
                CALL EC_T_GOutS(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            Outputs)
-            ELSE 
+C Ignore Calibration info prefixed by ...
+            ELSE IF (INDEX(TOKLINE,
+     &               SonPrefix(:EC_T_STRLEN(SonPrefix))) .GT. 0) THEN
+              NSonCal=NSonCal+1
+            ELSE IF (INDEX(TOKLINE,
+     &               CoupPrefix(:EC_T_STRLEN(CoupPrefix))) .GT. 0) THEN
+              NCoupCal=NCoupCal+1
+            ELSE IF (INDEX(TOKLINE,
+     &               HygPrefix(:EC_T_STRLEN(HygPrefix))) .GT. 0) THEN
+              NHygCal=NHygCal+1
+            ELSE IF (INDEX(TOKLINE,
+     &               CO2Prefix(:EC_T_STRLEN(CO2Prefix))) .GT. 0) THEN
+              NCO2Cal=NCO2Cal+1
+            ELSE IF (INDEX(TOKLINE,
+     &               ParPrefix(:EC_T_STRLEN(ParPrefix))) .GT. 0) THEN
+              NPar=NPar+1
+            ELSE
                write(*,*) 'WARNING: unknown token: ', 
      &                    TOKLINE(:INDEX(TOKLINE, CHAR(0))-1)
             ENDIF
-         ENDIF
- 4000 CONTINUE
- 9000 CONTINUE
+      ENDDO
 
       CALL EC_T_CLEARSTR(DUMSTRING)
       IF (EC_T_STRLEN(PlfName) .GT. 0) THEN
@@ -407,18 +572,321 @@ C
          OutStr(TSonic,Spechum) = .TRUE. 
       ENDIF
 
-C 
-C Now call EC_F_Params
 C
-      CALL EC_F_Params(ParmName, ExpVar,
-     &    DoCorr, PCorr,
-     &    DoStruct, DoPrint,
-     &    PRaw,PCal,PIndep)
-
+C Do we have either an (old-style) calibration-file name 
+C or sufficient calibration Info lines ?
+C
+      IF (EC_T_STRLEN(SonName) .GT. 0) THEN
+        IF (NSonCal.gt.0) THEN
+          write(*,*) 'ERROR: Son calibration filename set',
+     &               ' AND calibration data given in main config'
+        ENDIF
+        STOP
+!         write(*,*) 'INFO: Son calibration info will be read from: ',
+!      &             SonName(:EC_T_STRLEN(SonName))
+      ELSE IF (NSonCal.gt.0) THEN
+        write(*,*) 'INFO: Son calibration info lines read: ',
+     &             NSonCal
+        SonNAME="-"
+      ELSE
+        write(*,*) 'WARNING: Son calibration info not supplied.'
+      ENDIF
+C
+      IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
+        IF (NCoupCal.gt.0) THEN
+          write(*,*) 'ERROR: Coup calibration filename set',
+     &               ' AND calibration data given in main config'
+        ENDIF
+        STOP
+!         write(*,*) 'INFO: Coup calibration info will be read from: ',
+!      &             CoupName(:EC_T_STRLEN(CoupName))
+      ELSE IF (NCoupCal.gt.0) THEN
+        write(*,*) 'INFO: Coup calibration info lines read: ',
+     &             NCoupCal
+        CoupNAME="-"
+      ELSE
+        write(*,*) 'WARNING: Coup calibration info not supplied.'
+      ENDIF
+C
+      IF (EC_T_STRLEN(HygName) .GT. 0) THEN
+        IF (NHygCal.gt.0) THEN
+          write(*,*) 'ERROR: Hyg calibration filename set',
+     &               ' AND calibration data given in main config'
+        ENDIF
+        STOP
+!         write(*,*) 'INFO: Hyg calibration info will be read from: ',
+!      &             HygName(:EC_T_STRLEN(HygName))
+      ELSE IF (NHygCal.gt.0) THEN
+        write(*,*) 'INFO: Hyg calibration info lines read: ',
+     &             NHygCal
+        HygNAME="-"
+      ELSE
+        write(*,*) 'WARNING: Hyg calibration info not supplied.'
+      ENDIF
+C
+      IF (EC_T_STRLEN(CO2Name) .GT. 0) THEN
+        IF (NCO2Cal.gt.0) THEN
+          write(*,*) 'ERROR: CO2 calibration filename set',
+     &               ' AND calibration data given in main config'
+        ENDIF
+        STOP
+!         write(*,*) 'INFO: CO2 calibration info will be read from: ',
+!      &             CO2Name(:EC_T_STRLEN(CO2Name))
+      ELSE IF (NCO2Cal.gt.0) THEN
+        write(*,*) 'INFO: CO2 calibration info lines read: ',
+     &             NCO2Cal
+        CO2NAME="-"
+      ELSE
+        write(*,*) 'WARNING: CO2 calibration info not supplied.'
+      ENDIF
+C
+      IF (EC_T_STRLEN(ParmName) .GT. 0) THEN
+        IF (NPar.gt.0) THEN
+          write(*,*) 'ERROR: Parameter filename set',
+     &               ' AND parameters values given in main config'
+        ENDIF
+        STOP
+!         write(*,*) 'INFO: Parameter values will be read from: ',
+!      &             ParmName(:EC_T_STRLEN(ParmName))
+      ELSE IF (NPar.gt.0) THEN
+        write(*,*) 'INFO: Parameter values read: ',
+     &             NPar
+        ParmName='-'
+      ELSE
+        write(*,*) 'WARNING: Parameter values read not supplied.'
+      ENDIF
+C
+      IF (ParmName.EQ.'-') THEN
+C     If Parmameter values main config call EC_F_ParBuf
+        CALL EC_F_ParBuf(NConf,ConfTok,ConfVal,
+     &      ExpVar,
+     &      DoCorr, PCorr,
+     &      DoStruct, DoPrint,
+     &      PRaw,PCal,PIndep)
+      ELSE
+C     If ParmFile is given now call EC_F_Params
+        CALL EC_F_Params(ParmName, ExpVar,
+     &      DoCorr, PCorr,
+     &      DoStruct, DoPrint,
+     &      PRaw,PCal,PIndep)
+      ENDIF
       END
 
 
+C     ****f* ec_file.f/EC_F_ParBuf
+C NAME
+C     EC_F_ParBuf
+C SYNOPSIS
+C     CALL EC_F_ParBuf(NConf,ConfTok,ConfVar,
+C             ExpVar,
+C             DoCorr, PCorr,
+C             DoStruct, DoPrint,
+C             PRaw,PCal,PIndep)
+C INPUTS
+C     InName   : [CHARACTER*(*)]
+C                Name of parameter file
+C OUTPUT
+C     ExpVar   : [REAL*8](NMaxExp)
+C                array with Experimental settings
+C     DoCorr   : [LOGICAL](NMaxCorr)
+C                Switch for corrections
+C     PCorr    : [LOGICAL](NMaxCorr)
+C                Switch for printing intermediate results after
+C                corrections
+C     DoStruct : [LOGICAL]
+C                compute structure parameters
+C     DoPrint  : [LOGICAL]
+C                print any output
+C     PRaw     : [LOGICAL]
+C                write intermediate results with respect to
+C                raw data
+C     PCal     : [LOGICAL]
+C                write intermediate results with respect to
+C                calibrated data
+C     PIndep     : [LOGICAL]
+C                write intermediate results with respect to
+C                number of independent samples
+C FUNCTION
+C     Routine to get info from config buffer,
+C     with respect to corrections and writing
+C     of intermediate results
+C AUTHOR
+C     Clemens Druee
+C HISTORY
+C     $Name$ 
+C     $Id$
+C USES
+C     EC_T_StripSTR
+C     EC_T_UpCase
+C     EC_T_STRLEN
+C     parcnst.inc
+C     physcnst.inc
+C     ***
+      SUBROUTINE EC_F_ParBuf(NConf,ConfTok,ConfVal,
+     &    ExpVar,
+     &    DoCorr, PCorr,
+     &    DoStruct, DoPrint,
+     &    PRaw,PCal,PIndep)
+      IMPLICIT NONE
+      INCLUDE 'physcnst.inc'
+      INCLUDE 'parcnst.inc'
 
+      INTEGER         NConf
+      CHARACTER*(*)   ConfTok(MConf),ConfVal(MConf)
+      REAL*8 ExpVar(NMaxExp)
+      LOGICAL 
+     &    DoPrint,PRaw,PCal,PIndep,
+     &    DoStruct, DoCorr(NMaxCorr), PCorr(NMaxCorr)
+C
+      INTEGER ICONF
+      INTEGER EC_T_STRLEN
+      EXTERNAL EC_T_STRLEN
+      CHARACTER*255   TOKLINE, VALLINE, DUMSTRING
+C
+      DO ICONF=1,NConf
+C       Get one configuration value
+        TOKLINE=ConfTok(IConf)
+        VALLINE=ConfVal(IConf)
+        CALL EC_T_STRIPSTR(TOKLINE)
+!         CALL EC_T_STRIPSTR(VALLINE)
+        CALL EC_T_UPCASE(TOKLINE)
+        IF (INDEX(TOKLINE, 'PAR.') .EQ. 1) THEN
+         IF (EC_T_STRLEN(TOKLINE) .LT. 6) THEN
+           WRITE (*,*) 'ERROR: wrong syntax in token ',TOKLINE
+         ELSE
+          TOKLINE=TOKLINE(5:EC_T_STRLEN(TOKLINE))
+          CALL EC_T_STRIPSTR(TOKLINE)
+C
+C         Find values
+C
+!           print *,trim(tokline),'<->',trim(valline)
+C
+C         Tunable parametersz
+            IF (INDEX(TOKLINE, 'PITCHLIM') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEPitchLim)      
+              ! [degree] Limit when Mean(W) is turned to zero
+            ELSE IF (INDEX(TOKLINE, 'ROLLLIM') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QERollLim)      
+              ! [degree] Limit when Cov(V,W) is turned to zero
+            ELSE IF (INDEX(TOKLINE, 'PREYAW') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEPreYaw)   
+              ! Fixed yaw angle for known tilt-correction
+            ELSE IF (INDEX(TOKLINE, 'PREPITCH') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEPrePitch)      
+              ! Fixed pitch angle for known tilt-correction
+            ELSE IF (INDEX(TOKLINE, 'PREROLL') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEPreRoll)      
+              ! Fixed roll angle for known tilt-correction
+            ELSE IF (INDEX(TOKLINE, 'LLIMIT') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QELLimit)      
+              ! Smallest acceptable frequency-response correction factor
+            ELSE IF (INDEX(TOKLINE, 'ULIMIT') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEULimit)      
+              ! Largest acceptable frequency-response correction factor
+            ELSE IF (INDEX(TOKLINE, 'STRUCTSEP') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEStructSep)
+              ! Separation (meter) for which to calculate structure parameter
+            ELSE IF (INDEX(TOKLINE, 'PFVALID') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEPFValid)
+              ! Minimum part (<= 1) of samples that should be valid to incorporate interval in angle PF calculation
+C
+C         Correction switches
+            ELSE IF (INDEX(TOKLINE, 'DOCRMEAN') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCMean)     
+              ! Replace mean quantities by better estimates
+            ELSE IF (INDEX(TOKLINE, 'DODETREND') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCDetrend)  
+              ! Correct data for linear trend
+            ELSE IF (INDEX(TOKLINE, 'DOSONIC') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCSonic)      
+              ! Correct sonic temperature for humidity
+            ELSE IF (INDEX(TOKLINE, 'DOTILT') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCTilt)      
+              ! Perform true tilt-correction with known angles
+            ELSE IF (INDEX(TOKLINE, 'DOYAW') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCYaw)      
+              ! Turn system such that Mean(V) --> 0
+            ELSE IF (INDEX(TOKLINE, 'DOPITCH') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCPitch)      
+              ! Turn system such that Mean(W) --> 0
+            ELSE IF (INDEX(TOKLINE, 'DOROLL') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCRoll)      
+              ! Turn System such that Cov(W,V) --> 0
+            ELSE IF (INDEX(TOKLINE, 'DOFREQ') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCFreq)      
+              ! Correct for poor frequency response
+            ELSE IF (INDEX(TOKLINE, 'DOO2') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCO2)      
+              ! Correct hygrometer for oxygen-sensitivity
+            ELSE IF (INDEX(TOKLINE, 'DOWEBB') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCWebb)      
+              ! Calculate mean velocity according to Webb
+            ELSE IF (INDEX(TOKLINE, 'DOPF') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCPF) 
+              ! Do Planar fit ?
+C
+C         Switches controlling structure parameter calculation
+            ELSE IF (INDEX(TOKLINE, 'DOSTRUCT') .GT. 0) THEN
+              READ(VALLINE,*) DoStruct      
+              ! Calculate structure parameters
+            ELSE IF (INDEX(TOKLINE, 'DOPRINT') .GT. 0) THEN
+              READ(VALLINE,*) DoPrint      
+C
+C         Switches for intermediate information printing
+              ! Skip printing intermediate results or not?
+            ELSE IF (INDEX(TOKLINE, 'PRAW') .GT. 0) THEN
+              READ(VALLINE,*) PRaw      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PCAL') .GT. 0) THEN
+              READ(VALLINE,*) PCal      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PDETREND') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCDetrend)   
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PINDEP') .GT. 0) THEN
+              READ(VALLINE,*) PIndep      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PTILT') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCTilt)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PYAW') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCYaw)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PPITCH') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCPitch)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PROLL') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCRoll)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PSONIC') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCSonic)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PO2') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCO2)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PFREQ') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCFreq)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PWEBB') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCWebb)      
+              ! Indicator if these intermediate results are wanted
+            ELSE IF (INDEX(TOKLINE, 'PPF') .GT. 0) THEN
+              READ(VALLINE,*) PCorr(QCPF) 
+              ! Print planar fit intermediate results ?
+C         General
+            ELSE IF (INDEX(TOKLINE, 'FREQ') .GT. 0) THEN
+              READ(VALLINE,*) ExpVar(QEFreq)
+              ! [Hz] Sample frequency datalogger
+c         Nothing
+            ELSE
+              WRITE (*,*) 'ERROR: unkown processing parameter: ',
+     &                     TOKLINE(:EC_T_STRLEN(TOKLINE))
+              STOP 'Check configuration'
+            ENDIF
+         ENDIF
+        ENDIF
+      ENDDO
+      END
 
 
 C     ****f* ec_file.f/EC_F_Params
@@ -488,12 +956,12 @@ C
          WRITE(*,*) 'ERROR: could not open parameter file ', InName
          STOP
       ENDIF
-C
-C Default values for planar fit settings
-C
-      DoCorr(QCPF) = .FALSE.
-      PCorr(QCPF) = .FALSE.
-      ExpVar(QEPFValid) = 1.0D0
+CC
+CC Default values for planar fit settings
+CC
+C      DoCorr(QCPF) = .FALSE.
+C      PCorr(QCPF) = .FALSE.
+C      ExpVar(QEPFValid) = 1.0D0
       READ(TempFile,*) ExpVar(QEFreq)      ! [Hz] Sample frequency datalogger
       READ(TempFile,*)
       READ(TempFile,*) ExpVar(QEPitchLim)      ! [degree] Limit when Mean(W) is turned to zero
@@ -561,7 +1029,98 @@ C
 C ########################################################################
 C
 
+      SUBROUTINE EC_F_Buf2Ap(NConf,ConfTok,ConfVal,Prefix,CalSpec)
+C
+C Read specifications of an apparatus Configuration buffer
+C
+      IMPLICIT NONE
+      INCLUDE 'physcnst.inc'
+      INCLUDE 'parcnst.inc'
+C
+      INTEGER         NConf
+      CHARACTER*(*)   ConfTok(MConf),ConfVal(MConf),Prefix
+      REAL*8 CalSpec(NQQ)
+C
+      INTEGER I,ICONF
+      INTEGER EC_T_STRLEN
+      EXTERNAL EC_T_STRLEN
+      INTEGER SPECS_READ
+      CHARACTER*255   TOKLINE, VALLINE, DUMSTRING
 
+      DO I = 1,NQQ
+        CalSpec(I)=DUMMY
+      ENDDO
+
+C First get the type of apparatus
+      CalSpec(QQType)=-1
+      DO ICONF = 1,NConf
+        TOKLINE=ConfTok(ICONF)
+        VALLINE=ConfVal(ICONF)
+        CALL EC_T_STRIPSTR(TOKLINE)
+!         CALL EC_T_STRIPSTR(VALLINE)
+        CALL EC_T_UPCASE(TOKLINE)
+        IF (INDEX(TOKLINE, Prefix(:EC_T_STRLEN(Prefix))) .GT. 0) THEN
+          IF (EC_T_STRLEN(TOKLINE).GT.EC_T_STRLEN(Prefix)) THEN
+            TOKLINE=TOKLINE(EC_T_STRLEN(Prefix)+1:EC_T_STRLEN(TOKLINE))
+            DUMSTRING=NameQQ(QQType)
+            CALL EC_T_STRIPSTR(TOKLINE)
+            CALL EC_T_STRIPSTR(DUMSTRING)
+            CALL EC_T_UPCASE(DUMSTRING)
+            IF (TOKLINE .eq. DUMSTRING) THEN
+              READ(VALLINE,*) CalSpec(QQType)
+            ENDIF
+          ENDIF
+        ENDIF
+      ENDDO
+
+C Now read the correct number of specs
+      IF (CalSpec(QQType).GT.0) THEN
+       SPECS_READ=1
+       DO ICONF = 1,NConf
+        TOKLINE=ConfTok(ICONF)
+        VALLINE=ConfVal(ICONF)
+        CALL EC_T_STRIPSTR(TOKLINE)
+!         CALL EC_T_STRIPSTR(VALLINE)
+        CALL EC_T_UPCASE(TOKLINE)
+        IF (INDEX(TOKLINE, Prefix(:EC_T_STRLEN(Prefix))) .GT. 0) THEN
+          IF (EC_T_STRLEN(TOKLINE).GT.EC_T_STRLEN(Prefix)) THEN
+            TOKLINE=TOKLINE(EC_T_STRLEN(Prefix)+1:EC_T_STRLEN(TOKLINE))
+            CALL EC_T_STRIPSTR(TOKLINE)
+            DO I=2,ApNQQ(INT(CalSpec(QQType)))
+              DUMSTRING=NameQQ(I)
+              CALL EC_T_STRIPSTR(DUMSTRING)
+              CALL EC_T_UPCASE(DUMSTRING)
+              IF (TOKLINE .eq. DUMSTRING) THEN
+                IF (CalSpec(I) .NE. DUMMY) THEN
+                  WRITE(*,*) 'WARNING: multiple specs given for ',
+     &                       Prefix(:EC_T_STRLEN(Prefix))//
+     &                       TOKLINE(:EC_T_STRLEN(TOKLINE))
+                ELSE
+                  SPECS_READ=SPECS_READ+1
+                ENDIF
+                READ(VALLINE,*) CalSpec(I)
+              ENDIF
+            ENDDO
+          ENDIF
+        ENDIF
+       ENDDO
+       DO I=1,ApNQQ(INT(CalSpec(QQType)))
+         IF (CalSpec(I).EQ.DUMMY) THEN
+           WRITE(*,*) 'ERROR: no value for ',
+     &                'calibration spec ',trim(NameQQ(I)),
+     &                'of sensor group ',Prefix
+           STOP 'Check calibration information'
+         ENDIF
+       ENDDO
+       IF (SPECS_READ .GT. ApNQQ(INT(CalSpec(1)))) THEN
+         WRITE(*,*) 'WARNING: did read more specs than needed',
+     &              'for group ',Prefix
+       ENDIF
+      ELSE
+       WRITE(*,*) 'ERROR: No type defined for calibration group',Prefix
+       STOP 'Check calibration information'
+      ENDIF
+      END
 
 
 

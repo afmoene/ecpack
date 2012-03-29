@@ -67,7 +67,8 @@ C...........................................................................
      &              ParmName,InterName, PlfName, PlfIntName,
      &              OutName,DumName1,DumName2,
      &              SonName,CoupName,HygName, CO2Name, DUMSTRING,
-     &              NCvarname(NNNMax)
+     &              NCvarname(NNNMax),
+     &              ConfTok(MConf),ConfVal(MConf)
       LOGICAL PRaw, PCal,PIndep,
      &  DoPrint,Flag(NNMAx,MMMax),
      &  DoStruct,BadTc,
@@ -81,7 +82,8 @@ C...........................................................................
       INTEGER N,i,J,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
      &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3),
-     &  DiagFlag(NMaxDiag)
+     &  DiagFlag(NMaxDiag),
+     &  NConf
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),
      &  Mins(NNMax),Maxs(NNMax),
@@ -155,8 +157,56 @@ C Get defaults for configuration
       DO I=1,NMaxOST
          OutTime(I) = .FALSE.
       ENDDO
-C Get configuration (file names etc.)
-      CALL EC_F_GetConf(ECConfFile,
+C Default parameter values
+C     General
+      ExpVar(QEFreq)=20.      ! [Hz] Sample frequency datalogger
+C
+      ExpVar(QEPitchLim)=30.  ! [degree] Limit when Mean(W) is turned to zero
+      ExpVar(QERollLim)=30.   ! [degree] Limit when Cov(V,W) is turned to zero
+C
+      ExpVar(QEPreYaw)=0.     ! Fixed yaw angle for known tilt-correction
+      ExpVar(QEPrePitch)=0.   ! Fixed pitch angle for known tilt-correction
+      ExpVar(QEPreRoll)=0.    ! Fixed roll angle for known tilt-correction
+C
+      ExpVar(QELLimit)=0.85   ! Smallest acceptable frequency-response correction factor
+      ExpVar(QEULimit)=1.15   ! Largest acceptable frequency-response correction factor
+C
+      DoCorr(QCMean)=.true.   ! Replace mean quantities by better estimates
+      DoCorr(QCDetrend)=.true.! Correct data for linear trend
+      DoCorr(QCSonic)=.true.  ! Correct sonic temperature for humidity
+      DoCorr(QCTilt)=.false.  ! Perform true tilt-correction with known angles
+      DoCorr(QCYaw)=.true.    ! Turn system such that Mean(V) --> 0
+      DoCorr(QCPitch)=.true.  ! Turn system such that Mean(W) --> 0
+      DoCorr(QCRoll)=.true.   ! Turn System such that Cov(W,V) --> 0
+      DoCorr(QCFreq)=.true.   ! Correct for poor frequency response
+      DoCorr(QCO2)=.true.     ! Correct hygrometer for oxygen-sensitivity
+      DoCorr(QCWebb)=.true.   ! Calculate mean velocity according to Webb
+      DoStruct=.true.         ! Calculate structure parameters
+C
+      DoPrint=.false.         ! Skip printing intermediate results or not?
+      PRaw=.true.             ! Indicator if these intermediate results are wanted
+      PCal=.true.             ! Indicator if these intermediate results are wanted
+      PCorr(QCDetrend)=.true. ! Indicator if these intermediate results are wanted
+      PIndep=.true.           ! Indicator if these intermediate results are wanted
+      PCorr(QCTilt)=.true.    ! Indicator if these intermediate results are wanted
+      PCorr(QCYaw)=.true.     ! Indicator if these intermediate results are wanted
+      PCorr(QCPitch)=.true.   ! Indicator if these intermediate results are wanted
+      PCorr(QCRoll)=.true.    ! Indicator if these intermediate results are wanted
+      PCorr(QCSonic)=.true.   ! Indicator if these intermediate results are wanted
+      PCorr(QCO2)=.true.      ! Indicator if these intermediate results are wanted
+      PCorr(QCFreq)=.true.    ! Indicator if these intermediate results are wanted
+      PCorr(QCWebb)=.true.    ! Indicator if these intermediate results are wanted
+C
+      ExpVar(QEStructSep)=0.15! Separation (meter) for which to calculate structure parameter
+      DoCorr(QCPF)=.true.     ! Do Planar fit ?
+      PCorr(QCPF)=.true.      ! Print planar fit intermediate results ?
+      ExpVar(QEPFValid)=0.99  ! Minimum part (<= 1) of samples that should be valid to incorporate interval in angle PF calculation
+C
+C Put main configuration into Buffer
+      CALL EC_F_Conf2Buf(ECConfFile,NConf,ConfTok,ConfVal)
+
+C Read configuration from Buffer
+      CALL EC_F_GetConf(NConf,ConfTok,ConfVal,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName, PlfIntName,
      &             PlfName,
@@ -241,42 +291,58 @@ C
         Offset(i) = 0.D0
       ENDDO
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
+         IF (SonName.EQ.'-') THEN
+           CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,SonPrefix,CalSonic)
+         ELSE
            CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
+         ENDIF
            IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR61)  .AND.
      &         (CalSonic(QQType) .NE. ApGillSolent) .AND.
      &         (CalSonic(QQType) .NE. ApGenericSonic)) THEN
-               WRITE(*,*) 'ERROR: Calibration file ',SonName,
-     &                    'does not contain sonic info'
-               STOP 'Rewrite your calibration file'
+               WRITE(*,*) 'ERROR: Unknown type ',CalSonic(QQType)
+               WRITE(*,*) '       in ',SonName
+               STOP 'Check sonic calibration information'
            ENDIF
       ENDIF
       IF (EC_T_STRLEN(CoupName) .GT. 0) THEN
+         IF (CoupName.EQ.'-') THEN
+           CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,CoupPrefix,CalTherm)
+         ELSE
            CALL EC_F_ReadAp(CoupName,CalTherm) ! A thermo-couple
+         ENDIF
            IF (CalTherm(QQType) .NE. ApTCouple) THEN
-               WRITE(*,*) 'ERROR: Calibration file ', CoupName,
-     &                    'does not contain thermocouple info'
-               STOP 'Rewrite your calibration file'
+               WRITE(*,*) 'ERROR: Unknown type ',CalTherm(QQType)
+               WRITE(*,*) '       in ',CoupName
+               STOP 'Check thermometer calibration information'
            ENDIF
       ENDIF
       IF (EC_T_STRLEN(HygName) .GT. 0) THEN
+         IF (HygName.EQ.'-') THEN
+           CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,HygPrefix,CalHyg)
+         ELSE
            CALL EC_F_ReadAp(HygName,CalHyg) ! A hygrometer
+         ENDIF
            IF ((CalHyg(QQType) .NE. ApCampKrypton) .AND.
      &         (CalHyg(QQType) .NE. ApMierijLyma) .AND.
      &         (CalHyg(QQType) .NE. ApLiCor7500)) THEN
-               WRITE(*,*) 'ERROR: Calibration file ', HygName,
-     &                    'does not contain hygrometer info'
-               STOP 'Rewrite your calibration file'
+               WRITE(*,*) 'ERROR: Unknown type ',CalHyg(QQType)
+               WRITE(*,*) '       in ',HygName
+               STOP 'Check hygrometer calibration information'
            ENDIF
       ENDIF
       IF (EC_T_STRLEN(CO2Name) .GT. 0) THEN
-           CALL EC_F_ReadAp(CO2Name,CalCO2) ! A CO2 sensor 
+         IF (CO2Name.EQ.'-') THEN
+           CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,CO2Prefix,CalCO2)
+         ELSE
+           CALL EC_F_ReadAp(CO2Name,CalCO2) ! A CO2 sensor
+         ENDIF
            IF (CalCO2(QQType) .NE. ApLiCor7500) THEN
-               WRITE(*,*) 'ERROR: Calibration file ', CO2Name,
-     &                    'does not contain CO2 sensor info'
-               STOP 'Rewrite your calibration file'
+               WRITE(*,*) 'ERROR: Unknown type ',CalCO2(QQType)
+               WRITE(*,*) '       in ',CO2Name
+               STOP 'Check gas analyzer calibration information'
            ENDIF
       ENDIF
 C

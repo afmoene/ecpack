@@ -4,7 +4,8 @@ C
 C  Copyright (C) 
 C    1998-2000   Arjan van Dijk, Wageningen University, The Netherlands
 C    2000-2002   Arjan van Dijk, IMAU, The Netherlands
-C    1999-2004   Arnold Moene, Wageningen University, The Netherlands
+C    1999-2012   Arnold Moene, Wageningen University, The Netherlands
+C    2012        Clemens Druee, Universitaet Trier, Germany
 C 
 C  This program is free software; you can redistribute it and/or
 C  modify it under the terms of the GNU General Public License
@@ -41,7 +42,8 @@ C...........................................................................
       INTEGER MaxPF, NPF
       PARAMETER (MaxPF = 10000000)
       CHARACTER*255 FNAME, DatDir, OutDir, ParmDir, FluxName,
-     &              ParmName,InterName, PlfName, PlfIntName
+     &              ParmName,InterName, PlfName, PlfIntName,
+     &              ConfTok(MConf),ConfVal(MConf)
       CHARACTER*255 DumName1,DumName2
       LOGICAL PRaw,PCal,PIndep,
      &  DoPrint,Flag(NNMAx,MMMax),
@@ -52,7 +54,8 @@ C...........................................................................
       INTEGER N,i,j,M,MIndep(NNMax),CIndep(NNMax,NNMax),FOO,
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), FirstDay,
      &  StartTime(3),StopTime(3),
-     &  LStartTime(3),LStopTime(3)
+     &  LStartTime(3),LStopTime(3),
+     &  NConf
 
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,
      &  Mean(NNMax),TolMean(NNMax),Cov(NNMax,NNMax), Psychro,
@@ -91,7 +94,8 @@ C Give some RCS info (do not edit this!!, RCS does it for us)
       WRITE(*,*) '$Name$'
       WRITE(*,*) '$Date$'
       WRITE(*,*) '$Revision$'
-      CALL EC_F_GetConf(ECConfFile,
+      CALL EC_F_Conf2Buf(ECConfFile,NConf,ConfTok,ConfVal)
+      CALL EC_F_GetConf(NConf,ConfTok,ConfVal,
      &             DatDir, OutDir, ParmDir,
      &             FluxName, ParmName, InterName, PlfIntName,
      &             PlfName,
@@ -142,7 +146,7 @@ C
         Offset(i) = 0.D0
       ENDDO
       IF (EC_T_STRLEN(SonName) .GT. 0) THEN
-           CALL EC_F_ReadAp(SonName,CalSonic) ! The sonic
+           CALL EC_F_Buf2Ap(NConf,ConfTok,ConfVal,SonPrefix,CalSonic) ! The sonic
            IF ((CalSonic(QQType) .NE. ApCSATSonic) .AND.
      &         (CalSonic(QQType) .NE. ApSon3DCal)  .AND.
      &         (CalSonic(QQType) .NE. ApKaijoTR90)  .AND.
@@ -320,7 +324,7 @@ C
            IF (M .GT. 0) THEN
                DO i=1,M
                    CALL Calibrat(RawSampl(1,i),Channels,P,CorMean,
-     &	              CalSonic,CalTherm,CalHyg,CalCO2, 
+     &                CalSonic,CalTherm,CalHyg,CalCO2, 
      &                BadTc,Sample(1,i),N,Flag(1,i),
      &                Have_Uncal, FirstDay, i)
                ENDDO
