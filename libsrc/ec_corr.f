@@ -744,7 +744,7 @@ C
      &  O2Factor,
      &  CalSonic,CalTherm,CalHyg,
      &  CalCo2, FrCor,
-     &  WebVel,P, Have_Cal)
+     &  WebVel,P, Have_Cal,DoIterate,MaxIter)
 C     ****f* ec_corr.f/EC_C_Main
 C NAME
 C     EC_C_MAIN
@@ -756,7 +756,7 @@ C     	DirYaw, DirPitch, DirRoll,
 C     	SonFactr, O2Factor,
 C     	CalSonic,CalTherm,CalHyg,
 C       CalCo2,FrCor,
-C     	P, Have_Cal)
+C     	P, Have_Cal,DoIterate)
 C FUNCTION
 C     Integrated correction routine applying ALL (user-selected)
 C     corrections in this library on mean values and covariances.
@@ -816,6 +816,10 @@ C     P       : [REAL*8]
 C               Atmospheric pressure (Pa)
 C     Have_Cal : [LOGICAL(NMax)]
 C               Calibrated signal available for given quantity ?
+C     DoIterate : [LOGICAL]
+C               Perform iteration to account for interedependce of corrections
+C     MaxIter  : [INTEGER]
+C               Max number of such iterations
 C OUTPUT
 C     Mean    : [REAL*8(NMax)] (in/out)
 C               Mean values of all calibrated signals
@@ -857,6 +861,7 @@ C     $Name$
 C     $Id$
 C USES
 C     parcnst.inc
+C     physcnst.inc
 C     EC_C_T05
 C     EC_C_T06
 C     EC_C_T07
@@ -877,21 +882,26 @@ C     EC_G_Reset
 C     ***
       IMPLICIT NONE
       INCLUDE 'parcnst.inc'
+      INCLUDE 'physcnst.inc'
 
       INTEGER N,NumInt,NMAx,OutF, WhichTemp, I
       LOGICAL DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  DoPrint,
      &  QYaw,QPitch,QRoll,QFreq,QO2,QWebb,QSonic,QTilt,
-     &  Have_Cal(NMax), QSchot
+     &  Have_Cal(NMax), QSchot,
+     &  DoIterate
       REAL*8  P,Mean(NMax),TolMean(NMax),Cov(NMax,NMax),
      &  TolCov(NMax,NMax),FrCor(NMax,NMax),
      &  DirYaw,O2Factor(NMax),
      &  NSTA,NEND,TAUV,TauD,DirPitch,DirRoll, TSonFact,
      &  SonFactr(NMax),
      &  Yaw(3,3), Roll(3,3), Pitch(3,3), WebVel,
-     &  ExpVar(NMaxExp)
+     &  ExpVar(NMaxExp),
+     &  TCov(NMax,NMax),ICov(NMax,NMax),BCov(NMax,NMax)
       REAL*8  CalSonic(NQQ),CalTherm(NQQ),CalHyg(NQQ), CalCO2(NQQ)
+      REAL IterRelChange
       INTEGER DumIndep(NMax), DumCIndep(NMax,NMax)
+      INTEGER MaxIter,NIter,IIter
 C
 C
 C Only print intermediate results if desired
@@ -1003,10 +1013,6 @@ C
       CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
      &                  DumIndep, DumCindep)
 C
-C Correct sonic temperature and all covariances with sonic temperature
-C for humidity. This is half the Schotanus-correction. Side-wind
-C correction is done at calibration time directly after reading raw data.
-C
 C Now we need to know if and which temperature we have. Default to
 C Sonic temperature
 C
@@ -1017,56 +1023,78 @@ C
       ELSE
          WhichTemp = -1
       ENDIF
-
-      IF (DoCorr(QCSonic)) THEN
-        CALL EC_C_Schot1(Mean(SpecHum),Mean(TSonic),NMax,N,Cov,
-     &    SonFactr,TSonFact)
-        CALL EC_C_Schot2(SonFactr,TSonFact,Mean(TSonic),NMax,N,Cov)
-        CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
-     &                  DumIndep, DumCindep)
-
-        IF (QSchot) THEN
-          WRITE(OutF,*)
-            CALL EC_G_ShwHead(OutF,
-     &          'Correction factors for H2O-sensitivity of sonic')
-          DO i=1,N
-              WRITE(OutF,45) QName(i),SonFactr(i)
-          ENDDO
-   45     FORMAT('For (',a6,',T(son)) : ',F10.5)
-          CALL EC_G_ShwHead(OutF,
-     &                      'After H2O-correction for sonic : ')
-          CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
-        ENDIF
+C
+C The following correction are optionally iterated to
+C account for their interdependence 
+C Oncley et al.(2007) 'The Energy Balance Experiment EBEX-2000. 
+C Part I: overview and energy balance ' Boundary-Layer Meteorology, 
+C 123, 1-28 10.1007/s10546-007-9161-1
+C
+      IF (DoIterate) then
+        NIter=MaxIter
+      ELSE
+        NIter=1
       ENDIF
+      IIter=1
+      ICov=Cov   ! save initial covariance matrix
+      DO WHILE (IIter.eq.1.or.
+     &         (IIter.le.NIter.and.IterRelChange.gt.IterMinChange))
+        TCov=Cov ! store covariance matrix after last iteration
+        Cov=ICov ! apply corrections to initial covariance matrix
+C
+C Correct sonic temperature and all covariances with sonic temperature
+C for humidity. This is half the Schotanus-correction. Side-wind
+C correction is done at calibration time directly after reading raw data.
+C
+        IF (DoCorr(QCSonic)) THEN
+          CALL EC_C_Schot1(Mean(SpecHum),Mean(TSonic),NMax,N,TCov,
+     &      SonFactr,TSonFact)
+          CALL EC_C_Schot2(SonFactr,TSonFact,Mean(TSonic),NMax,N,Cov)
+          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                    DumIndep, DumCindep)
+
+          IF (QSchot) THEN
+            WRITE(OutF,*)
+              CALL EC_G_ShwHead(OutF,
+     &            'Correction factors for H2O-sensitivity of sonic')
+            DO i=1,N
+                WRITE(OutF,45) QName(i),SonFactr(i)
+            ENDDO
+   45       FORMAT('For (',a6,',T(son)) : ',F10.5)
+            CALL EC_G_ShwHead(OutF,
+     &                        'After H2O-correction for sonic : ')
+            CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+          ENDIF
+        ENDIF
 C
 C
 C Perform correction for oxygen-sensitivity of hygrometer
 C
 C
-      IF (DoCorr(QCO2)) THEN
-        IF (WhichTemp .GT. 0) THEN
-          CALL EC_C_Oxygen1(Mean(WhichTemp),NMax,N,Cov,P,CalHyg(QQType),
-     &      WhichTemp,O2Factor)
-          CALL EC_C_Oxygen2(O2Factor,NMax,N,Cov)
-          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
-     &                  DumIndep, DumCindep)
+        IF (DoCorr(QCO2)) THEN
+          IF (WhichTemp .GT. 0) THEN
+            CALL EC_C_Oxygen1(Mean(WhichTemp),NMax,N,TCov,P,
+     &        CalHyg(QQType),WhichTemp,O2Factor)
+            CALL EC_C_Oxygen2(O2Factor,NMax,N,Cov)
+            CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                    DumIndep, DumCindep)
 
-          IF (QO2) THEN
-            CALL EC_G_ShwHead(OutF,
-     &        'Correction factors for O2-sensitivity of hygrometer')
-            DO i=1,N
+            IF (QO2) THEN
+              CALL EC_G_ShwHead(OutF,
+     &          'Correction factors for O2-sensitivity of hygrometer')
+              DO i=1,N
                 WRITE(OutF,46) QName(i),O2Factor(i)
-            ENDDO
- 46         FORMAT('For (',a6,',RhoV or q) : ',F10.5)
-            CALL EC_G_ShwHead(OutF,
-     &           'After oxygen-correction for hygrometer : ')
-            CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+              ENDDO
+ 46           FORMAT('For (',a6,',RhoV or q) : ',F10.5)
+              CALL EC_G_ShwHead(OutF,
+     &             'After oxygen-correction for hygrometer : ')
+              CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+            ENDIF
+          ELSE
+              WRITE(*,*) 'ERROR: can not perform O2 correction without ',
+     &                   'a temperature'
           ENDIF
-        ELSE
-            WRITE(*,*) 'ERROR: can not perform O2 correction without ',
-     &                 'a temperature'
         ENDIF
-      ENDIF
 C
 C
 C Perform correction for poor frequency response and large paths
@@ -1076,36 +1104,56 @@ C
 C
 C Constants for integration routine in correction frequency response
 C
-      NSTA   = -5.0D0    ! [?] start frequency numerical integration
-      NEND   = LOG10(0.5*ExpVar(QEFreq)) ! [?] end frequency numerical integration
-      NumINT = 39        ! [1] number of intervals
-      TAUV   = 0.0D0     ! [?] Low pass filter time constant
-      TauD   = 0.0D0     ! [?] interval length for running mean
+        NSTA   = -5.0D0    ! [?] start frequency numerical integration
+        NEND   = LOG10(0.5*ExpVar(QEFreq)) ! [?] end frequency numerical integration
+        NumINT = 39        ! [1] number of intervals
+        TAUV   = 0.0D0     ! [?] Low pass filter time constant
+        TauD   = 0.0D0     ! [?] interval length for running mean
 
-      IF (DoCorr(QCFreq)) THEN
-        IF (WhichTemp .GT. 0) THEN
-          CALL EC_C_F01(Mean,Cov,NMax,N,WhichTemp,
-     &         NSta,NEnd,NumInt,ExpVar(QEFreq),TauD,TauV,
-     &         CalSonic,CalTherm,CalHyg,
-     &         CalCO2, FrCor)
-          CALL EC_C_F02(FrCor,NMax,N,ExpVar(QELLimit),
-     &                  ExpVar(QEULimit),Cov,TolCov)
+        IF (DoCorr(QCFreq)) THEN
+          IF (WhichTemp .GT. 0) THEN
+            CALL EC_C_F01(Mean,TCov,NMax,N,WhichTemp,
+     &           NSta,NEnd,NumInt,ExpVar(QEFreq),TauD,TauV,
+     &           CalSonic,CalTherm,CalHyg,
+     &           CalCO2, FrCor)
+            CALL EC_C_F02(FrCor,NMax,N,ExpVar(QELLimit),
+     &                    ExpVar(QEULimit),Cov,TolCov)
      
-          CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
-     &                  DumIndep, DumCindep)
-          IF (QFreq) THEN
-            CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
-            WRITE(OutF,*) 'Factors accepted between ',
-     &                     ExpVar(QELLimit),
-     &                    ' and ',ExpVar(QEULimit)
-            CALL EC_G_ShwHead(OutF, 'After frequency-correction : ')
-            CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+            CALL EC_G_Reset(Have_Cal, Mean, TolMean, Cov, TolCov,
+     &                    DumIndep, DumCindep)
+            IF (QFreq) THEN
+                CALL EC_G_ShwFrq(OutF,FrCor,NMax,N)
+              WRITE(OutF,*) 'Factors accepted between ',
+     &                       ExpVar(QELLimit),
+     &                      ' and ',ExpVar(QEULimit)
+              CALL EC_G_ShwHead(OutF, 'After frequency-correction : ')
+              CALL EC_G_Show(OutF,Mean,TolMean,Cov,TolCov,NMax,N)
+            ENDIF
+          ELSE
+              WRITE(*,*) 'ERROR: can not perform freq. response ',
+     &                   ' correction without a temperature'
           ENDIF
-        ELSE
-            WRITE(*,*) 'ERROR: can not perform freq. response ',
-     &                 ' correction without a temperature'
         ENDIF
+C
+C       Store matrix values without iteration (in case of no convergence)
+C
+        IF (IITER.EQ.1) THEN
+          BCov=Cov
+        ENDIF
+C
+        IterRelChange=maxval(abs(Cov-TCov)/TCov)
+        IITER=IITER+1
+      ENDDO
+C
+C     in case of no convergence: restore matrix values without iteration
+C
+      IF (DoIterate) THEN
+        Write (*,*) '[iterate]',iiter,' iterations'
       ENDIF
+!       IF (DoIterate.AND.IITER.gt.NITER) THEN
+!         Write (*,*) '[iterate] **** iteration didnt converge !'
+!           Cov=BCov
+!       ENDIF
 C
 C
 C Calculate mean vertical velocity according to Webb

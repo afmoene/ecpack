@@ -73,7 +73,7 @@ C...........................................................................
      &  DoPrint,Flag(NNMAx,MMMax),
      &  DoStruct,BadTc,
      &  HAVE_UNCAL(NNNMax), HAVE_CAL(NNMax),
-     &  AnglesFound, 
+     &  AnglesFound,
      &  DoCorr(NMaxCorr), PCorr(NMaxCorr),
      &  OutMean(NNMax), OutCov(NNMax, NNMax), 
      &  OutStd(NNMax), OutNum(NNMax), OutStr(NNMax, NNMax), 
@@ -83,7 +83,7 @@ C...........................................................................
      &  Channels,Delay(NNNMax),Mok(NNMax),Cok(NNMax,NNMax), 
      &  NDelta, NLock, NHigh, NLow, StartTime(3),StopTime(3),
      &  DiagFlag(NMaxDiag),
-     &  NConf
+     &  NConf, MaxIter
       REAL*8 RawSampl(NNNMax,MMMax),Sample(NNMax,MMMax),P,Psychro,
      &  Mean(NNMax),TolMean(NNMax),
      &  Mins(NNMax),Maxs(NNMax),
@@ -202,9 +202,17 @@ C
       PCorr(QCPF)=.true.      ! Print planar fit intermediate results ?
       ExpVar(QEPFValid)=0.99  ! Minimum part (<= 1) of samples that should be valid to incorporate interval in angle PF calculation
 C
-C Put main configuration into Buffer
+      DoCorr(QCErrFiSi)=.false.   ! Calculate covariance tolerance after Finkelstein&Sims
+      DoCorr(QCIterate)=.false.   ! Iterate calculation of interdependent corrections
+      MaxIter=5                   ! Put main configuration into Buffer
+                                  !
+                                  ! if record is not flagged, converges <= 5 
+                                  ! iterations; if more itrations are needed, 
+                                  ! data is usually rejected, anyway (Mauder, M.,
+                                  ! personal communication)
+C
       CALL EC_F_Conf2Buf(ECConfFile,NConf,ConfTok,ConfVal)
-
+C
 C Read configuration from Buffer
       CALL EC_F_GetConf(NConf,ConfTok,ConfVal,
      &             DatDir, OutDir, ParmDir,
@@ -216,7 +224,8 @@ C Read configuration from Buffer
      &             OutStd, OutNum, OutStr, OutFrcor,
      &             Outputs, DoCorr, CorrPar, ExpVar, 
      &             DoStruct, DoPrint,
-     &             PCorr, PRaw, PCal, PIndep)
+     &             PCorr, PRaw, PCal, PIndep,
+     &             MaxIter )
 
 C
 C Assume first we have no uncalibrated samples at all
@@ -509,7 +518,8 @@ C
      &    FrCor,
      &    Mean,TolMean, Mins, Maxs, Cov,TolCov,
      &    QPhys, dQPhys,
-     &    HAVE_UNCAL, HAVE_CAL, DiagFlag, StartTime(1))
+     &    HAVE_UNCAL, HAVE_CAL, DiagFlag, StartTime(1),
+     &    MaxIter)
 C
 C Calculate structure parameters
 C

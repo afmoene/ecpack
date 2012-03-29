@@ -296,12 +296,13 @@ C     ***
      &           OutFrcor,
      &           Outputs, DoCorr, CorrPars, ExpVar, 
      &           DoStruct, DoPrint,
-     &           PCorr, PRaw, PCal, PIndep)
+     &           PCorr, PRaw, PCal, PIndep,
+     &           MaxIter )
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
 
-      INTEGER         NConf
+      INTEGER         NConf, MaxIter
       CHARACTER*(*)   ConfTok(MConf),ConfVal(MConf)
       LOGICAL         DoPrint,PRaw,PCal,PIndep,
      &                 DoStruct, PCorr(NMaxCorr)
@@ -662,7 +663,8 @@ C     If Parmameter values main config call EC_F_ParBuf
      &      ExpVar,
      &      DoCorr, PCorr,
      &      DoStruct, DoPrint,
-     &      PRaw,PCal,PIndep)
+     &      PRaw,PCal,PIndep,
+     &      MaxIter)
       ELSE
 C     If ParmFile is given now call EC_F_Params
         CALL EC_F_Params(ParmName, ExpVar,
@@ -726,7 +728,8 @@ C     ***
      &    ExpVar,
      &    DoCorr, PCorr,
      &    DoStruct, DoPrint,
-     &    PRaw,PCal,PIndep)
+     &    PRaw,PCal,PIndep, 
+     &    Maxiter)
       IMPLICIT NONE
       INCLUDE 'physcnst.inc'
       INCLUDE 'parcnst.inc'
@@ -738,7 +741,7 @@ C     ***
      &    DoPrint,PRaw,PCal,PIndep,
      &    DoStruct, DoCorr(NMaxCorr), PCorr(NMaxCorr)
 C
-      INTEGER ICONF
+      INTEGER ICONF,MaxIter
       INTEGER EC_T_STRLEN
       EXTERNAL EC_T_STRLEN
       CHARACTER*255   TOKLINE, VALLINE, DUMSTRING
@@ -823,6 +826,14 @@ C         Correction switches
               ! Calculate mean velocity according to Webb
             ELSE IF (INDEX(TOKLINE, 'DOPF') .GT. 0) THEN
               READ(VALLINE,*) DoCorr(QCPF) 
+              ! Do Planar fit ?
+            ELSE IF (INDEX(TOKLINE, 'DOERRFISI') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCErrFiSi) 
+              ! Do Planar fit ?
+            ELSE IF (INDEX(TOKLINE, 'DOITERATE') .GT. 0) THEN
+              READ(VALLINE,*) DoCorr(QCIterate) 
+            ELSE IF (INDEX(TOKLINE, 'MAXITER') .GT. 0) THEN
+              READ(VALLINE,*) MaxIter
               ! Do Planar fit ?
 C
 C         Switches controlling structure parameter calculation

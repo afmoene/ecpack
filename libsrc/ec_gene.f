@@ -52,7 +52,8 @@ C ########################################################################
      &  Mins, Maxs,
      &  Cov,TolCov,
      &  QPhys, dQPhys,
-     &  HAVE_UNCAL, HAVE_CAL, DiagFlag, FirstDay)
+     &  HAVE_UNCAL, HAVE_CAL, DiagFlag, FirstDay,
+     &  MaxIter)
 C     ****f* ec_gene.f/EC_G_Main
 C NAME
 C     EC_G_Main
@@ -62,6 +63,7 @@ C        RawSampl,MaxChan,Channels,NMax,N,MMax,M, PCal,PIndep,
 C        Psychro,CalSonic,CalTherm,CalHyg, CalCO2, P,
 C        Calibr,
 C        Sample,Flag,Mok,Cok,MIndep,CIndep,Rc,BadTc,
+C        DoErr,
 C        DoCorr, PCorr, CorrPar, ExpVar,
 C        DirYaw, DirPitch, DirRoll,
 C        Apf, SonFactr, O2Factor, FrCor,
@@ -129,6 +131,8 @@ C                 are available for each channel
 C     FirstDay  : [INTEGER]
 C                 day number of first sample in array (needed for
 C                 detrending data that pass midnight)
+C     MaxIter   ; [INTEGER]
+C                 maximum iterations of iterdependent corrections
 C OUTPUTS
 C     Sample    : [REAL*8(NMax, MMax)]
 C                 array with calibrated samples
@@ -188,7 +192,7 @@ C                 are available for each channel
 C     DiagFlag  : [INTEGER](NMaxDiag)
 C                 count of flags occuring in diagnostic word of CSAT
 C AUTHOR
-C     Arjan van Dijk, Arnold Moene
+C     Arjan van Dijk, Arnold Moene, Clemens Druee
 C HISTORY
 C     Revision: 03-04-2001: get mean W and its tolerance before tilt
 C                           correction; export via interface (AM)
@@ -208,6 +212,8 @@ C     Revision: 29-06-2006: added Mins and Maxs to interface to get min
 C                           and max of calibrated signal out (also added
 C                           its calculation, irrespective of the DoPrint
 C                           flag)
+C     Revision: 03-03-20111: add option to calculate alternate tolerance
+C                           of covariances
 C     $Name$
 C     $Id$
 C USES
@@ -225,6 +231,7 @@ C     EC_M_Detren
 C     EC_M_BlockDet
 C     EC_Ph_Q
 C     EC_Ph_Flux
+C     EC_Ph_ErrFiSi
 C     parcnst.inc
 C     ***
       IMPLICIT NONE
@@ -232,7 +239,7 @@ C     ***
 
       INTEGER NMax,N,i,M,j,MIndep(NMax),CIndep(NMax,NMax),
      &  OutF,MMax,MaxChan,Channels,Mok(NMax),Cok(NMax,NMax),NTcOut,
-     &  WhichTemp, DiagFlag(NMaxDiag), FirstDay, DIAG_WORD
+     &  WhichTemp, DiagFlag(NMaxDiag), FirstDay, DIAG_WORD, Maxiter
       LOGICAL PCal,PIndep,
      &  DoPrint,Flag(NMAx,MMax),
      &  AnyTilt,BadTc,
@@ -519,6 +526,7 @@ C If 'classic' run-based tilt corrections are not done,
 C the first call to EC_C_Main is redundant and skipped), else
 C this run is only done to establish the 'classic' rotation
 C angles.
+C disable iteration to save time
       AnyTilt = ((DoCorr(QCTilt).OR.DoCorr(QCYaw)) .OR.
      &           (DoCorr(QCPitch).OR.DoCorr(QCRoll)))
       IF (AnyTilt) THen
@@ -534,7 +542,7 @@ C angles.
      &          O2Factor,
      &          CalSonic,CalTherm,CalHyg,
      &    CalCO2, FrCor,
-     &          WebVel, P,Have_cal)
+     &          WebVel, P,Have_cal,.false.,Maxiter)
         CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
       ENDIF
@@ -615,6 +623,7 @@ C
         ENDIF
 
       ENDIF
+
 C
 C Make copy of DoCorr and PCorr, and reset tilt info's
 C
@@ -642,7 +651,8 @@ C
      &          SonFactr,
      &          O2Factor,
      &          CalSonic,CalTherm,CalHyg,CalCO2,FrCor,
-     &          WebVel, P, Have_cal)
+     &          WebVel, P, Have_cal,
+     &          DoCorr(QCIterate),MaxIter)
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
 C Re-establish the mean humidity signal if needed
@@ -650,7 +660,15 @@ C Re-establish the mean humidity signal if needed
           Mean(Humidity) = Psychro
           MEAN(SpecHum) = EC_Ph_Q(Mean(Humidity), Mean(WhichTemp), P)
       ENDIF
-      
+C      
+C Calculate alternate error of covariances after Finkestein&Sims
+      IF (DoCorr(QCErrFiSi)) THEN
+        CALL EC_Ph_ErrFiSi(Sample,NMax,N,MMax,M,Flag,TolCov)
+        TolCov=2.D00*TolCov
+        CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
+     &                MIndep,  CIndep)
+      ENDIF
+C
 C
 C
 C Calculate fluxes from processed mean values and covariances.
@@ -663,10 +681,10 @@ C
       ELSE
          DirYaw = DirYaw + 180D0
       ENDIF
-      
+
       CALL EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,
      &                QPhys, dQPhys, WebVel, DirYaw)
-
+      
       CALL EC_G_Reset(Have_cal, Mean, TolMean, Cov, TolCov, 
      &                MIndep,  CIndep)
 C Re-establish the mean humidity signal if needed

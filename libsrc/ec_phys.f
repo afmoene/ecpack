@@ -40,6 +40,151 @@ C ########################################################################
 
 
 
+
+      SUBROUTINE EC_Ph_ErrFiSi(Val,NMax,N,MMax,M,Flag,Sigma)
+C     ****f* ec_math.f/EC_Ph_ErrFiSi
+C NAME
+C     EC_Ph_ErrFiSi
+C SYNOPSIS
+C     CALL EC_M_Averag(x,NMax,N,MMax,M,Flag,
+C    	               Mean,TolMean,Cov,TolCov,MIndep,CIndep,Mok,Cok)
+C FUNCTION
+C     From the given set of calibrated samples, calculate the averages,
+C     variances, covariances and their tolerances.
+C INPUTS
+C     Val    : [REAL*8(NMax,MMax)]
+C              Array with calibrated samples.
+C	       First index counts quantities; second counter
+C	       counts samples. Only the first N quantities
+C	       and the first M samples are used.
+C     NMax   : [INTEGER]
+C              maximum number of quantities
+C     N      : [INTEGER]
+C              actual number of quantities
+C     MMax   : [INTEGER]
+C              maximum number of samples
+C     M      : [INTEGER]
+C              actual number of samples
+C     Flag   : [LOGICAL(NMax, MMax)]
+C	       If flag(j,i) is true, then quantity j in sample
+C              i is not ok.
+C OUTPUTS
+C     tbc
+C AUTHOR
+C     Clemens Druee
+C HISTORY
+C     $Name$
+C     $Id$
+C USES
+C     RFFT1I
+C     RFFT1F
+C     RFFT1B
+C     parcnst.inc
+C     ***
+      IMPLICIT NONE
+      INCLUDE 'parcnst.inc'
+
+      INTEGER NMax,N,MMax,M
+      LOGICAL Flag(NMax,MMax)
+      REAL*8 Val(NMax,MMax),Sigma(NMax,NMax)
+
+      INTEGER I,J,K,IM,I1,I2
+      INTEGER IFAC(MMAX)
+      REAL XR(MMAX),CH(MMAX),WA(MMAX)
+      REAL X(NMax,MMax),F(NMax,MMax)
+      REAL XP(NMax,NMax,MMax),FP(NMax,NMax,MMax)
+      REAL SUMM
+C
+C     Calculate cross-correlations using the Convolution theorem
+C
+C     dereference and set flagged values to dummy
+      X=DUMMY
+      DO I1=1,N
+        DO IM=1,M
+          IF (.NOT.FLAG(I1,IM)) THEN
+            X(I1,IM)=REAL(VAL(I1,IM))
+          ENDIF
+        ENDDO
+      ENDDO
+C     linear interpolate data gaps
+      DO I1=1,N
+        IF (X(I1,1).EQ.DUMMY) THEN
+          DO J=2,M
+            IF (X(I1,J).NE.DUMMY) THEN
+              X(I1,1:J-1)=X(I1,J)
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
+        IF (X(I1,M).EQ.DUMMY) THEN
+          DO J=M-1,1,-1
+            IF (X(I1,J).NE.DUMMY) THEN
+              X(I1,J+1:M)=X(I1,J)
+              EXIT
+            ENDIF
+          ENDDO
+        ENDIF
+        DO IM=2,M-1
+          IF (X(I1,IM).EQ.DUMMY) THEN
+            DO J=IM+1,M
+              IF (X(I1,J).NE.DUMMY) THEN
+                DO K=IM,J-1
+                 X(I1,K)=REAL(K-IM+1)*(X(I1,J)-X(I1,IM-1))/REAL(J-IM+1)
+                 EXIT
+                ENDDO
+              ENDIF
+            ENDDO
+          ENDIF
+        ENDDO
+      ENDDO
+C     Calculate Fourier Transforms of all quantities
+      F=0
+      CALL RFFTI1 (M, WA, IFAC)
+      DO I1=1,N
+        XR=0
+        XR=x(I1,1:M)
+        CALL RFFTF1 (M, XR, CH, WA, IFAC)
+        F(I1,1:M)=XR
+      ENDDO
+C     High-pass Filter (set first three frequence zero) 
+      DO I1=1,N
+        DO IM=1,3
+          F(I1,M)=0.
+        ENDDO
+      ENDDO
+C     Calculate Products of Fourier Transforms
+      DO I1=1,N
+        DO I2=1,N
+          DO IM=1,M
+            FP(I1,I2,IM)=F(I1,IM)*F(I2,IM)
+          ENDDO
+        ENDDO
+      ENDDO
+C     Backward Transforms of Products
+      DO I1=1,N
+        DO I2=1,N
+          XR=0
+          XR=FP(I1,I2,1:M)
+          CALL RFFTB1 (M, XR, CH, WA, IFAC)
+          XP(I1,I2,1:M)=XR
+        ENDDO
+      ENDDO
+C
+C     Calculate covariance errors
+C
+      DO I1=1,N
+        DO I2=1,N
+          SUMM=0.D00
+          DO IM=1,M/2
+            SUMM=SUMM+DBLE(XP(I1,I1,IM)*XP(I2,I2,IM)
+     &                    +XP(I1,I2,IM)*XP(I2,I1,IM))
+          ENDDO
+          SIGMA(I1,I2)=SQRT((1./REAL(M))*SUMM)
+        ENDDO
+      ENDDO
+      END SUBROUTINE
+      
+
 C
 C ########################################################################
 C
@@ -48,9 +193,6 @@ C processed mean values, covariances and tolerances.
 C
 C ########################################################################
 C
-
-
-
 
 
       SUBROUTINE EC_Ph_Flux(Mean,NMax,Cov,TolMean,TolCov,p,BadTc,

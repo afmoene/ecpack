@@ -280,9 +280,10 @@ C
       INTEGER NMaxCorr
       INTEGER QCDetrend, QCTilt, QCYaw, QCPitch, QCRoll,
      &        QCPF, QCSonic, QCO2,QCFreq,
-     &        QCWebb, QCMean, QCPlanF, QCBlock
+     &        QCWebb, QCMean, QCPlanF, QCBlock,
+     &        QCErrFiSi, QCIterate
 
-      PARAMETER(NMaxCorr   = 12)
+      PARAMETER(NMaxCorr   = 14)
       
       PARAMETER(QCDetrend  = 1)
       PARAMETER(QCTilt     = 2) 
@@ -296,6 +297,8 @@ C
       PARAMETER(QCWebb     = 10)
       PARAMETER(QCMean     = 11)
       PARAMETER(QCBlock    = 12)
+      PARAMETER(QCErrFiSi  = 13)
+      PARAMETER(QCIterate  = 14)
 
       CHARACTER*8 CorrName(NMaxCorr) 
       DATA CorrName
@@ -310,7 +313,9 @@ C
      &                   'freqresp',
      &                   'webb    ',
      &                   'slowmean',
-     &                   'blockav '/
+     &                   'blockav ',
+     &                   'errfisi ',
+     &                   'iterate '/
 
 C
 C Parameters that have to with corrections

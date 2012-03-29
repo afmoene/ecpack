@@ -292,3 +292,14 @@ C SOURCE
       REAL*8 MaxRhoCO2
       PARAMETER(MaxRhoCO2 =   1.D0) ! [kg m^{-3}]
 C     *** 
+
+c     ****d* physcnst.inc/IterMinChange
+C NAME
+C     IterMinChange
+C FUNCTION
+C     Threshold for aborting the iteration due to flux
+C     correction interdependences
+C SOURCE
+      REAL*8 IterMinChange
+      PARAMETER(IterMinChange =   1.D-4) 
+C     *** 
