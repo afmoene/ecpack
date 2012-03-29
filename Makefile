@@ -27,8 +27,8 @@ LEXT=
 LFC=gfortran
 LAR=ar
 LRANLIB=ranlib
-LINCDIR='-I/home/arnold/include -I$(LIBSRC)/'
-LLIBDIR=-L/home/arnold/lib
+LINCDIR='-I/usr/include -I$(LIBSRC)/'
+LLIBDIR=-L/usr/lib64
 LEXTRA_FFLAG=-fno-second-underscore 
 
 # For MingW
@@ -47,8 +47,8 @@ WLIBDIR=-L/usr/local/i386-mingw32/lib
 WEXT=.exe
 WEXTRA_FFLAG=-fno-second-underscore
 
-FFLAGS=$(INCDIR)  -ffixed-form -ff2c  -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
-LDFLAGS=$(LIBDIR) -lnetcdf -L. -lecpack 
+FFLAGS=$(INCDIR)  -fno-second-underscore -ffixed-form -ff2c  -O3 -Wall -Wno-unused -fexpensive-optimizations -fomit-frame-pointer -ffixed-line-length-none -g $(EXTRA_FFLAG)
+LDFLAGS=$(LIBDIR) -lnetcdff -lnetcdf -L. -lecpack 
 LIBSRC=../libsrc
 SRC=../src
 
@@ -67,7 +67,7 @@ DOCFILES=$(LIBSRC)/ec_corr.f $(LIBSRC)/ec_phys.f $(LIBSRC)/ec_math.f $(LIBSRC)/e
 PDFLATEX=pdflatex
 
 
-all: linux linux-programs docs
+all: linux linux-programs 
 
 win32: 
 	($(MKDIR) $(BUILD-WIN32) ; cd $(BUILD-WIN32) ; make -f ../Makefile FC=$(WFC) AR=$(WAR) RANLIB=$(WRANLIB) EXT=$(WEXT) INCDIR=$(WINCDIR) EXTRA_FFLAG=$(WEXTRA_FFLAG) libecpack.a)

@@ -310,9 +310,8 @@ C Output definitions
                CALL EC_T_GOutS(VALLINE(:INDEX(VALLINE, CHAR(0))-1),
      &                            Outputs)
             ELSE 
-               write(*,*) 'ERROR: unkown token: ', 
+               write(*,*) 'WARNING: unknown token: ', 
      &                    TOKLINE(:INDEX(TOKLINE, CHAR(0))-1)
-               STOP
             ENDIF
          ENDIF
  4000 CONTINUE
