@@ -314,6 +314,7 @@ C
      &                                Sample(Humidity), P)
                   Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                TsCorr,P)
+                  Sample(Tsonic) = TsCorr
                 ELSE
                   Error(SpecHum) = (.TRUE.)
                 ENDIF
@@ -323,6 +324,7 @@ C
      &                                Sample(Humidity), P)
                   Sample(SpecHum)=EC_PH_Q(Sample(Humidity),
      &                                TsCorr,P)
+                  Sample(Tsonic) = TsCorr
                 ELSE
                   Error(SpecHum) = (.TRUE.)
                 ENDIF

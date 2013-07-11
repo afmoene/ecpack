@@ -432,6 +432,9 @@ Revision: 2.5.23:
        * fixed problem with finding right index for last sample when end of interval is on next day 0:00
        * Error in interface of EC_W_Flux: switch of OutFrcor was not ingested: all were set to true
        * changed format for csv output a bit to give less whitespace
+Revision: 2.5.24: 
+       * Now also raw Tsonic sample is corrected for humidity, so that resulting CT2 is correct (thanks to Linda Kooijmans for pointing this out)
+
 
 
 
